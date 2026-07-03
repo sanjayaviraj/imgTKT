@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROI_Inspector — Multi-Channel TIFF</title>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.min.js"></script>
+<script>
+  // Fallback to the package-root browser bundle if the pinned path fails.
+  if (typeof GeoTIFF === 'undefined') {
+    document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/geotiff"></scr'+'ipt>');
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --panel-2:#eef1f4; --line:#d5dbe1;
+    --ink:#1f2328; --muted:#5b6470; --accent:#0d8a7d; --accent-2:#c05621;
+    --ok:#1a7f37; --warn:#9a6700;
+    --mono:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --disp:"Roboto",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:
+      radial-gradient(1200px 600px at 80% -10%, #d9efec66, transparent),
+      radial-gradient(900px 500px at -10% 110%, #e6e1f266, transparent),
+      var(--bg);
+    color:var(--ink);font-family:var(--mono);font-size:14px;line-height:1.5;
+    min-height:100vh;
+  }
+  header{
+    padding:22px 28px;border-bottom:1px solid var(--line);
+    display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+  }
+  header h1{
+    font-family:var(--disp);font-weight:600;font-size:24px;margin:0;
+    letter-spacing:.3px;
+  }
+  header h1 .dot{color:var(--accent)}
+  header .sub{color:var(--muted);font-size:12.5px}
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:0;min-height:calc(100vh - 70px)}
+  @media (max-width:1000px){.wrap{grid-template-columns:1fr}}
+  .stage{padding:24px 28px;border-right:1px solid var(--line)}
+  .side{padding:24px 22px;background:linear-gradient(180deg,var(--panel),transparent 60%)}
+  .drop{
+    border:1.5px dashed var(--line);border-radius:14px;padding:42px 24px;
+    text-align:center;background:var(--panel);transition:.2s;cursor:pointer;
+  }
+  .drop.hot{border-color:var(--accent);background:#e6f5f2}
+  .drop strong{font-family:var(--disp);font-size:17px;display:block;margin-bottom:6px}
+  .drop span{color:var(--muted);font-size:12.5px}
+  input[type=file]{display:none}
+
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  .pill{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:999px;
+    padding:7px 14px;color:var(--muted);font-size:12px;
+  }
+  .pill b{color:var(--ink)}
+  button{
+    font-family:var(--mono);font-size:13px;cursor:pointer;border-radius:9px;
+    border:1px solid var(--line);background:var(--panel-2);color:var(--ink);
+    padding:9px 15px;transition:.15s;
+  }
+  button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--accent);color:#06231f;border-color:var(--accent);font-weight:600}
+  button.primary:hover:not(:disabled){filter:brightness(1.08);color:#06231f}
+  button.warn{border-color:var(--accent-2);color:var(--accent-2)}
+
+  .canvas-shell{
+    position:relative;border:1px solid var(--line);border-radius:12px;
+    background:#000;overflow:auto;max-width:100%;max-height:72vh;
+  }
+  canvas{display:block;touch-action:none;cursor:crosshair}
+  .hint{color:var(--muted);font-size:12px;margin-top:10px}
+
+  .group{margin-bottom:22px}
+  .group h3{
+    font-family:var(--disp);font-size:14px;font-weight:600;margin:0 0 10px;
+    color:var(--ink);text-transform:none;letter-spacing:.3px;
+    border-bottom:1px solid var(--line);padding-bottom:7px;
+  }
+  .ch-toggles{display:flex;gap:8px;flex-wrap:wrap}
+  .ch{
+    display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:8px;
+    border:1px solid var(--line);background:var(--panel-2);cursor:pointer;font-size:12px;
+  }
+  .ch .sw{width:11px;height:11px;border-radius:3px}
+  .ch.off{opacity:.4}
+
+  .shape-toggles{display:flex;gap:8px}
+  .shape-btn{flex:1}
+  .shape-btn.active{border-color:var(--accent);color:var(--accent);background:#e6f5f2}
+
+  .field{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+  .field label{color:var(--muted);font-size:12.5px}
+  .field input[type=range]{flex:1;accent-color:var(--accent)}
+  .field .val{min-width:30px;text-align:right;color:var(--accent)}
+  .num{width:84px;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);padding:7px 9px;font-family:var(--mono);font-size:13px}
+
+  .measure-box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .reading{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line)}
+  .reading:last-child{border-bottom:0}
+  .reading .lbl{display:flex;align-items:center;gap:8px;color:var(--muted)}
+  .reading .lbl .sw{width:10px;height:10px;border-radius:3px}
+  .reading b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+  .status-row{display:flex;gap:8px;margin:12px 0 4px}
+  .status-row input{
+    flex:1;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);padding:9px 11px;font-family:var(--mono);font-size:13px;
+  }
+  .status-row input:focus{outline:none;border-color:var(--accent)}
+
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+  th:first-child,td:first-child,th.l,td.l{text-align:left}
+  th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel)}
+  .tbl-scroll{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+  td .stat-in{width:100%;min-width:90px;background:transparent;border:1px solid transparent;color:var(--ink);
+    font-family:var(--mono);font-size:12px;border-radius:5px;padding:3px 5px}
+  td .stat-in:hover{border-color:var(--line)} td .stat-in:focus{outline:none;border-color:var(--accent);background:var(--bg)}
+  .del{color:var(--muted);cursor:pointer;border:none;background:none;padding:2px 6px;font-size:14px}
+  .del:hover{color:#ff4d4d}
+  .empty{color:var(--muted);text-align:center;padding:18px;font-size:12.5px}
+  .foot{margin-top:12px;display:flex;gap:10px}
+  .note{color:var(--warn);font-size:11.5px;margin-top:8px;line-height:1.4}
+</style>
+</head>
+<body>
+<header>
+  <h1>ROI_Inspector<span class="dot">.</span></h1>
+  <nav style="display:flex;gap:6px">
+    <a href="index.html" style="padding:4px 12px;border-radius:5px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Line Profile</a>
+    <a href="roi_inspector.html" style="padding:4px 12px;border-radius:5px;font-size:12px;text-decoration:none;background:var(--accent);color:#fff">ROI Inspector</a>
+  </nav>
+  <span class="sub">Multi-channel TIFF / OME-TIFF · auto channel detection · circular &amp; rectangular ROI mean intensity · CSV export</span>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: image stage -->
+  <section class="stage">
+    <div id="drop" class="drop">
+      <strong>Drop a TIFF / OME-TIFF here</strong>
+      <span>or click to browse · convert your .czi to OME-TIFF first (Bio-Formats / Fiji / QuPath)</span>
+      <input type="file" id="file" accept=".tif,.tiff,.ome.tif,.ome.tiff,image/tiff">
+    </div>
+
+    <div id="viewer" style="display:none">
+      <div class="toolbar">
+        <span class="pill">Size <b id="pSize">–</b></span>
+        <span class="pill">Channels <b id="pCh">–</b></span>
+        <span class="pill">Bit depth <b id="pBits">–</b></span>
+        <button id="clearRoi">Clear ROI</button>
+        <button id="reset">Load another</button>
+      </div>
+      <div class="toolbar" style="margin-bottom:10px">
+        <span class="pill" style="display:flex;align-items:center;gap:8px">
+          Zoom
+          <input type="range" id="zoom" min="0.25" max="8" step="0.05" value="1" style="width:130px;accent-color:var(--accent)">
+          <b id="zoomV" style="min-width:42px;text-align:right">100%</b>
+        </span>
+        <button id="zoomOut">−</button>
+        <button id="zoom100">100%</button>
+        <button id="zoomFit">Fit</button>
+        <button id="zoomIn">+</button>
+      </div>
+      <div class="canvas-shell">
+        <canvas id="cv"></canvas>
+      </div>
+      <p class="hint">Scroll over the image to <b>zoom</b> toward the cursor. Pick <b>Circle</b> or <b>Rectangle</b> on the right. Drag to draw the ROI — or enable <b>Fixed size</b> and click to drop a shape. Mean is computed on raw pixel values for every channel.</p>
+    </div>
+  </section>
+
+  <!-- RIGHT: controls + measurements -->
+  <aside class="side">
+    <div class="group">
+      <h3>Display channels</h3>
+      <div class="ch-toggles" id="chToggles"><span class="empty">Load an image first.</span></div>
+      <div id="brightCtrls"></div>
+    </div>
+
+    <div class="group">
+      <h3>ROI shape &amp; size</h3>
+      <div class="shape-toggles">
+        <button id="shapeCircle" class="shape-btn active">● Circle</button>
+        <button id="shapeRect" class="shape-btn">▭ Rectangle</button>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="fixedMode" style="accent-color:var(--accent)"> Fixed size
+        </label>
+        <span class="hint" style="margin:0">(click to drop)</span>
+      </div>
+      <div id="fixedCircle" class="field" style="display:none">
+        <label>Radius</label>
+        <input type="number" id="fixedR" min="1" step="1" value="25" class="num">
+        <span class="val">px</span>
+      </div>
+      <div id="fixedRect" style="display:none">
+        <div class="field"><label>Width</label><input type="number" id="fixedW" min="1" step="1" value="50" class="num"><span class="val">px</span></div>
+        <div class="field"><label>Height</label><input type="number" id="fixedH" min="1" step="1" value="50" class="num"><span class="val">px</span></div>
+      </div>
+      <p class="hint" id="shapeHint" style="margin-top:4px">Drag on the image to draw. Enable fixed size to click-drop a shape of the set size.</p>
+    </div>
+
+    <div class="group">
+      <h3>Current ROI</h3>
+      <div class="measure-box">
+        <div id="readings"><div class="empty">No ROI drawn.</div></div>
+        <div class="status-row">
+          <input id="statusIn" placeholder="Status (e.g. positive, control, cell-1)…">
+        </div>
+        <button class="primary" id="record" style="width:100%" disabled>Record measurement →</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Records <span id="recCount" style="color:var(--muted);font-weight:400"></span></h3>
+      <div class="tbl-scroll">
+        <table id="tbl">
+          <thead id="thead"><tr><th class="l">#</th></tr></thead>
+          <tbody id="tbody"><tr><td class="empty">No records yet.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="foot">
+        <button class="primary" id="export" disabled>Export CSV</button>
+        <button class="warn" id="clearAll" disabled>Clear all</button>
+      </div>
+      <p class="note">Intensities are mean raw values inside the ROI (all channels measured regardless of which are displayed). Coordinates are in full-resolution image pixels.</p>
+    </div>
+  </aside>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+/* ---------- channel colors (any number of channels) ---------- */
+const BASE_COLORS=[
+  [230,77,230],[70,209,96],[255,77,77],
+  [77,166,255],[255,209,77],[120,235,235],
+  [255,140,77],[200,120,255],[120,255,160],[235,120,160]
+];
+function hslToRgb(h,s,l){
+  h/=360;
+  const f=n=>{
+    const k=(n+h*12)%12;
+    const a=s*Math.min(l,1-l);
+    return l-a*Math.max(-1,Math.min(k-3,9-k,1));
+  };
+  return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
+}
+function channelColor(i){
+  if(i<BASE_COLORS.length) return BASE_COLORS[i].slice();
+  return hslToRgb((i*137.508)%360,0.65,0.6); // golden-angle hues, all distinct
+}
+const rgb = c => 'rgb('+c[0]+','+c[1]+','+c[2]+')';
+
+let state = {
+  width:0, height:0, nCh:0, bits:0,
+  channels:[],          // array of {data:TypedArray, min, max}
+  colors:[],            // [r,g,b] per channel
+  visible:[],           // bool per channel
+  bright:[],            // brightness multiplier per channel
+  shape:'circle',       // 'circle' | 'rect'
+  roi:null,             // {type, ...} in image px
+  records:[],
+  scale:1,              // image->canvas px (always 1; native-res render)
+  zoom:1,               // CSS display zoom factor
+  dragging:false, startX:0, startY:0
+};
+
+/* ---------- file loading ---------- */
+const drop=$('drop'), fileInput=$('file');
+drop.addEventListener('click',()=>fileInput.click());
+['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('hot');}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('hot');}));
+drop.addEventListener('drop',ev=>{const f=ev.dataTransfer.files[0]; if(f) loadFile(f);});
+fileInput.addEventListener('change',e=>{const f=e.target.files[0]; if(f) loadFile(f);});
+
+async function loadFile(file){
+  if (typeof GeoTIFF === 'undefined') {
+    drop.querySelector('strong').textContent='TIFF library failed to load';
+    drop.querySelector('span').textContent='The GeoTIFF library could not be fetched (check your network / ad-blocker), then reload the page.';
+    return;
+  }
+  drop.querySelector('strong').textContent='Reading '+file.name+' …';
+  try{
+    const buf = await file.arrayBuffer();
+    const tiff = await GeoTIFF.fromArrayBuffer(buf);
+    const count = await tiff.getImageCount();
+    const first = await tiff.getImage(0);
+    const w=first.getWidth(), h=first.getHeight();
+    const spp=first.getSamplesPerPixel();
+    const bits=(first.getBitsPerSample&&first.getBitsPerSample()[0])||16;
+
+    let channels=[];
+    if(count>=2){
+      // channels stored as separate IFD pages (typical multi-channel microscopy export)
+      // NOTE: no cap — read every page as a channel.
+      for(let i=0;i<count;i++){
+        const img=await tiff.getImage(i);
+        // guard against pyramids / mismatched pages: only take same-size pages
+        if(img.getWidth()!==w || img.getHeight()!==h) continue;
+        const r=await img.readRasters();
+        for(let b=0;b<r.length;b++) channels.push(toChannel(r[b]));
+      }
+      if(!channels.length){ // fallback: just the first page's bands
+        const r=await first.readRasters();
+        for(let b=0;b<r.length;b++) channels.push(toChannel(r[b]));
+      }
+    } else if(spp>=2){
+      // single image, multiple samples interleaved/banded
+      const r=await first.readRasters();           // r is array of bands
+      for(let i=0;i<r.length;i++) channels.push(toChannel(r[i]));
+    } else {
+      // single-channel image
+      const r=await first.readRasters();
+      channels.push(toChannel(r[0]));
+    }
+
+    state.width=w; state.height=h; state.nCh=channels.length;
+    state.bits=bits; state.channels=channels;
+    state.colors=channels.map((_,i)=>channelColor(i));
+    state.visible=channels.map(()=>true);
+    state.bright=channels.map(()=>1);
+    state.roi=null;
+    initViewer(file.name);
+  }catch(err){
+    console.error(err);
+    drop.querySelector('strong').textContent='Could not read that file';
+    drop.querySelector('span').textContent='Make sure it is an uncompressed/LZW/Deflate TIFF or OME-TIFF. JPEG-XR is not supported in-browser. ('+err.message+')';
+  }
+}
+
+function toChannel(arr){
+  let min=Infinity,max=-Infinity;
+  for(let i=0;i<arr.length;i++){const v=arr[i]; if(v<min)min=v; if(v>max)max=v;}
+  if(max===min) max=min+1;
+  return {data:arr,min,max};
+}
+
+/* ---------- viewer init ---------- */
+function initViewer(name){
+  drop.style.display='none';
+  $('viewer').style.display='block';
+  $('pSize').textContent=state.width+' × '+state.height;
+  $('pCh').textContent=state.nCh;
+  $('pBits').textContent=state.bits+'-bit';
+
+  // channel toggles
+  const tg=$('chToggles'); tg.innerHTML='';
+  for(let i=0;i<state.nCh;i++){
+    const el=document.createElement('div');
+    el.className='ch'; el.dataset.c=i;
+    el.innerHTML='<span class="sw" style="background:'+rgb(state.colors[i])+'"></span>Channel '+(i+1);
+    el.onclick=()=>{ state.visible[i]=!state.visible[i]; el.classList.toggle('off',!state.visible[i]); render(); };
+    tg.appendChild(el);
+  }
+
+  // per-channel brightness sliders
+  const bc=$('brightCtrls'); bc.innerHTML='';
+  for(let i=0;i<state.nCh;i++){
+    const row=document.createElement('div');
+    row.className='field';
+    row.innerHTML='<label style="color:'+rgb(state.colors[i])+'">C'+(i+1)+' brightness</label>'
+      +'<input type="range" min="0.2" max="8" step="0.1" value="1" data-c="'+i+'">'
+      +'<span class="val" style="min-width:42px">1.0×</span>';
+    const slider=row.querySelector('input');
+    const valEl=row.querySelector('.val');
+    slider.oninput=e=>{
+      const v=parseFloat(e.target.value);
+      state.bright[i]=v; valEl.textContent=v.toFixed(1)+'×'; render();
+    };
+    bc.appendChild(row);
+  }
+
+  // render the canvas at native image resolution (crisp at any zoom);
+  // zoom only changes the CSS display size.
+  state.scale = 1;
+  const cv=$('cv');
+  cv.width=state.width;
+  cv.height=state.height;
+  applyFitZoom();
+  bindCanvas();
+  renderTableHead();
+  render();
+  refreshReadings();
+  renderTable();
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const cv=$('cv'), ctx=cv.getContext('2d');
+  const w=cv.width, h=cv.height;
+  const img=ctx.createImageData(w,h);
+  const data=img.data;
+  const sc=state.scale;
+
+  for(let y=0;y<h;y++){
+    const sy=Math.min(state.height-1, Math.floor(y/sc));
+    for(let x=0;x<w;x++){
+      const sx=Math.min(state.width-1, Math.floor(x/sc));
+      const si=sy*state.width+sx;
+      let R=0,G=0,B=0;
+      for(let c=0;c<state.nCh;c++){
+        if(!state.visible[c]) continue;
+        const ch=state.channels[c];
+        let nv=(ch.data[si]-ch.min)/(ch.max-ch.min); // 0..1
+        nv=Math.min(1, nv*(state.bright[c]||1));
+        const col=state.colors[c];
+        R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2];
+      }
+      const di=(y*w+x)*4;
+      data[di]=Math.min(255,R); data[di+1]=Math.min(255,G); data[di+2]=Math.min(255,B); data[di+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+  const z=state.zoom||1;
+
+  // recorded ROIs — drawn persistently so you can see what's already measured
+  ctx.save();
+  ctx.lineWidth=1.5/z;
+  ctx.font=(13/z)+'px "JetBrains Mono", monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  state.records.forEach((rec,i)=>{
+    let lx,ly;
+    ctx.strokeStyle='#f0b429'; // amber = already recorded
+    ctx.fillStyle='rgba(240,180,41,0.10)';
+    ctx.beginPath();
+    if(rec.shape==='circle'){
+      ctx.arc(rec.cx*sc, rec.cy*sc, rec.r*sc, 0, Math.PI*2);
+      lx=rec.cx*sc; ly=rec.cy*sc;
+    } else {
+      ctx.rect(rec.x*sc, rec.y*sc, rec.w*sc, rec.h*sc);
+      lx=(rec.x+rec.w/2)*sc; ly=(rec.y+rec.h/2)*sc;
+    }
+    ctx.stroke(); ctx.fill();
+    // record number label
+    ctx.lineWidth=3/z; ctx.strokeStyle='#1a1205';
+    ctx.strokeText(String(i+1), lx, ly);
+    ctx.fillStyle='#f0b429';
+    ctx.fillText(String(i+1), lx, ly);
+    ctx.lineWidth=1.5/z;
+  });
+  ctx.restore();
+
+  // active ROI — stroke/dot sized in screen px (divide by zoom since canvas is CSS-scaled)
+  if(state.roi){
+    ctx.save();
+    ctx.strokeStyle='#5ad1c7'; ctx.lineWidth=2/z;
+    ctx.fillStyle='rgba(90,209,199,0.12)';
+    let lx,ly;
+    ctx.beginPath();
+    if(state.roi.type==='circle'){
+      ctx.arc(state.roi.cx*sc, state.roi.cy*sc, state.roi.r*sc, 0, Math.PI*2);
+      lx=state.roi.cx*sc; ly=state.roi.cy*sc;
+    } else {
+      ctx.rect(state.roi.x*sc, state.roi.y*sc, state.roi.w*sc, state.roi.h*sc);
+      lx=(state.roi.x+state.roi.w/2)*sc; ly=(state.roi.y+state.roi.h/2)*sc;
+    }
+    ctx.stroke(); ctx.fill();
+    ctx.fillStyle='#5ad1c7';
+    ctx.beginPath(); ctx.arc(lx, ly, 3/z, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+/* ---------- ROI drawing ---------- */
+function roiValid(roi){
+  if(!roi) return false;
+  if(roi.type==='circle') return roi.r>=1;
+  return roi.w>=1 && roi.h>=1;
+}
+
+function bindCanvas(){
+  const cv=$('cv');
+  const pos=ev=>{
+    const r=cv.getBoundingClientRect();
+    const px=(ev.clientX-r.left)*(cv.width/r.width);
+    const py=(ev.clientY-r.top)*(cv.height/r.height);
+    return {x:px/state.scale, y:py/state.scale};
+  };
+  cv.onpointerdown=ev=>{
+    cv.setPointerCapture(ev.pointerId);
+    const p=pos(ev);
+    const fixed=$('fixedMode').checked;
+    if(state.shape==='circle'){
+      if(fixed){
+        const fr=Math.max(1, parseFloat($('fixedR').value)||1);
+        state.roi={type:'circle',cx:p.x,cy:p.y,r:fr};
+        state.dragging=false; render(); refreshReadings(); return;
+      }
+      state.dragging=true; state.startX=p.x; state.startY=p.y;
+      state.roi={type:'circle',cx:p.x,cy:p.y,r:0};
+    } else {
+      if(fixed){
+        const fw=Math.max(1, parseFloat($('fixedW').value)||1);
+        const fh=Math.max(1, parseFloat($('fixedH').value)||1);
+        state.roi={type:'rect',x:p.x-fw/2,y:p.y-fh/2,w:fw,h:fh};
+        state.dragging=false; render(); refreshReadings(); return;
+      }
+      state.dragging=true; state.startX=p.x; state.startY=p.y;
+      state.roi={type:'rect',x:p.x,y:p.y,w:0,h:0};
+    }
+  };
+  cv.onpointermove=ev=>{
+    if(!state.dragging) return;
+    const p=pos(ev);
+    if(state.roi.type==='circle'){
+      const dx=p.x-state.startX, dy=p.y-state.startY;
+      state.roi.r=Math.sqrt(dx*dx+dy*dy);
+    } else {
+      state.roi.x=Math.min(state.startX,p.x);
+      state.roi.y=Math.min(state.startY,p.y);
+      state.roi.w=Math.abs(p.x-state.startX);
+      state.roi.h=Math.abs(p.y-state.startY);
+    }
+    render();
+  };
+  cv.onpointerup=()=>{
+    state.dragging=false;
+    if(state.roi && !roiValid(state.roi)){ state.roi=null; render(); }
+    refreshReadings();
+  };
+
+  // mouse-wheel zoom, anchored to the cursor
+  const shell=document.querySelector('.canvas-shell');
+  cv.addEventListener('wheel', ev=>{
+    ev.preventDefault();
+    const r=cv.getBoundingClientRect();
+    const ix=(ev.clientX-r.left)*(cv.width/r.width)/state.scale;
+    const iy=(ev.clientY-r.top)*(cv.height/r.height)/state.scale;
+    const vx=ev.clientX-shell.getBoundingClientRect().left;
+    const vy=ev.clientY-shell.getBoundingClientRect().top;
+    const factor = ev.deltaY<0 ? 1.15 : 1/1.15;
+    setZoom(state.zoom*factor);
+    shell.scrollLeft = ix*state.scale*state.zoom - vx;
+    shell.scrollTop  = iy*state.scale*state.zoom - vy;
+  }, {passive:false});
+}
+
+/* ---------- measurement ---------- */
+function measureROI(roi){
+  return roi.type==='circle' ? measureCircle(roi) : measureRect(roi);
+}
+function measureCircle(roi){
+  const {cx,cy,r}=roi, r2=r*r;
+  const x0=Math.max(0,Math.floor(cx-r)), x1=Math.min(state.width-1,Math.ceil(cx+r));
+  const y0=Math.max(0,Math.floor(cy-r)), y1=Math.min(state.height-1,Math.ceil(cy+r));
+  const sums=new Array(state.nCh).fill(0);
+  let n=0;
+  for(let y=y0;y<=y1;y++){
+    for(let x=x0;x<=x1;x++){
+      const dx=x+0.5-cx, dy=y+0.5-cy;
+      if(dx*dx+dy*dy<=r2){
+        const i=y*state.width+x;
+        for(let c=0;c<state.nCh;c++) sums[c]+=state.channels[c].data[i];
+        n++;
+      }
+    }
+  }
+  return {means:sums.map(s=> n? s/n : 0), pixels:n};
+}
+function measureRect(roi){
+  const x0=Math.max(0,Math.floor(roi.x)), x1=Math.min(state.width-1,Math.ceil(roi.x+roi.w));
+  const y0=Math.max(0,Math.floor(roi.y)), y1=Math.min(state.height-1,Math.ceil(roi.y+roi.h));
+  const sums=new Array(state.nCh).fill(0);
+  let n=0;
+  for(let y=y0;y<=y1;y++){
+    for(let x=x0;x<=x1;x++){
+      const px=x+0.5, py=y+0.5;
+      if(px>=roi.x && px<roi.x+roi.w && py>=roi.y && py<roi.y+roi.h){
+        const i=y*state.width+x;
+        for(let c=0;c<state.nCh;c++) sums[c]+=state.channels[c].data[i];
+        n++;
+      }
+    }
+  }
+  return {means:sums.map(s=> n? s/n : 0), pixels:n};
+}
+
+function refreshReadings(){
+  const box=$('readings');
+  if(!roiValid(state.roi)){
+    box.innerHTML='<div class="empty">No ROI drawn.</div>';
+    $('record').disabled=true; return;
+  }
+  const m=measureROI(state.roi);
+  state._current=m;
+  let html='';
+  for(let c=0;c<state.nCh;c++){
+    html+='<div class="reading"><span class="lbl"><span class="sw" style="background:'+rgb(state.colors[c])+'"></span>Channel '+(c+1)+'</span><b>'+m.means[c].toFixed(2)+'</b></div>';
+  }
+  html+='<div class="reading"><span class="lbl">ROI pixels</span><b>'+m.pixels+'</b></div>';
+  let geo;
+  if(state.roi.type==='circle'){
+    geo='center '+Math.round(state.roi.cx)+', '+Math.round(state.roi.cy)+' · r='+state.roi.r.toFixed(1);
+  } else {
+    geo='x,y '+Math.round(state.roi.x)+', '+Math.round(state.roi.y)+' · '+Math.round(state.roi.w)+'×'+Math.round(state.roi.h);
+  }
+  html+='<div class="reading"><span class="lbl">'+state.roi.type+'</span><b>'+geo+'</b></div>';
+  box.innerHTML=html;
+  $('record').disabled=false;
+}
+
+/* ---------- records ---------- */
+$('record').onclick=()=>{
+  if(!roiValid(state.roi)||!state._current) return;
+  const m=state._current, roi=state.roi;
+  const rec={shape:roi.type, pixels:m.pixels, means:m.means.slice(), status:$('statusIn').value.trim()};
+  if(roi.type==='circle'){
+    rec.cx=Math.round(roi.cx); rec.cy=Math.round(roi.cy); rec.r=+roi.r.toFixed(2);
+  } else {
+    rec.x=Math.round(roi.x); rec.y=Math.round(roi.y);
+    rec.w=Math.round(roi.w); rec.h=Math.round(roi.h);
+  }
+  state.records.push(rec);
+  $('statusIn').value='';
+  state.roi=null;          // recorded ROI now shown persistently in amber
+  state._current=null;
+  renderTable();
+  render();
+  refreshReadings();
+};
+
+function renderTableHead(){
+  let h='<tr><th class="l">#</th><th class="l">shape</th><th>cx</th><th>cy</th><th class="l">size</th><th>px</th>';
+  for(let c=0;c<state.nCh;c++){
+    h+='<th style="color:'+rgb(state.colors[c])+'">C'+(c+1)+'</th>';
+  }
+  h+='<th class="l">Status</th><th></th></tr>';
+  $('thead').innerHTML=h;
+}
+
+function renderTable(){
+  const tb=$('tbody');
+  const span=8+(state.nCh||1);
+  if(!state.records.length){
+    tb.innerHTML='<tr><td colspan="'+span+'" class="empty">No records yet.</td></tr>';
+    $('export').disabled=true; $('clearAll').disabled=true; $('recCount').textContent=''; return;
+  }
+  $('export').disabled=false; $('clearAll').disabled=false;
+  $('recCount').textContent='('+state.records.length+')';
+  tb.innerHTML=state.records.map((r,i)=>{
+    const cx = r.shape==='circle'? r.cx : Math.round(r.x+r.w/2);
+    const cy = r.shape==='circle'? r.cy : Math.round(r.y+r.h/2);
+    const size = r.shape==='circle'? ('r='+r.r) : (r.w+'×'+r.h);
+    let chCells='';
+    for(let c=0;c<state.nCh;c++) chCells+='<td>'+(r.means[c]!=null? r.means[c].toFixed(2):'—')+'</td>';
+    return '<tr>'
+      +'<td class="l">'+(i+1)+'</td>'
+      +'<td class="l">'+r.shape+'</td>'
+      +'<td>'+cx+'</td><td>'+cy+'</td>'
+      +'<td class="l">'+size+'</td>'
+      +'<td>'+r.pixels+'</td>'
+      +chCells
+      +'<td class="l"><input class="stat-in" data-i="'+i+'" value="'+escapeHtml(r.status)+'" placeholder="…"></td>'
+      +'<td><button class="del" data-i="'+i+'">✕</button></td>'
+      +'</tr>';
+  }).join('');
+  tb.querySelectorAll('.stat-in').forEach(inp=>{
+    inp.oninput=e=>{ state.records[+e.target.dataset.i].status=e.target.value; };
+  });
+  tb.querySelectorAll('.del').forEach(btn=>{
+    btn.onclick=e=>{ state.records.splice(+e.target.dataset.i,1); renderTable(); render(); };
+  });
+}
+function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ---------- CSV export ---------- */
+$('export').onclick=()=>{
+  const head=['record','shape','center_x','center_y','radius_px','width_px','height_px','roi_pixels'];
+  for(let c=0;c<state.nCh;c++) head.push('mean_C'+(c+1));
+  head.push('status');
+  const rows=state.records.map((r,i)=>{
+    const cx = r.shape==='circle'? r.cx : Math.round(r.x+r.w/2);
+    const cy = r.shape==='circle'? r.cy : Math.round(r.y+r.h/2);
+    const cells=[
+      i+1, r.shape, cx, cy,
+      r.shape==='circle'? r.r : '',
+      r.shape==='rect'? r.w : '',
+      r.shape==='rect'? r.h : '',
+      r.pixels
+    ];
+    for(let c=0;c<state.nCh;c++) cells.push(r.means[c]!=null? r.means[c].toFixed(4):'');
+    cells.push(csvCell(r.status));
+    return cells.join(',');
+  });
+  const csv=[head.join(','),...rows].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='roi_inspector_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+};
+function csvCell(s){s=s==null?'':String(s); return /[",\n]/.test(s)? '"'+s.replace(/"/g,'""')+'"' : s;}
+
+/* ---------- shape + fixed-size controls ---------- */
+function setShape(s){
+  state.shape=s;
+  $('shapeCircle').classList.toggle('active',s==='circle');
+  $('shapeRect').classList.toggle('active',s==='rect');
+  $('shapeHint').textContent = s==='circle'
+    ? 'Drag out from the center to set the radius. Enable fixed size to click-drop a circle.'
+    : 'Drag from one corner to the opposite. Enable fixed size to click-drop a rectangle.';
+  state.roi=null;
+  updateFixedUI();
+  if($('cv').width){ render(); refreshReadings(); }
+}
+function updateFixedUI(){
+  const on=$('fixedMode').checked;
+  $('fixedCircle').style.display=(on && state.shape==='circle')?'flex':'none';
+  $('fixedRect').style.display=(on && state.shape==='rect')?'block':'none';
+  const cv=$('cv');
+  if(cv) cv.style.cursor = on ? 'pointer' : 'crosshair';
+}
+$('shapeCircle').onclick=()=>setShape('circle');
+$('shapeRect').onclick=()=>setShape('rect');
+
+$('fixedMode').onchange=()=>{
+  updateFixedUI();
+  // snap an existing ROI to the fixed size right away
+  if($('fixedMode').checked && state.roi){
+    if(state.roi.type==='circle'){
+      state.roi.r=Math.max(1, parseFloat($('fixedR').value)||1);
+    } else {
+      const cx=state.roi.x+state.roi.w/2, cy=state.roi.y+state.roi.h/2;
+      const fw=Math.max(1, parseFloat($('fixedW').value)||1);
+      const fh=Math.max(1, parseFloat($('fixedH').value)||1);
+      state.roi.x=cx-fw/2; state.roi.y=cy-fh/2; state.roi.w=fw; state.roi.h=fh;
+    }
+    render(); refreshReadings();
+  }
+};
+function reSnap(){
+  if(!$('fixedMode').checked || !state.roi) return;
+  if(state.roi.type==='circle'){
+    state.roi.r=Math.max(1, parseFloat($('fixedR').value)||1);
+  } else {
+    const cx=state.roi.x+state.roi.w/2, cy=state.roi.y+state.roi.h/2;
+    const fw=Math.max(1, parseFloat($('fixedW').value)||1);
+    const fh=Math.max(1, parseFloat($('fixedH').value)||1);
+    state.roi.x=cx-fw/2; state.roi.y=cy-fh/2; state.roi.w=fw; state.roi.h=fh;
+  }
+  render(); refreshReadings();
+}
+$('fixedR').oninput=reSnap;
+$('fixedW').oninput=reSnap;
+$('fixedH').oninput=reSnap;
+
+$('clearRoi').onclick=()=>{ state.roi=null; render(); refreshReadings(); };
+$('clearAll').onclick=()=>{ if(confirm('Clear all records?')){ state.records=[]; renderTable(); render(); } };
+
+/* ---------- zoom ---------- */
+function setZoom(z){
+  z=Math.max(0.25, Math.min(8, z));
+  state.zoom=z;
+  const cv=$('cv');
+  cv.style.width=(state.width*z)+'px';
+  cv.style.height=(state.height*z)+'px';
+  $('zoom').value=z;
+  $('zoomV').textContent=Math.round(z*100)+'%';
+}
+function applyFitZoom(){
+  const shell=document.querySelector('.canvas-shell');
+  const avail=(shell.clientWidth||800)-4;
+  const z=state.width? avail/state.width : 1;
+  setZoom(z);
+}
+$('zoom').oninput=e=>setZoom(parseFloat(e.target.value));
+$('zoomIn').onclick=()=>setZoom(state.zoom*1.25);
+$('zoomOut').onclick=()=>setZoom(state.zoom/1.25);
+$('zoom100').onclick=()=>setZoom(1);
+$('zoomFit').onclick=()=>applyFitZoom();
+
+$('reset').onclick=()=>{
+  $('viewer').style.display='none'; drop.style.display='block';
+  drop.querySelector('strong').textContent='Drop a TIFF / OME-TIFF here';
+  drop.querySelector('span').textContent='or click to browse · convert your .czi to OME-TIFF first (Bio-Formats / Fiji / QuPath)';
+  fileInput.value='';
+};
+
+renderTable();
+</script>
+</body>
+</html>
