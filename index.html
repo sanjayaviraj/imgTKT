@@ -112,13 +112,8 @@
   <div class="left-panel">
     <div class="panel-section">
       <div class="section-label">Image Input</div>
-      <div class="upload-zone" id="uploadZone">
-        <input type="file" id="fileInput" accept=".tif,.tiff,.png,.jpg,.jpeg,.bmp">
-        <div class="upload-icon">🔬</div>
-        <div class="upload-text">Drop image or <strong>browse</strong><br>
-          <span style="font-size:10px;color:var(--text-muted)">.tif .tiff .png .jpg .bmp</span>
-        </div>
-      </div>
+      <input type="file" id="fileInput" accept=".tif,.tiff,.png,.jpg,.jpeg,.bmp" style="display:none">
+      <button class="btn" id="btnBrowse">📂 Browse image…</button>
       <div id="fileInfo" style="margin-top:6px;font-size:11px;color:var(--text-muted);display:none"></div>
     </div>
     <div class="panel-section">
@@ -225,8 +220,8 @@
         <span class="toolbar-info" id="cursorInfo">—</span>
       </div>
       <div class="canvas-wrap" id="canvasWrap">
-        <div class="empty-state" id="emptyState">
-          <div class="icon">📷</div>Upload an image to begin<br>
+        <div class="empty-state" id="emptyState" style="cursor:pointer">
+          <div class="icon">📷</div>Drag &amp; drop an image here, or click to browse<br>
           <span style="font-size:11px">Then draw a line to measure FWHM</span>
         </div>
         <canvas id="imageCanvas"></canvas>
@@ -273,18 +268,19 @@ const LUTs={
   rainbow:t=>{const h=t*300,c=1,x=c*(1-Math.abs((h/60)%2-1));let r,g,b;if(h<60){r=c;g=x;b=0}else if(h<120){r=x;g=c;b=0}else if(h<180){r=0;g=c;b=x}else if(h<240){r=0;g=x;b=c}else{r=x;g=0;b=c}return[r*255,g*255,b*255];}
 };
 
-const uz=document.getElementById('uploadZone'),fi=document.getElementById('fileInput');
-uz.addEventListener('click',()=>fi.click());
-uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('dragover');});
-uz.addEventListener('dragleave',()=>uz.classList.remove('dragover'));
-uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('dragover');if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0]);});
+const fi=document.getElementById('fileInput');
+document.getElementById('btnBrowse').addEventListener('click',()=>fi.click());
 fi.addEventListener('change',e=>{if(e.target.files.length)handleFile(e.target.files[0]);});
+// Drag & drop onto the main viewer area
+wrap.addEventListener('dragover',e=>{e.preventDefault();wrap.style.outline='2px dashed var(--accent)';wrap.style.outlineOffset='-6px';});
+wrap.addEventListener('dragleave',()=>{wrap.style.outline='none';});
+wrap.addEventListener('drop',e=>{e.preventDefault();wrap.style.outline='none';if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0]);});
+document.getElementById('emptyState').addEventListener('click',()=>fi.click());
 
 function handleFile(file){
   const ext=file.name.split('.').pop().toLowerCase();
   document.getElementById('fileInfo').style.display='block';
   document.getElementById('fileInfo').textContent=`${file.name} (${(file.size/1024).toFixed(1)} KB)`;
-  uz.classList.add('has-file');
   document.getElementById('statusText').textContent='Loading…';
   if(ext==='tif'||ext==='tiff')loadTiff(file);else loadStd(file);
 }
