@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Size Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.min.js"></script>
+<script>
+  // Fallback to the package-root browser bundle if the pinned path fails.
+  if (typeof GeoTIFF === 'undefined') {
+    document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/geotiff"></scr'+'ipt>');
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+  :root {
+    --bg-primary:#f8f9fa;--bg-secondary:#ffffff;--bg-panel:#ffffff;--bg-input:#ffffff;
+    --border:#dadce0;--text-primary:#202124;--text-secondary:#5f6368;--text-muted:#80868b;
+    --accent:#5FC44A;--accent-glow:rgba(95,196,74,0.16);--green:#188038;--green-glow:rgba(24,128,56,0.10);
+    --red:#d93025;--yellow:#e37400;--cyan:#F763AA;--magenta:#5FC44A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Roboto',sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+  .header-title{font-family:'Roboto',sans-serif;font-size:22px;font-weight:500;letter-spacing:0;color:var(--text-primary);}
+  .header-subtitle{font-size:12px;color:var(--text-muted);font-family:'Roboto',sans-serif;}
+  .main{display:flex;flex:1;overflow:hidden;}
+  .left-panel{width:290px;min-width:290px;background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+  .panel-section{padding:14px 16px;border-bottom:1px solid var(--border);}
+  .section-label{font-family:'Roboto Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;}
+  .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg-input);}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--accent-glow);}
+  .upload-zone.has-file{border-color:var(--green);background:var(--green-glow);border-style:solid;}
+  .upload-zone input{display:none;}
+  .upload-icon{font-size:28px;margin-bottom:6px;opacity:0.7;}
+  .upload-text{font-size:12px;color:var(--text-secondary);line-height:1.5;}
+  .upload-text strong{color:var(--accent);}
+  .form-group{margin-bottom:10px;}
+  .form-group label{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;}
+  .form-group input,.form-group select{width:100%;padding:8px 11px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:'Roboto Mono',monospace;font-size:13px;outline:none;transition:border-color 0.2s;box-shadow:none;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+  .range-row{display:flex;gap:6px;align-items:center;}
+  .range-row input[type=range]{flex:1;accent-color:var(--accent);height:4px;}
+  .range-row input[type=number]{width:64px;padding:4px 6px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:'Roboto Mono',monospace;font-size:11px;outline:none;text-align:right;box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+  .range-row input[type=number]:focus{border-color:var(--accent);}
+  .btn{width:100%;padding:9px 16px;border:1px solid var(--border);border-radius:999px;background:var(--bg-input);color:var(--text-primary);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:none;}
+  .btn:hover{background:var(--bg-secondary);border-color:var(--accent);color:var(--accent);}
+  .btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.danger{border-color:var(--red);color:var(--red);}
+  .btn.danger:hover{background:rgba(220,38,38,0.07);}
+  .btn.success{border-color:var(--green);color:var(--green);}
+  .btn.success:hover{background:rgba(5,150,105,0.07);}
+  .btn-row{display:flex;gap:8px;margin-top:8px;}
+  .btn-row .btn{flex:1;}
+  .color-options{display:flex;gap:6px;margin-top:6px;}
+  .color-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.15s;}
+  .color-swatch.active{border-color:#0f172a;transform:scale(1.15);}
+  .lut-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;}
+  .lut-chip{padding:3px 10px;border-radius:999px;font-size:10px;font-family:'Roboto Mono',monospace;cursor:pointer;border:1px solid var(--border);background:var(--bg-input);color:var(--text-secondary);transition:all 0.15s;}
+  .lut-chip.active{border-color:var(--accent);color:var(--accent);background:var(--accent-glow);}
+  .colormap-bar-wrap{position:absolute;right:12px;top:42px;bottom:8px;width:50px;z-index:3;display:none;pointer-events:none;}
+  .colormap-bar-inner{width:18px;height:100%;border:1px solid rgba(0,0,0,0.2);border-radius:3px;overflow:hidden;position:relative;}
+  .colormap-bar-inner canvas{width:100%;height:100%;display:block;}
+  .cbar-label{font-family:'Roboto Mono',monospace;font-size:9px;color:#334155;position:absolute;left:22px;white-space:nowrap;}
+  .cbar-label.top{top:0;}.cbar-label.mid{top:50%;transform:translateY(-50%);}.cbar-label.bot{bottom:0;}
+  .results-box{background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-top:6px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+  .result-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px;}
+  .result-row .label{color:var(--text-muted);}
+  .result-row .value{font-family:'Roboto Mono',monospace;font-weight:600;color:var(--green);}
+  .result-row .value.highlight{font-size:15px;color:var(--cyan);}
+  .meas-table-wrap{max-height:180px;overflow-y:auto;margin-top:6px;border:1px solid var(--border);border-radius:6px;}
+  .meas-table{width:100%;border-collapse:collapse;font-family:'Roboto Mono',monospace;font-size:11px;}
+  .meas-table th{background:var(--bg-primary);color:var(--text-muted);padding:5px 6px;text-align:left;font-weight:500;position:sticky;top:0;z-index:1;font-size:10px;letter-spacing:0.5px;text-transform:uppercase;}
+  .meas-table td{padding:4px 6px;border-top:1px solid var(--border);color:var(--text-secondary);}
+  .meas-table tr:hover td{background:var(--accent-glow);}
+  .meas-table tr.active-row td{background:rgba(247,99,170,0.10);color:var(--text-primary);}
+  .meas-table .fwhm-cell{color:var(--cyan);font-weight:600;}
+  .meas-table .del-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:0 2px;transition:color 0.15s;}
+  .meas-table .del-btn:hover{color:var(--red);}
+  .image-viewer{flex:1;display:flex;flex-direction:column;position:relative;background:#e2e8f0;overflow:hidden;}
+  .viewer-toolbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;}
+  .toolbar-btn{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:999px;color:var(--text-secondary);font-size:11px;cursor:pointer;font-family:'Roboto Mono',monospace;transition:all 0.15s;}
+  .toolbar-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .toolbar-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .toolbar-sep{width:1px;height:20px;background:var(--border);}
+  .toolbar-info{margin-left:auto;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text-muted);}
+  .canvas-wrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+  .canvas-wrap canvas{position:absolute;top:0;left:0;}
+  #imageCanvas{image-rendering:pixelated;}
+  #overlayCanvas{cursor:crosshair;z-index:2;}
+  .empty-state{text-align:center;color:var(--text-muted);font-size:13px;line-height:1.8;}
+  .empty-state .icon{font-size:48px;margin-bottom:12px;opacity:0.4;}
+  .bottom-panel{height:230px;min-height:160px;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;flex-shrink:0;position:relative;box-shadow:0 -1px 3px rgba(0,0,0,0.05);}
+  .chart-container{flex:1;padding:10px 16px 10px 10px;position:relative;}
+  .chart-container canvas{width:100%!important;height:100%!important;}
+  .chart-legend{position:absolute;top:14px;right:24px;display:flex;gap:14px;font-size:11px;font-family:'Roboto Mono',monospace;z-index:3;}
+  .legend-item{display:flex;align-items:center;gap:5px;}
+  .legend-dot{width:8px;height:8px;border-radius:50%;}
+  .resize-handle{position:absolute;top:-3px;left:0;right:0;height:6px;cursor:ns-resize;z-index:10;}
+  .status-bar{padding:4px 20px;background:var(--bg-secondary);border-top:1px solid var(--border);font-family:'Roboto Mono',monospace;font-size:10px;color:var(--text-muted);display:flex;gap:20px;flex-shrink:0;}
+  ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  .auto-btn{padding:2px 8px;font-size:9px;font-family:'Roboto Mono',monospace;background:var(--bg-primary);border:1px solid var(--border);border-radius:999px;color:var(--text-muted);cursor:pointer;transition:all 0.15s;margin-left:auto;}
+  .auto-btn:hover{border-color:var(--accent);color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="display:flex;align-items:center;gap:16px"><div class="header-title">Size Analysis<span style="color:var(--accent)">.</span></div>
+    <nav style="display:flex;gap:4px">
+      <a href="index.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Home</a>
+      <a href="size_analysis.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;background:var(--accent);color:#fff">Size Analysis</a>
+      <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Line Profile</a>
+      <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">ROI Inspector</a>
+    </nav>
+  </div>
+  <div class="header-subtitle">FWHM Measurement Tool</div>
+</div>
+<div class="main">
+  <div class="left-panel">
+    <div class="panel-section">
+      <div class="section-label">Image Input</div>
+      <input type="file" id="fileInput" accept=".tif,.tiff,.png,.jpg,.jpeg,.bmp" style="display:none">
+      <button class="btn" id="btnBrowse">📂 Browse image…</button>
+      <div id="fileInfo" style="margin-top:6px;font-size:11px;color:var(--text-muted);display:none"></div>
+    </div>
+    <div class="panel-section" id="channelSection" style="display:none">
+      <div class="section-label">Channels</div>
+      <div class="lut-row" id="channelChips"></div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-muted)">Select the channel to display &amp; measure.</div>
+    </div>
+    <div class="panel-section">
+      <div class="section-label">Calibration</div>
+      <div class="form-group">
+        <label>Pixel Size (nm)</label>
+        <input type="number" id="pixelSize" value="20" min="0.1" step="0.1">
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-label">Display</div>
+      <div class="form-group">
+        <label>Lookup Table (LUT)</label>
+        <div class="lut-row">
+          <div class="lut-chip active" data-lut="gray">Gray</div>
+          <div class="lut-chip" data-lut="green">Green</div>
+          <div class="lut-chip" data-lut="magenta">Magenta</div>
+          <div class="lut-chip" data-lut="fire">Fire</div>
+          <div class="lut-chip" data-lut="cyan">Cyan</div>
+          <div class="lut-chip" data-lut="hot">Hot</div>
+          <div class="lut-chip" data-lut="ice">Ice</div>
+          <div class="lut-chip" data-lut="rainbow">Rainbow</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Min <button class="auto-btn" id="btnAutoMin">Auto</button></label>
+        <div class="range-row">
+          <input type="range" id="minSlider" min="0" max="255" value="0" step="1">
+          <input type="number" id="minVal" value="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Max <button class="auto-btn" id="btnAutoMax">Auto</button></label>
+        <div class="range-row">
+          <input type="range" id="maxSlider" min="0" max="255" value="255" step="1">
+          <input type="number" id="maxVal" value="255">
+        </div>
+      </div>
+      <button class="btn" id="btnAutoRange" style="font-size:11px;padding:5px 10px;margin-top:2px">⟳ Auto Min / Max</button>
+    </div>
+    <div class="panel-section">
+      <div class="section-label">Line Profile</div>
+      <div class="form-group">
+        <label>Line Width (px)</label>
+        <input type="number" id="lineWidth" value="1" min="1" max="20" step="1">
+      </div>
+      <div class="form-group">
+        <label>Line Color</label>
+        <div class="color-options">
+          <div class="color-swatch active" style="background:#d97706" data-color="#d97706"></div>
+          <div class="color-swatch" style="background:#dc2626" data-color="#dc2626"></div>
+          <div class="color-swatch" style="background:#059669" data-color="#059669"></div>
+          <div class="color-swatch" style="background:#F763AA" data-color="#F763AA"></div>
+          <div class="color-swatch" style="background:#a21caf" data-color="#a21caf"></div>
+          <div class="color-swatch" style="background:#0f172a" data-color="#0f172a"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnDraw">✏️ Draw</button>
+        <button class="btn danger" id="btnClearCurrent">✕ Clear Line</button>
+      </div>
+    </div>
+    <div class="panel-section" id="resultsSection" style="display:none">
+      <div class="section-label">Current Fit</div>
+      <div class="results-box">
+        <div class="result-row"><span class="label">FWHM</span><span class="value highlight" id="resFwhm">—</span></div>
+        <div class="result-row"><span class="label">Amplitude</span><span class="value" id="resAmp">—</span></div>
+        <div class="result-row"><span class="label">Center</span><span class="value" id="resCenter">—</span></div>
+        <div class="result-row"><span class="label">Sigma (σ)</span><span class="value" id="resSigma">—</span></div>
+        <div class="result-row"><span class="label">Offset</span><span class="value" id="resOffset">—</span></div>
+        <div class="result-row"><span class="label">R²</span><span class="value" id="resR2">—</span></div>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn success" id="btnSaveMeas">＋ Save Measurement</button>
+      </div>
+    </div>
+    <div class="panel-section" id="measSection" style="display:none">
+      <div class="section-label">Measurements (<span id="measCount">0</span>)</div>
+      <div class="meas-table-wrap">
+        <table class="meas-table">
+          <thead><tr><th>#</th><th>Ch</th><th>FWHM (nm)</th><th>R²</th><th>Len (nm)</th><th></th></tr></thead>
+          <tbody id="measBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-muted)">
+        Mean FWHM: <span id="meanFwhm" style="color:var(--cyan);font-family:'Roboto Mono',monospace;font-weight:600">—</span>
+        &nbsp;±&nbsp;<span id="stdFwhm" style="color:var(--text-secondary);font-family:'Roboto Mono',monospace">—</span>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn success" id="btnDownloadCSV">⬇ Download CSV</button>
+        <button class="btn danger" id="btnClearAll">✕ Clear All</button>
+      </div>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div class="image-viewer" id="imageViewer">
+      <div class="viewer-toolbar">
+        <button class="toolbar-btn" id="btnZoomIn">＋</button>
+        <button class="toolbar-btn" id="btnZoomOut">－</button>
+        <button class="toolbar-btn" id="btnFit">⊞ Fit</button>
+        <button class="toolbar-btn" id="btn1to1">1:1</button>
+        <div class="toolbar-sep"></div>
+        <span class="toolbar-info" id="zoomInfo">100%</span>
+        <span class="toolbar-info" id="cursorInfo">—</span>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="empty-state" id="emptyState" style="cursor:pointer">
+          <div class="icon">📷</div>Drag &amp; drop an image here, or click to browse<br>
+          <span style="font-size:11px">Then draw a line to measure FWHM</span>
+        </div>
+        <canvas id="imageCanvas"></canvas>
+        <canvas id="overlayCanvas"></canvas>
+        <div class="colormap-bar-wrap" id="colormapWrap">
+          <div class="colormap-bar-inner"><canvas id="colormapCanvas"></canvas></div>
+          <span class="cbar-label top" id="cbarMax">255</span>
+          <span class="cbar-label mid" id="cbarMid">128</span>
+          <span class="cbar-label bot" id="cbarMin">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-panel" id="bottomPanel">
+      <div class="resize-handle" id="resizeHandle"></div>
+      <div class="chart-container">
+        <div class="chart-legend" id="chartLegend" style="display:none">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--cyan)"></div> Raw</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--magenta)"></div> Gaussian</div>
+          <div class="legend-item"><div class="legend-dot" style="background:rgba(220,38,38,0.6)"></div> FWHM</div>
+        </div>
+        <canvas id="profileChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="status-bar">
+  <span id="statusText">Ready</span>
+  <span id="statusDim">—</span>
+</div>
+<script>
+const S={imageData:null,channels:[],nCh:0,activeCh:0,rawMin:0,rawMax:255,dispMin:0,dispMax:255,width:0,height:0,zoom:1,panX:0,panY:0,drawing:false,drawMode:false,lineStart:null,lineEnd:null,lineColor:'#d97706',lut:'gray',profileData:null,fitResult:null,measurements:[]};
+const iC=document.getElementById('imageCanvas'),oC=document.getElementById('overlayCanvas');
+const iCtx=iC.getContext('2d'),oCtx=oC.getContext('2d');
+const wrap=document.getElementById('canvasWrap');
+
+const LUTs={
+  gray:t=>{const v=t*255;return[v,v,v];},
+  green:t=>[0,t*255,0],
+  magenta:t=>[t*255,0,t*255],
+  cyan:t=>[0,t*255,t*255],
+  fire:t=>{if(t<.33)return[t/.33*255,0,0];if(t<.66)return[255,(t-.33)/.33*255,0];return[255,255,(t-.66)/.34*255];},
+  hot:t=>{if(t<.375)return[t/.375*255,0,0];if(t<.75)return[255,(t-.375)/.375*255,0];return[255,255,(t-.75)/.25*255];},
+  ice:t=>[Math.min(1,t*2)*120,Math.min(1,Math.max(0,t-.25)*2)*200,t*255],
+  rainbow:t=>{const h=t*300,c=1,x=c*(1-Math.abs((h/60)%2-1));let r,g,b;if(h<60){r=c;g=x;b=0}else if(h<120){r=x;g=c;b=0}else if(h<180){r=0;g=c;b=x}else if(h<240){r=0;g=x;b=c}else{r=x;g=0;b=c}return[r*255,g*255,b*255];}
+};
+
+const fi=document.getElementById('fileInput');
+document.getElementById('btnBrowse').addEventListener('click',()=>fi.click());
+fi.addEventListener('change',e=>{if(e.target.files.length)handleFile(e.target.files[0]);});
+// Drag & drop onto the main viewer area
+wrap.addEventListener('dragover',e=>{e.preventDefault();wrap.style.outline='2px dashed var(--accent)';wrap.style.outlineOffset='-6px';});
+wrap.addEventListener('dragleave',()=>{wrap.style.outline='none';});
+wrap.addEventListener('drop',e=>{e.preventDefault();wrap.style.outline='none';if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0]);});
+document.getElementById('emptyState').addEventListener('click',()=>fi.click());
+
+function handleFile(file){
+  const ext=file.name.split('.').pop().toLowerCase();
+  document.getElementById('fileInfo').style.display='block';
+  document.getElementById('fileInfo').textContent=`${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  document.getElementById('statusText').textContent='Loading…';
+  if(ext==='tif'||ext==='tiff')loadTiff(file);else loadStd(file);
+}
+
+// Compute min/max for a channel's typed-array data.
+function toChannel(arr){
+  let mn=Infinity,mx=-Infinity;
+  for(let i=0;i<arr.length;i++){const v=arr[i];if(v<mn)mn=v;if(v>mx)mx=v;}
+  if(mx===mn)mx=mn+1;
+  return{data:arr,min:mn,max:mx};
+}
+
+// Multi-channel TIFF / OME-TIFF via geotiff.js (channels = IFD pages or interleaved samples).
+async function loadTiff(file){
+  if(typeof GeoTIFF==='undefined'){loadTiffUTIF(file);return;}
+  try{
+    const buf=await file.arrayBuffer();
+    const tiff=await GeoTIFF.fromArrayBuffer(buf);
+    const count=await tiff.getImageCount();
+    const first=await tiff.getImage(0);
+    const w=first.getWidth(),h=first.getHeight();
+    const spp=first.getSamplesPerPixel();
+    let channels=[];
+    if(count>=2){
+      // channels stored as separate IFD pages (typical multi-channel microscopy export)
+      for(let i=0;i<count;i++){
+        const img=await tiff.getImage(i);
+        if(img.getWidth()!==w||img.getHeight()!==h)continue; // skip pyramids / mismatched pages
+        const r=await img.readRasters();
+        for(let b=0;b<r.length;b++)channels.push(toChannel(r[b]));
+      }
+      if(!channels.length){const r=await first.readRasters();for(let b=0;b<r.length;b++)channels.push(toChannel(r[b]));}
+    } else if(spp>=2){
+      const r=await first.readRasters();               // single image, multiple bands
+      for(let i=0;i<r.length;i++)channels.push(toChannel(r[i]));
+    } else {
+      const r=await first.readRasters();
+      channels.push(toChannel(r[0]));
+    }
+    setChannels(channels,w,h);
+  }catch(err){console.error(err);loadTiffUTIF(file);}
+}
+
+// Fallback single-channel TIFF decode when geotiff is unavailable.
+function loadTiffUTIF(file){
+  if(typeof UTIF==='undefined'){document.getElementById('statusText').textContent='TIFF decoder failed to load — check internet connection and reload';return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const buf=new Uint8Array(e.target.result);
+      const ifds=UTIF.decode(buf);UTIF.decodeImage(buf,ifds[0]);
+      const ifd=ifds[0],w=ifd.width,h=ifd.height;
+      const rgba=UTIF.toRGBA8(ifd);
+      const gray=new Float32Array(w*h);
+      for(let i=0;i<w*h;i++)gray[i]=.299*rgba[i*4]+.587*rgba[i*4+1]+.114*rgba[i*4+2];
+      if(ifd.t258&&ifd.t258[0]>8){const data=ifd.data,samples=ifd.t277?ifd.t277[0]:1;if(samples===1&&data.length>=w*h*2)for(let i=0;i<w*h;i++)gray[i]=data[i*2]|(data[i*2+1]<<8);}
+      setChannels([toChannel(gray)],w,h);
+    }catch(err){console.error(err);loadStd(file);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// PNG/JPG/BMP: split into R/G/B channels, or a single channel if the image is grayscale.
+function loadStd(file){
+  const img=new Image();
+  img.onload=function(){
+    const w=img.width,h=img.height,N=w*h;
+    const tc=document.createElement('canvas');tc.width=w;tc.height=h;
+    const tctx=tc.getContext('2d');tctx.drawImage(img,0,0);
+    const id=tctx.getImageData(0,0,w,h).data;
+    const R=new Float32Array(N),G=new Float32Array(N),B=new Float32Array(N);
+    let color=false;
+    for(let i=0;i<N;i++){const r=id[i*4],g=id[i*4+1],b=id[i*4+2];R[i]=r;G[i]=g;B[i]=b;if(r!==g||g!==b)color=true;}
+    setChannels(color?[toChannel(R),toChannel(G),toChannel(B)]:[toChannel(R)],w,h);
+  };
+  img.src=URL.createObjectURL(file);
+}
+
+function setChannels(channels,w,h){
+  S.channels=channels;S.nCh=channels.length;S.width=w;S.height=h;
+  S.lineStart=null;S.lineEnd=null;S.profileData=null;S.fitResult=null;
+  buildChannelChips();
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('colormapWrap').style.display='block';
+  document.getElementById('resultsSection').style.display='none';
+  document.getElementById('chartLegend').style.display='none';
+  clearChart();
+  applyChannel(0,true);
+}
+
+function buildChannelChips(){
+  const sec=document.getElementById('channelSection'),box=document.getElementById('channelChips');
+  box.innerHTML='';
+  if(S.nCh<=1){sec.style.display='none';return;}
+  sec.style.display='block';
+  for(let i=0;i<S.nCh;i++){
+    const chip=document.createElement('div');
+    chip.className='lut-chip'+(i===0?' active':'');
+    chip.dataset.ch=i;chip.textContent='Ch '+(i+1);
+    chip.addEventListener('click',()=>applyChannel(i));
+    box.appendChild(chip);
+  }
+}
+
+// Switch the active channel: point imageData at it, reset display range, redraw, re-fit any current line.
+function applyChannel(i,firstLoad){
+  S.activeCh=i;const ch=S.channels[i];
+  S.imageData=ch.data;S.rawMin=ch.min;S.rawMax=ch.max;S.dispMin=ch.min;S.dispMax=ch.max;
+  updateMinMaxSliders();
+  document.querySelectorAll('#channelChips .lut-chip').forEach(c=>c.classList.toggle('active',+c.dataset.ch===i));
+  document.getElementById('statusDim').textContent=`${S.width} × ${S.height} px | Ch ${i+1}/${S.nCh} | range ${ch.min.toFixed(0)}–${ch.max.toFixed(0)}`;
+  document.getElementById('statusText').textContent='Image loaded';
+  if(firstLoad)fitToView();
+  renderImage();renderColorbar();
+  if(S.lineStart&&S.lineEnd)extractProfile();else renderOverlay();
+}
+
+function updateMinMaxSliders(){
+  const{rawMin:mn,rawMax:mx}=S;
+  ['minSlider','maxSlider'].forEach(id=>{const e=document.getElementById(id);e.min=mn;e.max=mx;});
+  document.getElementById('minSlider').value=S.dispMin;document.getElementById('maxSlider').value=S.dispMax;
+  document.getElementById('minVal').value=Math.round(S.dispMin);document.getElementById('maxVal').value=Math.round(S.dispMax);
+}
+
+function onMinChange(v){S.dispMin=parseFloat(v);document.getElementById('minSlider').value=S.dispMin;document.getElementById('minVal').value=Math.round(S.dispMin);renderImage();renderColorbar();}
+function onMaxChange(v){S.dispMax=parseFloat(v);document.getElementById('maxSlider').value=S.dispMax;document.getElementById('maxVal').value=Math.round(S.dispMax);renderImage();renderColorbar();}
+
+document.getElementById('minSlider').addEventListener('input',e=>onMinChange(e.target.value));
+document.getElementById('minVal').addEventListener('change',e=>onMinChange(e.target.value));
+document.getElementById('maxSlider').addEventListener('input',e=>onMaxChange(e.target.value));
+document.getElementById('maxVal').addEventListener('change',e=>onMaxChange(e.target.value));
+document.getElementById('btnAutoRange').addEventListener('click',()=>{S.dispMin=S.rawMin;S.dispMax=S.rawMax;updateMinMaxSliders();renderImage();renderColorbar();});
+document.getElementById('btnAutoMin').addEventListener('click',()=>{S.dispMin=S.rawMin;updateMinMaxSliders();renderImage();renderColorbar();});
+document.getElementById('btnAutoMax').addEventListener('click',()=>{S.dispMax=S.rawMax;updateMinMaxSliders();renderImage();renderColorbar();});
+
+function renderImage(){
+  if(!S.imageData)return;
+  const w=S.width,h=S.height;iC.width=w;iC.height=h;
+  const dMin=S.dispMin,range=(S.dispMax-S.dispMin)||1;
+  const imgD=iCtx.createImageData(w,h);const lutFn=LUTs[S.lut]||LUTs.gray;
+  for(let i=0;i<w*h;i++){
+    let t=Math.max(0,Math.min(1,(S.imageData[i]-dMin)/range));
+    const[r,g,b]=lutFn(t);
+    imgD.data[i*4]=r|0;imgD.data[i*4+1]=g|0;imgD.data[i*4+2]=b|0;imgD.data[i*4+3]=255;
+  }
+  iCtx.putImageData(imgD,0,0);applyTransform();
+}
+
+function renderColorbar(){
+  const c=document.getElementById('colormapCanvas'),h=256;
+  c.width=1;c.height=h;
+  const ctx=c.getContext('2d'),imgD=ctx.createImageData(1,h);
+  const lutFn=LUTs[S.lut]||LUTs.gray;
+  for(let i=0;i<h;i++){const t=1-i/(h-1);const[r,g,b]=lutFn(t);imgD.data[i*4]=r|0;imgD.data[i*4+1]=g|0;imgD.data[i*4+2]=b|0;imgD.data[i*4+3]=255;}
+  ctx.putImageData(imgD,0,0);
+  document.getElementById('cbarMax').textContent=Math.round(S.dispMax);
+  document.getElementById('cbarMid').textContent=Math.round((S.dispMin+S.dispMax)/2);
+  document.getElementById('cbarMin').textContent=Math.round(S.dispMin);
+}
+
+function applyTransform(){
+  // Image canvas: native-res bitmap, CSS-scaled by zoom (crisp via image-rendering:pixelated).
+  iC.style.width=S.width*S.zoom+'px';iC.style.height=S.height*S.zoom+'px';iC.style.left=S.panX+'px';iC.style.top=S.panY+'px';
+  // Overlay canvas: screen-resolution so the drawn line stays crisp at any zoom (display only — does not affect sampled data).
+  const cw=wrap.clientWidth,ch=wrap.clientHeight,dpr=window.devicePixelRatio||1;
+  oC.width=Math.round(cw*dpr);oC.height=Math.round(ch*dpr);
+  oC.style.width=cw+'px';oC.style.height=ch+'px';oC.style.left='0px';oC.style.top='0px';
+  oCtx.setTransform(dpr,0,0,dpr,0,0);
+  renderOverlay();
+  document.getElementById('zoomInfo').textContent=Math.round(S.zoom*100)+'%';
+}
+// image px -> screen (CSS) px within the wrap
+function toScreen(p){return{x:S.panX+p.x*S.zoom,y:S.panY+p.y*S.zoom};}
+
+function fitToView(){
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  const sx=(ww-20)/S.width,sy=(wh-20)/S.height;
+  S.zoom=Math.min(sx,sy,8);S.panX=(ww-S.width*S.zoom)/2;S.panY=(wh-S.height*S.zoom)/2;applyTransform();
+}
+
+document.getElementById('btnZoomIn').addEventListener('click',()=>{S.zoom*=1.3;applyTransform();});
+document.getElementById('btnZoomOut').addEventListener('click',()=>{S.zoom/=1.3;applyTransform();});
+document.getElementById('btnFit').addEventListener('click',fitToView);
+document.getElementById('btn1to1').addEventListener('click',()=>{S.zoom=1;S.panX=(wrap.clientWidth-S.width)/2;S.panY=(wrap.clientHeight-S.height)/2;applyTransform();});
+
+wrap.addEventListener('wheel',e=>{
+  if(!S.imageData)return;e.preventDefault();
+  const f=e.deltaY<0?1.1:0.9,r=wrap.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top,old=S.zoom;
+  S.zoom=Math.max(.1,Math.min(50,S.zoom*f));
+  S.panX=mx-(mx-S.panX)*(S.zoom/old);S.panY=my-(my-S.panY)*(S.zoom/old);applyTransform();
+});
+
+let isPan=false,psX,psY;
+wrap.addEventListener('mousedown',e=>{if(e.button===1||(e.button===0&&!S.drawMode)){isPan=true;psX=e.clientX-S.panX;psY=e.clientY-S.panY;oC.style.cursor='grabbing';e.preventDefault();}});
+window.addEventListener('mousemove',e=>{if(isPan){S.panX=e.clientX-psX;S.panY=e.clientY-psY;applyTransform();}});
+window.addEventListener('mouseup',()=>{isPan=false;oC.style.cursor=S.drawMode?'crosshair':'grab';});
+
+function canvasCoords(e){const r=wrap.getBoundingClientRect();return{x:(e.clientX-r.left-S.panX)/S.zoom,y:(e.clientY-r.top-S.panY)/S.zoom};}
+
+const btnDraw=document.getElementById('btnDraw');
+btnDraw.addEventListener('click',()=>{S.drawMode=!S.drawMode;btnDraw.classList.toggle('active',S.drawMode);oC.style.cursor=S.drawMode?'crosshair':'grab';});
+document.getElementById('btnClearCurrent').addEventListener('click',()=>{S.lineStart=null;S.lineEnd=null;S.profileData=null;S.fitResult=null;renderOverlay();clearChart();document.getElementById('resultsSection').style.display='none';document.getElementById('chartLegend').style.display='none';});
+
+oC.addEventListener('mousedown',e=>{if(!S.drawMode||e.button!==0||!S.imageData)return;S.drawing=true;S.lineStart=canvasCoords(e);S.lineEnd=null;});
+oC.addEventListener('mousemove',e=>{
+  if(!S.imageData)return;
+  const c=canvasCoords(e),px=Math.floor(c.x),py=Math.floor(c.y);
+  if(px>=0&&px<S.width&&py>=0&&py<S.height)document.getElementById('cursorInfo').textContent=`x:${px} y:${py} val:${S.imageData[py*S.width+px].toFixed(1)}`;
+  if(S.drawing){S.lineEnd=c;renderOverlay();}
+});
+oC.addEventListener('mouseup',e=>{if(S.drawing){S.drawing=false;S.lineEnd=canvasCoords(e);if(S.lineStart&&S.lineEnd)extractProfile();}});
+
+function renderOverlay(){
+  oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
+  S.measurements.forEach((m,i)=>drawLine(oCtx,m.startPt,m.endPt,m.color,.35,i+1));
+  if(S.lineStart&&S.lineEnd){
+    drawLine(oCtx,S.lineStart,S.lineEnd,S.lineColor,1);
+    if(S.fitResult&&S.profileData){
+      const f=S.fitResult,s=S.lineStart,en=S.lineEnd;
+      const dx=en.x-s.x,dy=en.y-s.y,len=Math.sqrt(dx*dx+dy*dy);
+      const nx=dx/len,ny=dy/len,pxSz=parseFloat(document.getElementById('pixelSize').value)||20;
+      const fs=(f.center-f.fwhm/2)/pxSz,fe=(f.center+f.fwhm/2)/pxSz;
+      oCtx.strokeStyle='rgba(217,48,37,0.9)';oCtx.lineWidth=2;
+      const pL=10/S.zoom,px=-ny,py2=nx; // pL in image px; toScreen scales it to ~10 screen px
+      [fs,fe].forEach(t=>{
+        if(t<0||t>S.profileData.length)return;
+        const fx=s.x+nx*t,fy=s.y+ny*t;
+        const a=toScreen({x:fx-px*pL,y:fy-py2*pL}),b=toScreen({x:fx+px*pL,y:fy+py2*pL});
+        oCtx.beginPath();oCtx.moveTo(a.x,a.y);oCtx.lineTo(b.x,b.y);oCtx.stroke();
+      });
+    }
+  }
+}
+
+// s, en are in image px; converted to crisp screen-space here (display only).
+function drawLine(ctx,s,en,color,alpha,label){
+  const A=toScreen(s),B=toScreen(en);
+  ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash([6,4]);
+  ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.setLineDash([]);
+  [A,B].forEach(p=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.lineWidth=1.2;ctx.stroke();});
+  if(label!==undefined){ctx.globalAlpha=Math.min(1,alpha+.3);ctx.font="bold 12px 'Roboto Mono'";ctx.fillStyle=color;ctx.fillText('#'+label,A.x+7,A.y-7);}
+  ctx.restore();
+}
+
+function extractProfile(){
+  if(!S.imageData||!S.lineStart||!S.lineEnd)return;
+  const s=S.lineStart,en=S.lineEnd;
+  const dx=en.x-s.x,dy=en.y-s.y,len=Math.sqrt(dx*dx+dy*dy);
+  const steps=Math.max(Math.round(len),2);
+  const lw=parseInt(document.getElementById('lineWidth').value)||1;
+  const nx=dx/len,ny=dy/len,perpX=-ny,perpY=nx;
+  const profile=[];
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,cx=s.x+dx*t,cy=s.y+dy*t;
+    let sum=0,cnt=0;
+    for(let w=-(lw-1)/2;w<=(lw-1)/2;w++){
+      const px=Math.round(cx+perpX*w),py=Math.round(cy+perpY*w);
+      if(px>=0&&px<S.width&&py>=0&&py<S.height){sum+=S.imageData[py*S.width+px];cnt++;}
+    }
+    profile.push(cnt>0?sum/cnt:0);
+  }
+  S.profileData=profile;
+  fitGaussian(profile,parseFloat(document.getElementById('pixelSize').value)||20);
+}
+
+function fitGaussian(profile,pxSz){
+  const n=profile.length,xD=profile.map((_,i)=>i*pxSz),yD=[...profile];
+  const sorted=[...yD].sort((a,b)=>a-b);
+  const baseN=Math.max(2,Math.floor(n*.2));
+  let offset=0;for(let i=0;i<baseN;i++)offset+=sorted[i];offset/=baseN;
+  const baselined=yD.map(v=>v-offset);
+  let peakVal=-Infinity,peakIdx=0;
+  for(let i=0;i<n;i++){if(baselined[i]>peakVal){peakVal=baselined[i];peakIdx=i;}}
+  let amp=peakVal;
+  const halfPeak=amp*.5;let wSum=0,wCnt=0;
+  for(let i=0;i<n;i++){if(baselined[i]>halfPeak){wSum+=xD[i]*baselined[i];wCnt+=baselined[i];}}
+  let center=wCnt>0?wSum/wCnt:xD[peakIdx];
+  const halfMax=amp*.5;let iLeft=peakIdx,iRight=peakIdx;
+  while(iLeft>0&&baselined[iLeft]>halfMax)iLeft--;while(iRight<n-1&&baselined[iRight]>halfMax)iRight++;
+  let xLeft=xD[iLeft],xRight=xD[iRight];
+  if(iLeft<peakIdx&&iLeft+1<n){const frac=(halfMax-baselined[iLeft])/((baselined[iLeft+1]-baselined[iLeft])||1);xLeft=xD[iLeft]+frac*pxSz;}
+  if(iRight>peakIdx&&iRight-1>=0){const frac=(halfMax-baselined[iRight])/((baselined[iRight-1]-baselined[iRight])||1);xRight=xD[iRight]-frac*pxSz;}
+  const estFWHM=Math.max(pxSz,xRight-xLeft);
+  let sigma=estFWHM/(2*Math.sqrt(2*Math.log(2)));if(sigma<pxSz*.5)sigma=pxSz*2;
+
+  const G=(x,p)=>{const d=(x-p[1])/p[2];return p[3]+p[0]*Math.exp(-.5*d*d);};
+  const Res=p=>xD.map((x,i)=>yD[i]-G(x,p));
+  const Jac=p=>xD.map(x=>{const d=(x-p[1])/p[2],ex=Math.exp(-.5*d*d);return[ex,p[0]*ex*d/p[2],p[0]*ex*d*d/p[2],1];});
+  const cost=p=>Res(p).reduce((s,v)=>s+v*v,0);
+
+  function runLM(initP,maxIter){
+    let P=[...initP],lam=1e-3;
+    for(let it=0;it<maxIter;it++){
+      const r=Res(P),Jm=Jac(P);
+      const JtJ=Array.from({length:4},()=>new Float64Array(4));const JtR=new Float64Array(4);
+      for(let i=0;i<n;i++){for(let j=0;j<4;j++){JtR[j]+=Jm[i][j]*r[i];for(let k=0;k<4;k++)JtJ[j][k]+=Jm[i][j]*Jm[i][k];}}
+      for(let j=0;j<4;j++)JtJ[j][j]*=(1+lam);
+      const aug=JtJ.map((row,i)=>[...row,JtR[i]]);
+      for(let col=0;col<4;col++){
+        let mr=col;for(let row=col+1;row<4;row++)if(Math.abs(aug[row][col])>Math.abs(aug[mr][col]))mr=row;
+        [aug[col],aug[mr]]=[aug[mr],aug[col]];
+        if(Math.abs(aug[col][col])<1e-20)continue;
+        for(let row=col+1;row<4;row++){const f=aug[row][col]/aug[col][col];for(let j=col;j<=4;j++)aug[row][j]-=f*aug[col][j];}
+      }
+      const delta=new Float64Array(4);
+      for(let i=3;i>=0;i--){delta[i]=aug[i][4];for(let j=i+1;j<4;j++)delta[i]-=aug[i][j]*delta[j];delta[i]/=aug[i][i]||1e-20;}
+      let stepScale=1;
+      for(let j=0;j<4;j++){const ratio=Math.abs(delta[j])/(Math.abs(P[j])+1e-10);if(ratio>2)stepScale=Math.min(stepScale,2/ratio);}
+      const newP=P.map((p,i)=>p+delta[i]*stepScale);if(newP[2]<pxSz*.1)newP[2]=pxSz*.1;
+      const oldC=cost(P),newC=cost(newP);
+      if(newC<oldC){P=newP;lam=Math.max(1e-10,lam*.3);if(Math.abs(oldC-newC)/(oldC+1e-20)<1e-12)break;}
+      else lam=Math.min(1e8,lam*3);
+    }
+    return P;
+  }
+
+  let bestP=runLM([amp,center,sigma,offset],500);let bestCost=cost(bestP);
+  const altSigmas=[sigma*.3,sigma*.7,sigma*1.5,sigma*3],altCenters=[center,xD[peakIdx]];
+  for(const as of altSigmas)for(const ac of altCenters){const trial=runLM([amp,ac,as,offset],300);const tc=cost(trial);if(tc<bestCost&&trial[2]>0){bestP=trial;bestCost=tc;}}
+  bestP[2]=Math.abs(bestP[2]);
+  const fwhm=2*Math.sqrt(2*Math.log(2))*bestP[2];
+  const yMean=yD.reduce((a,b)=>a+b,0)/n;const ssTot=yD.reduce((s,y)=>s+(y-yMean)**2,0);const ssRes=cost(bestP);const r2=1-ssRes/(ssTot||1);
+  const fitCurve=xD.map(x=>G(x,bestP));
+  S.fitResult={amplitude:bestP[0],center:bestP[1],sigma:bestP[2],offset:bestP[3],fwhm,r2,xData:xD,fitCurve};
+  updateResults();plotProfile(xD,yD,fitCurve);renderOverlay();
+}
+
+function updateResults(){
+  const f=S.fitResult;
+  document.getElementById('resultsSection').style.display='block';
+  document.getElementById('resFwhm').textContent=f.fwhm.toFixed(1)+' nm';
+  document.getElementById('resAmp').textContent=f.amplitude.toFixed(1);
+  document.getElementById('resCenter').textContent=f.center.toFixed(1)+' nm';
+  document.getElementById('resSigma').textContent=f.sigma.toFixed(1)+' nm';
+  document.getElementById('resOffset').textContent=f.offset.toFixed(1);
+  document.getElementById('resR2').textContent=f.r2.toFixed(4);
+}
+
+let chart=null;
+function plotProfile(xD,yD,fC){
+  document.getElementById('chartLegend').style.display='flex';
+  const f=S.fitResult,hm=f.offset+f.amplitude/2,fl=f.center-f.fwhm/2,fr=f.center+f.fwhm/2;
+  if(chart)chart.destroy();
+  chart=new Chart(document.getElementById('profileChart').getContext('2d'),{
+    type:'line',
+    data:{labels:xD.map(x=>x.toFixed(1)),datasets:[
+      {label:'Raw Profile',data:yD,borderColor:'#F763AA',backgroundColor:'rgba(247,99,170,0.08)',borderWidth:1.5,pointRadius:0,fill:true,tension:.1,order:2},
+      {label:'Gaussian Fit',data:fC,borderColor:'#5FC44A',borderWidth:2,pointRadius:0,borderDash:[6,3],fill:false,tension:.3,order:1},
+      {label:'FWHM',data:xD.map(x=>(x>=fl&&x<=fr)?hm:null),borderColor:'rgba(217,48,37,0.7)',backgroundColor:'rgba(217,48,37,0.07)',borderWidth:2,pointRadius:0,fill:true,spanGaps:false,order:0}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#ffffff',titleColor:'#202124',bodyColor:'#5f6368',borderColor:'#dadce0',borderWidth:1,titleFont:{family:'Roboto Mono',size:11},bodyFont:{family:'Roboto Mono',size:11},callbacks:{title:i=>`Position: ${i[0].label} nm`,label:i=>`${i.dataset.label}: ${i.parsed.y.toFixed(1)}`}}},
+      scales:{
+        x:{title:{display:true,text:'Distance (nm)',color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10},maxTicksLimit:12},grid:{display:false},border:{color:'#dadce0'}},
+        y:{title:{display:true,text:'Intensity (a.u.)',color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:false},border:{color:'#dadce0'}}
+      },interaction:{mode:'index',intersect:false}
+    }
+  });
+}
+function clearChart(){if(chart){chart.destroy();chart=null;}}
+
+document.getElementById('btnSaveMeas').addEventListener('click',()=>{
+  if(!S.fitResult||!S.lineStart||!S.lineEnd)return;
+  const f=S.fitResult,pxSz=parseFloat(document.getElementById('pixelSize').value)||20;
+  S.measurements.push({id:Date.now(),channel:S.activeCh+1,fwhm:f.fwhm,r2:f.r2,amplitude:f.amplitude,center:f.center,sigma:f.sigma,offset:f.offset,lineLength:S.profileData.length*pxSz,startPt:{...S.lineStart},endPt:{...S.lineEnd},color:S.lineColor,pixelSize:pxSz,profileData:[...S.profileData],fitCurve:[...f.fitCurve],xData:[...f.xData]});
+  S.lineStart=null;S.lineEnd=null;S.profileData=null;S.fitResult=null;
+  document.getElementById('resultsSection').style.display='none';document.getElementById('chartLegend').style.display='none';
+  clearChart();refreshMeasTable();renderOverlay();
+});
+
+function refreshMeasTable(){
+  const L=S.measurements;
+  document.getElementById('measSection').style.display=L.length?'block':'none';
+  document.getElementById('measCount').textContent=L.length;
+  document.getElementById('measBody').innerHTML=L.map((m,i)=>`<tr data-idx="${i}" onclick="selectMeas(${i})" style="cursor:pointer"><td>${i+1}</td><td>${m.channel||1}</td><td class="fwhm-cell">${m.fwhm.toFixed(1)}</td><td>${m.r2.toFixed(3)}</td><td>${m.lineLength.toFixed(0)}</td><td><button class="del-btn" onclick="event.stopPropagation();delMeas(${i})">✕</button></td></tr>`).join('');
+  if(L.length){const fs=L.map(m=>m.fwhm),mean=fs.reduce((a,b)=>a+b,0)/fs.length;const std=fs.length>1?Math.sqrt(fs.reduce((s,v)=>s+(v-mean)**2,0)/(fs.length-1)):0;document.getElementById('meanFwhm').textContent=mean.toFixed(1)+' nm';document.getElementById('stdFwhm').textContent=std.toFixed(1)+' nm';}
+  else{document.getElementById('meanFwhm').textContent='—';document.getElementById('stdFwhm').textContent='—';}
+}
+
+window.selectMeas=function(idx){
+  const m=S.measurements[idx];if(!m)return;
+  document.querySelectorAll('.meas-table tr').forEach(r=>r.classList.remove('active-row'));
+  const row=document.querySelector(`.meas-table tr[data-idx="${idx}"]`);if(row)row.classList.add('active-row');
+  S.fitResult={amplitude:m.amplitude,center:m.center,sigma:m.sigma,offset:m.offset,fwhm:m.fwhm,r2:m.r2,xData:m.xData,fitCurve:m.fitCurve};
+  S.profileData=m.profileData;updateResults();plotProfile(m.xData,m.profileData,m.fitCurve);document.getElementById('resultsSection').style.display='block';
+};
+window.delMeas=function(idx){S.measurements.splice(idx,1);refreshMeasTable();renderOverlay();};
+document.getElementById('btnClearAll').addEventListener('click',()=>{S.measurements=[];refreshMeasTable();renderOverlay();});
+
+document.getElementById('btnDownloadCSV').addEventListener('click',()=>{
+  const L=S.measurements;if(!L.length)return;
+  let csv='Measurement,Channel,FWHM_nm,Amplitude,Center_nm,Sigma_nm,Offset,R2,LineLength_nm,PixelSize_nm\n';
+  L.forEach((m,i)=>{csv+=`${i+1},${m.channel||1},${m.fwhm.toFixed(2)},${m.amplitude.toFixed(2)},${m.center.toFixed(2)},${m.sigma.toFixed(2)},${m.offset.toFixed(2)},${m.r2.toFixed(4)},${m.lineLength.toFixed(2)},${m.pixelSize}\n`;});
+  const fs=L.map(m=>m.fwhm),mean=fs.reduce((a,b)=>a+b,0)/fs.length;const std=fs.length>1?Math.sqrt(fs.reduce((s,v)=>s+(v-mean)**2,0)/(fs.length-1)):0;
+  csv+=`\nStatistics\nMean_FWHM_nm,${mean.toFixed(2)}\nStd_FWHM_nm,${std.toFixed(2)}\nN,${L.length}\n`;
+  L.forEach((m,i)=>{csv+=`\nProfile_${i+1}\nDistance_nm,Raw_Intensity,Gaussian_Fit\n`;for(let j=0;j<m.xData.length;j++)csv+=`${m.xData[j].toFixed(2)},${m.profileData[j].toFixed(2)},${m.fitCurve[j].toFixed(2)}\n`;});
+  const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='size_analysis_measurements.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);
+});
+
+document.querySelectorAll('.lut-chip[data-lut]').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('.lut-chip[data-lut]').forEach(x=>x.classList.remove('active'));c.classList.add('active');S.lut=c.dataset.lut;renderImage();renderColorbar();});});
+document.querySelectorAll('.color-swatch').forEach(sw=>{sw.addEventListener('click',()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');S.lineColor=sw.dataset.color;renderOverlay();});});
+document.getElementById('pixelSize').addEventListener('change',()=>{if(S.profileData)fitGaussian(S.profileData,parseFloat(document.getElementById('pixelSize').value)||20);});
+document.getElementById('lineWidth').addEventListener('change',()=>{if(S.lineStart&&S.lineEnd)extractProfile();});
+
+const rh=document.getElementById('resizeHandle');let isR=false,rsY,rsH;
+rh.addEventListener('mousedown',e=>{isR=true;rsY=e.clientY;rsH=document.getElementById('bottomPanel').offsetHeight;e.preventDefault();});
+window.addEventListener('mousemove',e=>{if(!isR)return;const h2=rsH-(e.clientY-rsY);document.getElementById('bottomPanel').style.height=Math.max(120,Math.min(500,h2))+'px';if(S.imageData)fitToView();});
+window.addEventListener('mouseup',()=>{isR=false;});
+window.addEventListener('resize',()=>{if(S.imageData)fitToView();});
+
+document.getElementById('statusText').textContent=(typeof GeoTIFF!=='undefined'||typeof UTIF!=='undefined')?'Ready — multi-channel TIFF support loaded':'Ready (TIFF unavailable — use PNG/JPG)';
+</script>
+</body>
+</html>
