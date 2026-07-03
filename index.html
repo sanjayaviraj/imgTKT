@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Line Profile Analyzer</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Fira+Code:wght@300;400;500;600&display=swap');
   :root {
@@ -284,6 +285,7 @@ function handleFile(file){
 }
 
 function loadTiff(file){
+  if(typeof UTIF==='undefined'){document.getElementById('statusText').textContent='TIFF decoder failed to load — check internet connection and reload';return;}
   const reader=new FileReader();
   reader.onload=function(e){
     try{
@@ -612,12 +614,7 @@ window.addEventListener('mousemove',e=>{if(!isR)return;const h2=rsH-(e.clientY-r
 window.addEventListener('mouseup',()=>{isR=false;});
 window.addEventListener('resize',()=>{if(S.imageData)fitToView();});
 
-(function(){
-  const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js';
-  s.onload=()=>{document.getElementById('statusText').textContent='Ready — TIFF support loaded';};
-  s.onerror=()=>{window.UTIF={decode:()=>{throw new Error('UTIF not loaded');},decodeImage:()=>{},toRGBA8:()=>new Uint8Array(0)};document.getElementById('statusText').textContent='Ready (TIFF unavailable — use PNG/JPG)';};
-  document.head.appendChild(s);
-})();
+document.getElementById('statusText').textContent=typeof UTIF!=='undefined'?'Ready — TIFF support loaded':'Ready (TIFF unavailable — use PNG/JPG)';
 </script>
 </body>
 </html>
