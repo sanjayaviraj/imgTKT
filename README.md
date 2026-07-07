@@ -1,5 +1,7 @@
 # imgTKT — A Quick Image Analysis Tool Kit
 
+To access this browser-based image analysis tool, go to https://github.com/sanjayaviraj/imgTKT 
+
 Browser-based tools for microscopy and scientific image analysis. Each tool is a single
 self-contained HTML file — no build step, no server, no install. Everything runs locally in the
 browser, so **images are never uploaded anywhere**. Open `index.html` to reach all tools.
