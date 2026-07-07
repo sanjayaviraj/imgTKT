@@ -1,8 +1,10 @@
 <!DOCTYPE html>
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. All rights reserved. Proprietary; do not copy, modify, or distribute without written permission. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
 <title>Size Analysis</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
@@ -18,8 +20,8 @@
   :root {
     --bg-primary:#f8f9fa;--bg-secondary:#ffffff;--bg-panel:#ffffff;--bg-input:#ffffff;
     --border:#dadce0;--text-primary:#202124;--text-secondary:#5f6368;--text-muted:#80868b;
-    --accent:#5FC44A;--accent-glow:rgba(95,196,74,0.16);--green:#188038;--green-glow:rgba(24,128,56,0.10);
-    --red:#d93025;--yellow:#e37400;--cyan:#F763AA;--magenta:#5FC44A;
+    --accent:#5FC44A;--accent-glow:rgba(95,196,74,0.16);--accent-hover:#4CAF3C;--green:#188038;--green-glow:rgba(24,128,56,0.10);
+    --red:#d93025;--yellow:#e37400;--cyan:#F763AA;--magenta:#5FC44A;--pink:#F763AA;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'Roboto',sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
@@ -27,9 +29,9 @@
   .header-title{font-family:'Roboto',sans-serif;font-size:22px;font-weight:500;letter-spacing:0;color:var(--text-primary);}
   .header-subtitle{font-size:12px;color:var(--text-muted);font-family:'Roboto',sans-serif;}
   .main{display:flex;flex:1;overflow:hidden;}
-  .left-panel{width:290px;min-width:290px;background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
-  .panel-section{padding:14px 16px;border-bottom:1px solid var(--border);}
-  .section-label{font-family:'Roboto Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;}
+  .left-panel{width:440px;min-width:440px;background:var(--bg-panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;order:2;}
+  .panel-section{padding:18px 22px;border-bottom:1px solid var(--border);}
+  .section-label{font-family:'Roboto',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.3px;text-transform:none;color:var(--text-primary);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:7px;}
   .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg-input);}
   .upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--accent-glow);}
   .upload-zone.has-file{border-color:var(--green);background:var(--green-glow);border-style:solid;}
@@ -45,18 +47,20 @@
   .range-row input[type=range]{flex:1;accent-color:var(--accent);height:4px;}
   .range-row input[type=number]{width:64px;padding:4px 6px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:'Roboto Mono',monospace;font-size:11px;outline:none;text-align:right;box-shadow:0 1px 2px rgba(0,0,0,0.04);}
   .range-row input[type=number]:focus{border-color:var(--accent);}
-  .btn{width:100%;padding:9px 16px;border:1px solid var(--border);border-radius:999px;background:var(--bg-input);color:var(--text-primary);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:none;}
-  .btn:hover{background:var(--bg-secondary);border-color:var(--accent);color:var(--accent);}
-  .btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .btn.danger{border-color:var(--red);color:var(--red);}
-  .btn.danger:hover{background:rgba(220,38,38,0.07);}
-  .btn.success{border-color:var(--green);color:var(--green);}
-  .btn.success:hover{background:rgba(5,150,105,0.07);}
+  .btn{width:100%;padding:9px 18px;border:1px solid var(--border);border-radius:999px;background:var(--bg-input);color:var(--text-primary);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:none;}
+  .btn:hover:not(:disabled){background:var(--bg-primary);border-color:var(--accent);color:var(--accent);}
+  .btn.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent);}
+  .btn.danger{border-color:var(--pink);color:var(--pink);}
+  .btn.danger:hover:not(:disabled){background:rgba(247,99,170,0.08);border-color:var(--pink);color:var(--pink);}
+  .btn.success{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.success:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);color:#fff;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
   .btn-row{display:flex;gap:8px;margin-top:8px;}
   .btn-row .btn{flex:1;}
   .color-options{display:flex;gap:6px;margin-top:6px;}
-  .color-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.15s;}
-  .color-swatch.active{border-color:#0f172a;transform:scale(1.15);}
+  .color-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid var(--border);transition:all 0.15s;}
+  .color-swatch:hover{transform:scale(1.1);}
+  .color-swatch.active{border-color:var(--text-primary);transform:scale(1.12);}
   .lut-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;}
   .lut-chip{padding:3px 10px;border-radius:999px;font-size:10px;font-family:'Roboto Mono',monospace;cursor:pointer;border:1px solid var(--border);background:var(--bg-input);color:var(--text-secondary);transition:all 0.15s;}
   .lut-chip.active{border-color:var(--accent);color:var(--accent);background:var(--accent-glow);}
@@ -79,8 +83,13 @@
   .meas-table .fwhm-cell{color:var(--cyan);font-weight:600;}
   .meas-table .del-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:0 2px;transition:color 0.15s;}
   .meas-table .del-btn:hover{color:var(--red);}
-  .image-viewer{flex:1;display:flex;flex-direction:column;position:relative;background:#e2e8f0;overflow:hidden;}
-  .viewer-toolbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;}
+  .image-viewer{flex:1;display:flex;flex-direction:column;position:relative;background:var(--bg-primary);overflow:hidden;}
+  .viewer-head{background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;}
+  .filename{padding:9px 14px 0;font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pill{background:var(--bg-primary);border:1px solid var(--border);border-radius:999px;padding:6px 13px;color:var(--text-secondary);font-size:12px;font-family:'Roboto Mono',monospace;white-space:nowrap;}
+  .pill b{color:var(--text-primary)}
+  .top-result{font-family:'Roboto Mono',monospace;font-size:15px;font-weight:600;color:var(--accent);letter-spacing:0.3px;padding:5px 14px;background:var(--accent-glow);border:1px solid var(--accent);border-radius:999px;white-space:nowrap;}
+  .viewer-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;flex-shrink:0;flex-wrap:wrap;}
   .toolbar-btn{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:999px;color:var(--text-secondary);font-size:11px;cursor:pointer;font-family:'Roboto Mono',monospace;transition:all 0.15s;}
   .toolbar-btn:hover{border-color:var(--accent);color:var(--accent);}
   .toolbar-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
@@ -90,8 +99,12 @@
   .canvas-wrap canvas{position:absolute;top:0;left:0;}
   #imageCanvas{image-rendering:pixelated;}
   #overlayCanvas{cursor:crosshair;z-index:2;}
-  .empty-state{text-align:center;color:var(--text-muted);font-size:13px;line-height:1.8;}
-  .empty-state .icon{font-size:48px;margin-bottom:12px;opacity:0.4;}
+  .empty-state{position:absolute;top:24px;left:24px;right:24px;bottom:24px;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:var(--bg-secondary);border:1.5px dashed var(--border);border-radius:8px;padding:42px 24px;cursor:pointer;transition:border-color 0.2s,background 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+  .empty-state:hover{border-color:var(--accent);background:var(--accent-glow);}
+  .empty-state strong{font-family:'Roboto',sans-serif;font-size:17px;font-weight:600;display:block;margin-bottom:6px;color:var(--text-primary);}
+  .empty-state span{color:var(--text-muted);font-size:12.5px;}
+  .chart-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 24px;color:var(--text-muted);font-size:12px;font-family:'Roboto Mono',monospace;z-index:2;}
+  .chart-empty .chart-desc{max-width:560px;font-family:'Roboto',sans-serif;font-size:13px;line-height:1.6;color:var(--text-secondary);}
   .bottom-panel{height:230px;min-height:160px;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;flex-shrink:0;position:relative;box-shadow:0 -1px 3px rgba(0,0,0,0.05);}
   .chart-container{flex:1;padding:10px 16px 10px 10px;position:relative;}
   .chart-container canvas{width:100%!important;height:100%!important;}
@@ -113,9 +126,11 @@
       <a href="size_analysis.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;background:var(--accent);color:#fff">Size Analysis</a>
       <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Line Profile</a>
       <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">ROI Inspector</a>
+      <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Correlations</a>
+      <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Plot Data</a>
     </nav>
+    <div class="header-subtitle">FWHM Measurement Tool</div>
   </div>
-  <div class="header-subtitle">FWHM Measurement Tool</div>
 </div>
 <div class="main">
   <div class="left-panel">
@@ -171,18 +186,26 @@
     <div class="panel-section">
       <div class="section-label">Line Profile</div>
       <div class="form-group">
+        <label>Line Type</label>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn active" id="btnLineStraight">╱ Straight</button>
+          <button class="btn" id="btnLineFree">✎ Freehand</button>
+        </div>
+      </div>
+      <div class="form-group">
         <label>Line Width (px)</label>
         <input type="number" id="lineWidth" value="1" min="1" max="20" step="1">
       </div>
       <div class="form-group">
         <label>Line Color</label>
         <div class="color-options">
-          <div class="color-swatch active" style="background:#d97706" data-color="#d97706"></div>
-          <div class="color-swatch" style="background:#dc2626" data-color="#dc2626"></div>
-          <div class="color-swatch" style="background:#059669" data-color="#059669"></div>
+          <div class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></div>
+          <div class="color-swatch" style="background:#ffd400" data-color="#ffd400"></div>
           <div class="color-swatch" style="background:#F763AA" data-color="#F763AA"></div>
-          <div class="color-swatch" style="background:#a21caf" data-color="#a21caf"></div>
-          <div class="color-swatch" style="background:#0f172a" data-color="#0f172a"></div>
+          <div class="color-swatch" style="background:#5FC44A" data-color="#5FC44A"></div>
+          <div class="color-swatch" style="background:#00e5ff" data-color="#00e5ff"></div>
+          <div class="color-swatch" style="background:#ff5252" data-color="#ff5252"></div>
+          <div class="color-swatch" style="background:#202124" data-color="#202124"></div>
         </div>
       </div>
       <div class="btn-row">
@@ -220,23 +243,40 @@
         <button class="btn success" id="btnDownloadCSV">⬇ Download CSV</button>
         <button class="btn danger" id="btnClearAll">✕ Clear All</button>
       </div>
+      <div class="btn-row" style="margin-top:8px"><button class="btn" id="btnPlotData">📊 Plot this data →</button></div>
     </div>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
     <div class="image-viewer" id="imageViewer">
-      <div class="viewer-toolbar">
-        <button class="toolbar-btn" id="btnZoomIn">＋</button>
-        <button class="toolbar-btn" id="btnZoomOut">－</button>
-        <button class="toolbar-btn" id="btnFit">⊞ Fit</button>
-        <button class="toolbar-btn" id="btn1to1">1:1</button>
-        <div class="toolbar-sep"></div>
-        <span class="toolbar-info" id="zoomInfo">100%</span>
-        <span class="toolbar-info" id="cursorInfo">—</span>
+      <div class="viewer-head">
+        <div class="filename" id="fileName" style="display:none"></div>
+        <div class="viewer-toolbar">
+          <span class="pill">Size <b id="pSize">–</b></span>
+          <span class="pill">Channels <b id="pCh">–</b></span>
+          <span class="pill">Bit depth <b id="pBits">–</b></span>
+          <span id="loadActions" style="display:none">
+            <button class="toolbar-btn" id="btnClearTop">Clear line</button>
+            <button class="toolbar-btn" id="btnReset">Load another</button>
+          </span>
+          <span class="toolbar-info" id="cursorInfo">—</span>
+          <span class="top-result" id="topResult" style="display:none"></span>
+        </div>
+        <div class="viewer-toolbar" style="padding-top:0">
+          <span class="pill" style="display:flex;align-items:center;gap:8px">Zoom
+            <input type="range" id="zoomSlider" min="0.25" max="8" step="0.05" value="1" style="width:130px;accent-color:var(--accent)">
+            <b id="zoomInfo" style="min-width:42px;text-align:right;color:var(--text-primary)">100%</b>
+          </span>
+          <button class="toolbar-btn" id="btnZoomOut">−</button>
+          <button class="toolbar-btn" id="btn1to1">100%</button>
+          <button class="toolbar-btn" id="btnFit">Fit</button>
+          <button class="toolbar-btn" id="btnZoomIn">+</button>
+        </div>
+        <div class="viewer-toolbar" id="ztBar" style="display:none;padding-top:0"></div>
       </div>
       <div class="canvas-wrap" id="canvasWrap">
-        <div class="empty-state" id="emptyState" style="cursor:pointer">
-          <div class="icon">📷</div>Drag &amp; drop an image here, or click to browse<br>
-          <span style="font-size:11px">Then draw a line to measure FWHM</span>
+        <div class="empty-state" id="emptyState">
+          <strong>Drop an image here</strong>
+          <span>or click to browse · TIFF / OME-TIFF · PNG / JPG · then draw a line to measure FWHM</span>
         </div>
         <canvas id="imageCanvas"></canvas>
         <canvas id="overlayCanvas"></canvas>
@@ -257,6 +297,10 @@
           <div class="legend-item"><div class="legend-dot" style="background:rgba(220,38,38,0.6)"></div> FWHM</div>
         </div>
         <canvas id="profileChart"></canvas>
+        <div class="chart-empty" id="chartEmpty">
+          <p class="chart-desc">Draw a line across a feature, extract its intensity profile, and fit a Gaussian to measure FWHM. Loads multi-channel TIFF/OME-TIFF with a channel selector, plus LUTs, calibrated pixel size, and CSV export of measurements.</p>
+          Draw a line to see its intensity profile and Gaussian fit
+        </div>
       </div>
     </div>
   </div>
@@ -266,7 +310,7 @@
   <span id="statusDim">—</span>
 </div>
 <script>
-const S={imageData:null,channels:[],nCh:0,activeCh:0,rawMin:0,rawMax:255,dispMin:0,dispMax:255,width:0,height:0,zoom:1,panX:0,panY:0,drawing:false,drawMode:false,lineStart:null,lineEnd:null,lineColor:'#d97706',lut:'gray',profileData:null,fitResult:null,measurements:[]};
+const S={imageData:null,channels:[],nCh:0,activeCh:0,rawMin:0,rawMax:255,dispMin:0,dispMax:255,width:0,height:0,zoom:1,panX:0,panY:0,drawing:false,drawMode:true,lineType:'straight',linePts:null,lineStart:null,lineEnd:null,lineColor:'#ffffff',lut:'gray',profileData:null,fitResult:null,measurements:[]};
 const iC=document.getElementById('imageCanvas'),oC=document.getElementById('overlayCanvas');
 const iCtx=iC.getContext('2d'),oCtx=oC.getContext('2d');
 const wrap=document.getElementById('canvasWrap');
@@ -295,6 +339,7 @@ function handleFile(file){
   const ext=file.name.split('.').pop().toLowerCase();
   document.getElementById('fileInfo').style.display='block';
   document.getElementById('fileInfo').textContent=`${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  const fn=document.getElementById('fileName'); fn.textContent=file.name; fn.title=file.name; fn.style.display='block';
   document.getElementById('statusText').textContent='Loading…';
   if(ext==='tif'||ext==='tiff')loadTiff(file);else loadStd(file);
 }
@@ -308,6 +353,86 @@ function toChannel(arr){
 }
 
 // Multi-channel TIFF / OME-TIFF via geotiff.js (channels = IFD pages or interleaved samples).
+/* ---------- dimension metadata (separate channels from Z-slices / time points) ---------- */
+// TIFF pages can be channels, Z-slices, or time points; read the real layout from OME-XML or ImageJ
+// metadata so a z-stack / time series isn't mistaken for N "channels".
+function parseDims(desc){
+  if(!desc) return null;
+  const pm=desc.match(/<Pixels\b[^>]*>/i);
+  if(pm){
+    const gi=k=>{const r=pm[0].match(new RegExp(k+'\\s*=\\s*"(\\d+)"'));return r?+r[1]:null;};
+    const nC=gi('SizeC');
+    if(nC){const od=pm[0].match(/DimensionOrder\s*=\s*"([A-Za-z]+)"/);
+      return {nC:nC,nZ:gi('SizeZ')||1,nT:gi('SizeT')||1,order:od?od[1].toUpperCase():'XYCZT',source:'OME'};}
+  }
+  if(/ImageJ\s*=/.test(desc)){
+    const gi=k=>{const r=desc.match(new RegExp('(?:^|[\\n\\r])'+k+'\\s*=\\s*(\\d+)'));return r?+r[1]:null;};
+    const nC=gi('channels'),nZ=gi('slices'),nT=gi('frames');
+    if(nC||nZ||nT) return {nC:nC||1,nZ:nZ||1,nT:nT||1,order:'XYCZT',source:'ImageJ'};
+  }
+  return null;
+}
+function planeIndex(c,z,t,D){
+  const val={C:c,Z:z,T:t},num={C:D.nC,Z:D.nZ,T:D.nT};
+  const seq=(D.order||'XYCZT').replace(/[^CZT]/g,'').split('');
+  let idx=0,stride=1;
+  for(const ch of seq){ idx+=val[ch]*stride; stride*=num[ch]; }
+  return idx;
+}
+async function readPlaneChannels(z,t){
+  const D=S.dims,out=[];
+  if(S.planeMode==='samples'){
+    const r=await S.first.readRasters();
+    for(let c=0;c<D.nC;c++) out.push(toChannel(r[c]));
+  }else{
+    for(let c=0;c<D.nC;c++){
+      const img=await S.tiff.getImage(planeIndex(c,z,t,D));
+      const r=await img.readRasters();
+      out.push(toChannel(r[0]));
+    }
+  }
+  return out;
+}
+async function gotoPlane(z,t){
+  const D=S.dims; z=Math.max(0,Math.min(D.nZ-1,z)); t=Math.max(0,Math.min(D.nT-1,t));
+  S.z=z; S.t=t;
+  S.channels=await readPlaneChannels(z,t);
+  applyChannel(Math.min(S.activeCh,S.nCh-1));   // refresh active-channel data + re-fit any drawn line
+}
+async function reinterpret(mode){
+  const N=S.pageCount;
+  S.dims = mode==='z' ? {nC:1,nZ:N,nT:1,order:'XYCZT'}
+        : mode==='t' ? {nC:1,nZ:1,nT:N,order:'XYCZT'}
+        : {nC:N,nZ:1,nT:1,order:'XYCZT'};
+  S.z=0; S.t=0; S.activeCh=0;
+  const ch=await readPlaneChannels(0,0);
+  setChannels(ch,S.width,S.height,S.bits);
+}
+function makeSlider(label,n,getV,onSet){
+  const pill=document.createElement('span'); pill.className='pill'; pill.style.cssText='display:inline-flex;align-items:center;gap:8px';
+  const sl=document.createElement('input'); sl.type='range'; sl.min=0; sl.max=n-1; sl.step=1; sl.value=getV();
+  sl.style.cssText='width:118px;accent-color:var(--accent)';
+  const lab=document.createElement('b'); lab.style.cssText='min-width:52px;text-align:right;color:var(--text-primary)'; lab.textContent=(getV()+1)+' / '+n;
+  sl.oninput=()=>{ lab.textContent=(+sl.value+1)+' / '+n; onSet(+sl.value); };
+  pill.append(label+' ', sl, lab);
+  return pill;
+}
+function buildZT(){
+  const bar=document.getElementById('ztBar'); if(!bar) return; bar.innerHTML=''; const D=S.dims;
+  if(S.ambiguous){
+    const wrap=document.createElement('span'); wrap.className='pill'; wrap.style.cssText='display:inline-flex;align-items:center;gap:8px';
+    const sel=document.createElement('select'); sel.style.cssText='background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:Roboto Mono,monospace;font-size:12px;padding:3px 6px';
+    sel.innerHTML='<option value="channels">'+S.pageCount+' channels</option><option value="z">'+S.pageCount+' Z-slices</option><option value="t">'+S.pageCount+' time points</option>';
+    sel.value = D.nZ>1?'z':(D.nT>1?'t':'channels');
+    sel.onchange=()=>reinterpret(sel.value);
+    wrap.append(S.pageCount+' pages =', sel);
+    bar.appendChild(wrap);
+  }
+  if(D.nZ>1) bar.appendChild(makeSlider('Z slice',D.nZ,()=>S.z,v=>gotoPlane(v,S.t)));
+  if(D.nT>1) bar.appendChild(makeSlider('Time',D.nT,()=>S.t,v=>gotoPlane(S.z,v)));
+  bar.style.display=(S.ambiguous||D.nZ>1||D.nT>1)?'flex':'none';
+}
+
 async function loadTiff(file){
   if(typeof GeoTIFF==='undefined'){loadTiffUTIF(file);return;}
   try{
@@ -317,24 +442,17 @@ async function loadTiff(file){
     const first=await tiff.getImage(0);
     const w=first.getWidth(),h=first.getHeight();
     const spp=first.getSamplesPerPixel();
-    let channels=[];
-    if(count>=2){
-      // channels stored as separate IFD pages (typical multi-channel microscopy export)
-      for(let i=0;i<count;i++){
-        const img=await tiff.getImage(i);
-        if(img.getWidth()!==w||img.getHeight()!==h)continue; // skip pyramids / mismatched pages
-        const r=await img.readRasters();
-        for(let b=0;b<r.length;b++)channels.push(toChannel(r[b]));
-      }
-      if(!channels.length){const r=await first.readRasters();for(let b=0;b<r.length;b++)channels.push(toChannel(r[b]));}
-    } else if(spp>=2){
-      const r=await first.readRasters();               // single image, multiple bands
-      for(let i=0;i<r.length;i++)channels.push(toChannel(r[i]));
-    } else {
-      const r=await first.readRasters();
-      channels.push(toChannel(r[0]));
-    }
-    setChannels(channels,w,h);
+    const bits=(first.getBitsPerSample&&first.getBitsPerSample()[0])||16;
+    const desc=first.fileDirectory?first.fileDirectory.ImageDescription:'';
+    let dims,planeMode='pages',ambiguous=false;
+    const meta=parseDims(desc);
+    if(meta && spp===1 && meta.nC*meta.nZ*meta.nT===count){ dims=meta; }
+    else if(spp>=2){ dims={nC:spp,nZ:1,nT:1,order:'XYCZT'}; planeMode='samples'; }
+    else if(count>=2){ dims={nC:count,nZ:1,nT:1,order:'XYCZT'}; ambiguous=true; }
+    else { dims={nC:1,nZ:1,nT:1,order:'XYCZT'}; planeMode='samples'; }
+    S.tiff=tiff; S.first=first; S.pageCount=count; S.dims=dims; S.planeMode=planeMode; S.ambiguous=ambiguous; S.z=0; S.t=0; S.activeCh=0;
+    const channels=await readPlaneChannels(0,0);
+    setChannels(channels,w,h,bits);
   }catch(err){console.error(err);loadTiffUTIF(file);}
 }
 
@@ -344,6 +462,7 @@ function loadTiffUTIF(file){
   const reader=new FileReader();
   reader.onload=function(e){
     try{
+      S.dims=null;                       // fallback decoder: plain channels, no Z/T
       const buf=new Uint8Array(e.target.result);
       const ifds=UTIF.decode(buf);UTIF.decodeImage(buf,ifds[0]);
       const ifd=ifds[0],w=ifd.width,h=ifd.height;
@@ -351,7 +470,7 @@ function loadTiffUTIF(file){
       const gray=new Float32Array(w*h);
       for(let i=0;i<w*h;i++)gray[i]=.299*rgba[i*4]+.587*rgba[i*4+1]+.114*rgba[i*4+2];
       if(ifd.t258&&ifd.t258[0]>8){const data=ifd.data,samples=ifd.t277?ifd.t277[0]:1;if(samples===1&&data.length>=w*h*2)for(let i=0;i<w*h;i++)gray[i]=data[i*2]|(data[i*2+1]<<8);}
-      setChannels([toChannel(gray)],w,h);
+      setChannels([toChannel(gray)],w,h,(ifd.t258&&ifd.t258[0])||8);
     }catch(err){console.error(err);loadStd(file);}
   };
   reader.readAsArrayBuffer(file);
@@ -361,6 +480,7 @@ function loadTiffUTIF(file){
 function loadStd(file){
   const img=new Image();
   img.onload=function(){
+    S.dims=null;                         // PNG/JPG: plain RGB channels, no Z/T
     const w=img.width,h=img.height,N=w*h;
     const tc=document.createElement('canvas');tc.width=w;tc.height=h;
     const tctx=tc.getContext('2d');tctx.drawImage(img,0,0);
@@ -368,15 +488,23 @@ function loadStd(file){
     const R=new Float32Array(N),G=new Float32Array(N),B=new Float32Array(N);
     let color=false;
     for(let i=0;i<N;i++){const r=id[i*4],g=id[i*4+1],b=id[i*4+2];R[i]=r;G[i]=g;B[i]=b;if(r!==g||g!==b)color=true;}
-    setChannels(color?[toChannel(R),toChannel(G),toChannel(B)]:[toChannel(R)],w,h);
+    setChannels(color?[toChannel(R),toChannel(G),toChannel(B)]:[toChannel(R)],w,h,8);
   };
   img.src=URL.createObjectURL(file);
 }
 
-function setChannels(channels,w,h){
+function setChannels(channels,w,h,bits){
+  // Non-TIFF / fallback loaders don't set dimension metadata — treat those as plain channels.
+  if(!S.dims){ S.dims={nC:channels.length,nZ:1,nT:1,order:'XYCZT'}; S.ambiguous=false; S.planeMode='samples'; S.pageCount=channels.length; S.z=0; S.t=0; }
+  S.bits=bits;
   S.channels=channels;S.nCh=channels.length;S.width=w;S.height=h;
   S.lineStart=null;S.lineEnd=null;S.profileData=null;S.fitResult=null;
+  document.getElementById('pSize').textContent=w+' × '+h;
+  document.getElementById('pCh').textContent=channels.length;
+  document.getElementById('pBits').textContent=(bits||8)+'-bit';
+  document.getElementById('loadActions').style.display='contents';
   buildChannelChips();
+  buildZT();
   document.getElementById('emptyState').style.display='none';
   document.getElementById('colormapWrap').style.display='block';
   document.getElementById('resultsSection').style.display='none';
@@ -465,6 +593,7 @@ function applyTransform(){
   oCtx.setTransform(dpr,0,0,dpr,0,0);
   renderOverlay();
   document.getElementById('zoomInfo').textContent=Math.round(S.zoom*100)+'%';
+  const zs=document.getElementById('zoomSlider'); if(zs) zs.value=Math.max(0.25,Math.min(8,S.zoom));
 }
 // image px -> screen (CSS) px within the wrap
 function toScreen(p){return{x:S.panX+p.x*S.zoom,y:S.panY+p.y*S.zoom};}
@@ -475,10 +604,18 @@ function fitToView(){
   S.zoom=Math.min(sx,sy,8);S.panX=(ww-S.width*S.zoom)/2;S.panY=(wh-S.height*S.zoom)/2;applyTransform();
 }
 
-document.getElementById('btnZoomIn').addEventListener('click',()=>{S.zoom*=1.3;applyTransform();});
-document.getElementById('btnZoomOut').addEventListener('click',()=>{S.zoom/=1.3;applyTransform();});
+function setZoomCentered(z){
+  if(!S.imageData)return;
+  z=Math.max(0.1,Math.min(50,z));
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  const cx=(ww/2-S.panX)/S.zoom, cy=(wh/2-S.panY)/S.zoom;   // image point under the viewport center
+  S.zoom=z;S.panX=ww/2-cx*z;S.panY=wh/2-cy*z;applyTransform();
+}
+document.getElementById('btnZoomIn').addEventListener('click',()=>setZoomCentered(S.zoom*1.3));
+document.getElementById('btnZoomOut').addEventListener('click',()=>setZoomCentered(S.zoom/1.3));
 document.getElementById('btnFit').addEventListener('click',fitToView);
-document.getElementById('btn1to1').addEventListener('click',()=>{S.zoom=1;S.panX=(wrap.clientWidth-S.width)/2;S.panY=(wrap.clientHeight-S.height)/2;applyTransform();});
+document.getElementById('btn1to1').addEventListener('click',()=>setZoomCentered(1));
+document.getElementById('zoomSlider').addEventListener('input',e=>setZoomCentered(parseFloat(e.target.value)));
 
 wrap.addEventListener('wheel',e=>{
   if(!S.imageData)return;e.preventDefault();
@@ -496,22 +633,65 @@ window.addEventListener('mouseup',()=>{isPan=false;oC.style.cursor=S.drawMode?'c
 function canvasCoords(e){const r=wrap.getBoundingClientRect();return{x:(e.clientX-r.left-S.panX)/S.zoom,y:(e.clientY-r.top-S.panY)/S.zoom};}
 
 const btnDraw=document.getElementById('btnDraw');
+btnDraw.classList.toggle('active',S.drawMode);          // Draw is selected by default
+oC.style.cursor=S.drawMode?'crosshair':'grab';
 btnDraw.addEventListener('click',()=>{S.drawMode=!S.drawMode;btnDraw.classList.toggle('active',S.drawMode);oC.style.cursor=S.drawMode?'crosshair':'grab';});
-document.getElementById('btnClearCurrent').addEventListener('click',()=>{S.lineStart=null;S.lineEnd=null;S.profileData=null;S.fitResult=null;renderOverlay();clearChart();document.getElementById('resultsSection').style.display='none';document.getElementById('chartLegend').style.display='none';});
+function clearCurrentLine(){S.lineStart=null;S.lineEnd=null;S.linePts=null;S.profileData=null;S.fitResult=null;renderOverlay();clearChart();document.getElementById('resultsSection').style.display='none';document.getElementById('chartLegend').style.display='none';document.getElementById('topResult').style.display='none';}
+document.getElementById('btnClearCurrent').addEventListener('click',clearCurrentLine);
+// Line type toggle (straight / freehand)
+function setLineType(t){S.lineType=t;document.getElementById('btnLineStraight').classList.toggle('active',t==='straight');document.getElementById('btnLineFree').classList.toggle('active',t==='freehand');clearCurrentLine();}
+document.getElementById('btnLineStraight').addEventListener('click',()=>setLineType('straight'));
+document.getElementById('btnLineFree').addEventListener('click',()=>setLineType('freehand'));
+// Top toolbar: Clear line + Load another
+document.getElementById('btnClearTop').addEventListener('click',clearCurrentLine);
+document.getElementById('btnReset').addEventListener('click',resetImage);
+function resetImage(){
+  S.channels=[];S.nCh=0;S.imageData=null;S.width=0;S.height=0;
+  clearCurrentLine();
+  document.getElementById('emptyState').style.display='';
+  document.getElementById('colormapWrap').style.display='none';
+  document.getElementById('channelSection').style.display='none';
+  document.getElementById('fileInfo').style.display='none';
+  document.getElementById('fileName').style.display='none';
+  document.getElementById('loadActions').style.display='none';
+  document.getElementById('pSize').textContent='–';
+  document.getElementById('pCh').textContent='–';
+  document.getElementById('pBits').textContent='–';
+  document.getElementById('statusDim').textContent='—';
+  document.getElementById('statusText').textContent='Ready';
+  document.getElementById('cursorInfo').textContent='—';
+  oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
+  fi.value='';
+}
 
-oC.addEventListener('mousedown',e=>{if(!S.drawMode||e.button!==0||!S.imageData)return;S.drawing=true;S.lineStart=canvasCoords(e);S.lineEnd=null;});
+oC.addEventListener('mousedown',e=>{
+  if(!S.drawMode||e.button!==0||!S.imageData)return;
+  S.drawing=true;const p=canvasCoords(e);
+  if(S.lineType==='freehand'){S.linePts=[p];S.lineStart=p;S.lineEnd=null;}
+  else{S.lineStart=p;S.lineEnd=null;}
+});
 oC.addEventListener('mousemove',e=>{
   if(!S.imageData)return;
   const c=canvasCoords(e),px=Math.floor(c.x),py=Math.floor(c.y);
   if(px>=0&&px<S.width&&py>=0&&py<S.height)document.getElementById('cursorInfo').textContent=`x:${px} y:${py} val:${S.imageData[py*S.width+px].toFixed(1)}`;
-  if(S.drawing){S.lineEnd=c;renderOverlay();}
+  if(S.drawing){
+    if(S.lineType==='freehand'){const last=S.linePts[S.linePts.length-1];const dx=c.x-last.x,dy=c.y-last.y;if(dx*dx+dy*dy>=1)S.linePts.push(c);S.lineEnd=c;}
+    else S.lineEnd=c;
+    renderOverlay();
+  }
 });
-oC.addEventListener('mouseup',e=>{if(S.drawing){S.drawing=false;S.lineEnd=canvasCoords(e);if(S.lineStart&&S.lineEnd)extractProfile();}});
+oC.addEventListener('mouseup',e=>{
+  if(!S.drawing)return;S.drawing=false;const c=canvasCoords(e);
+  if(S.lineType==='freehand'){const lp=S.linePts;if(lp&&(c.x!==lp[lp.length-1].x||c.y!==lp[lp.length-1].y))lp.push(c);S.lineEnd=c;if(lp&&lp.length>=2)extractProfile();}
+  else{S.lineEnd=c;if(S.lineStart&&S.lineEnd)extractProfile();}
+});
 
 function renderOverlay(){
   oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
-  S.measurements.forEach((m,i)=>drawLine(oCtx,m.startPt,m.endPt,m.color,.35,i+1));
-  if(S.lineStart&&S.lineEnd){
+  S.measurements.forEach((m,i)=>{ if(m.pts&&m.pts.length>2)drawPolyline(oCtx,m.pts,m.color,.35,i+1); else drawLine(oCtx,m.startPt,m.endPt,m.color,.35,i+1); });
+  if(S.lineType==='freehand'){
+    if(S.linePts&&S.linePts.length>=2)drawPolyline(oCtx,S.linePts,S.lineColor,1);
+  } else if(S.lineStart&&S.lineEnd){
     drawLine(oCtx,S.lineStart,S.lineEnd,S.lineColor,1);
     if(S.fitResult&&S.profileData){
       const f=S.fitResult,s=S.lineStart,en=S.lineEnd;
@@ -530,35 +710,70 @@ function renderOverlay(){
   }
 }
 
-// s, en are in image px; converted to crisp screen-space here (display only).
+// s, en are in image px; converted to crisp screen-space here (display only). Dark halo keeps light colors visible.
 function drawLine(ctx,s,en,color,alpha,label){
   const A=toScreen(s),B=toScreen(en);
-  ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash([6,4]);
+  ctx.save();ctx.globalAlpha=alpha;ctx.lineCap='round';
+  ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=3.5;
+  ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash([6,4]);
   ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.setLineDash([]);
   [A,B].forEach(p=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.lineWidth=1.2;ctx.stroke();});
   if(label!==undefined){ctx.globalAlpha=Math.min(1,alpha+.3);ctx.font="bold 12px 'Roboto Mono'";ctx.fillStyle=color;ctx.fillText('#'+label,A.x+7,A.y-7);}
   ctx.restore();
 }
+// pts are in image px; drawn as a crisp screen-space polyline.
+function drawPolyline(ctx,pts,color,alpha,label){
+  ctx.save();ctx.globalAlpha=alpha;ctx.lineJoin='round';ctx.lineCap='round';
+  const trace=()=>{ctx.beginPath();pts.forEach((p,i)=>{const q=toScreen(p);if(i===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y);});ctx.stroke();};
+  ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=3.5;trace();
+  ctx.strokeStyle=color;ctx.lineWidth=2;trace();
+  [pts[0],pts[pts.length-1]].forEach(p=>{const q=toScreen(p);ctx.fillStyle=color;ctx.beginPath();ctx.arc(q.x,q.y,4,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.lineWidth=1.2;ctx.stroke();});
+  if(label!==undefined){const q=toScreen(pts[0]);ctx.globalAlpha=Math.min(1,alpha+.3);ctx.font="bold 12px 'Roboto Mono'";ctx.fillStyle=color;ctx.fillText('#'+label,q.x+7,q.y-7);}
+  ctx.restore();
+}
 
-function extractProfile(){
-  if(!S.imageData||!S.lineStart||!S.lineEnd)return;
-  const s=S.lineStart,en=S.lineEnd;
-  const dx=en.x-s.x,dy=en.y-s.y,len=Math.sqrt(dx*dx+dy*dy);
-  const steps=Math.max(Math.round(len),2);
-  const lw=parseInt(document.getElementById('lineWidth').value)||1;
-  const nx=dx/len,ny=dy/len,perpX=-ny,perpY=nx;
-  const profile=[];
-  for(let i=0;i<=steps;i++){
-    const t=i/steps,cx=s.x+dx*t,cy=s.y+dy*t;
-    let sum=0,cnt=0;
-    for(let w=-(lw-1)/2;w<=(lw-1)/2;w++){
-      const px=Math.round(cx+perpX*w),py=Math.round(cy+perpY*w);
-      if(px>=0&&px<S.width&&py>=0&&py<S.height){sum+=S.imageData[py*S.width+px];cnt++;}
-    }
-    profile.push(cnt>0?sum/cnt:0);
+// Average raw pixels across the line width, perpendicular (perpX,perpY) to the local direction.
+function sampleAt(cx,cy,perpX,perpY,lw){
+  let sum=0,cnt=0;
+  for(let w=-(lw-1)/2;w<=(lw-1)/2;w++){
+    const px=Math.round(cx+perpX*w),py=Math.round(cy+perpY*w);
+    if(px>=0&&px<S.width&&py>=0&&py<S.height){sum+=S.imageData[py*S.width+px];cnt++;}
   }
+  return cnt>0?sum/cnt:0;
+}
+// Walk a freehand polyline in ~1px steps, sampling perpendicular to the local tangent.
+function sampleAlongPath(pts,lw){
+  const seg=[];let total=0;
+  for(let i=1;i<pts.length;i++){const dx=pts[i].x-pts[i-1].x,dy=pts[i].y-pts[i-1].y,L=Math.hypot(dx,dy);seg.push({L,dx,dy,x:pts[i-1].x,y:pts[i-1].y});total+=L;}
+  if(total<1)return null;
+  const steps=Math.max(Math.round(total),2),profile=[];
+  for(let i=0;i<=steps;i++){
+    const target=total*i/steps;
+    let acc=0,si=0;while(si<seg.length-1&&acc+seg[si].L<target){acc+=seg[si].L;si++;}
+    const sg=seg[si],f=sg.L>0?(target-acc)/sg.L:0;
+    const nx=sg.L>0?sg.dx/sg.L:1,ny=sg.L>0?sg.dy/sg.L:0;
+    profile.push(sampleAt(sg.x+sg.dx*f,sg.y+sg.dy*f,-ny,nx,lw));
+  }
+  return profile;
+}
+function extractProfile(){
+  if(!S.imageData)return;
+  const lw=parseInt(document.getElementById('lineWidth').value)||1;
+  const pxSz=parseFloat(document.getElementById('pixelSize').value)||20;
+  let profile=null;
+  if(S.lineType==='freehand'&&S.linePts&&S.linePts.length>=2){
+    profile=sampleAlongPath(S.linePts,lw);
+  } else if(S.lineStart&&S.lineEnd){
+    const s=S.lineStart,en=S.lineEnd,dx=en.x-s.x,dy=en.y-s.y,len=Math.sqrt(dx*dx+dy*dy);
+    if(len<1)return;
+    const steps=Math.max(Math.round(len),2),nx=dx/len,ny=dy/len;
+    profile=[];
+    for(let i=0;i<=steps;i++){const t=i/steps;profile.push(sampleAt(s.x+dx*t,s.y+dy*t,-ny,nx,lw));}
+  }
+  if(!profile)return;
   S.profileData=profile;
-  fitGaussian(profile,parseFloat(document.getElementById('pixelSize').value)||20);
+  fitGaussian(profile,pxSz);
 }
 
 function fitGaussian(profile,pxSz){
@@ -632,10 +847,14 @@ function updateResults(){
   document.getElementById('resSigma').textContent=f.sigma.toFixed(1)+' nm';
   document.getElementById('resOffset').textContent=f.offset.toFixed(1);
   document.getElementById('resR2').textContent=f.r2.toFixed(4);
+  const tr=document.getElementById('topResult');
+  tr.textContent='FWHM = '+f.fwhm.toFixed(1)+' nm';
+  tr.style.display='';
 }
 
 let chart=null;
 function plotProfile(xD,yD,fC){
+  document.getElementById('chartEmpty').style.display='none';
   document.getElementById('chartLegend').style.display='flex';
   const f=S.fitResult,hm=f.offset+f.amplitude/2,fl=f.center-f.fwhm/2,fr=f.center+f.fwhm/2;
   if(chart)chart.destroy();
@@ -656,14 +875,15 @@ function plotProfile(xD,yD,fC){
     }
   });
 }
-function clearChart(){if(chart){chart.destroy();chart=null;}}
+function clearChart(){if(chart){chart.destroy();chart=null;}document.getElementById('chartEmpty').style.display='flex';}
 
 document.getElementById('btnSaveMeas').addEventListener('click',()=>{
   if(!S.fitResult||!S.lineStart||!S.lineEnd)return;
   const f=S.fitResult,pxSz=parseFloat(document.getElementById('pixelSize').value)||20;
-  S.measurements.push({id:Date.now(),channel:S.activeCh+1,fwhm:f.fwhm,r2:f.r2,amplitude:f.amplitude,center:f.center,sigma:f.sigma,offset:f.offset,lineLength:S.profileData.length*pxSz,startPt:{...S.lineStart},endPt:{...S.lineEnd},color:S.lineColor,pixelSize:pxSz,profileData:[...S.profileData],fitCurve:[...f.fitCurve],xData:[...f.xData]});
-  S.lineStart=null;S.lineEnd=null;S.profileData=null;S.fitResult=null;
+  S.measurements.push({id:Date.now(),channel:S.activeCh+1,fwhm:f.fwhm,r2:f.r2,amplitude:f.amplitude,center:f.center,sigma:f.sigma,offset:f.offset,lineLength:S.profileData.length*pxSz,startPt:{...S.lineStart},endPt:{...S.lineEnd},pts:(S.lineType==='freehand'&&S.linePts)?S.linePts.map(p=>({...p})):null,color:S.lineColor,pixelSize:pxSz,profileData:[...S.profileData],fitCurve:[...f.fitCurve],xData:[...f.xData]});
+  S.lineStart=null;S.lineEnd=null;S.linePts=null;S.profileData=null;S.fitResult=null;
   document.getElementById('resultsSection').style.display='none';document.getElementById('chartLegend').style.display='none';
+  document.getElementById('topResult').style.display='none';
   clearChart();refreshMeasTable();renderOverlay();
 });
 
@@ -674,6 +894,31 @@ function refreshMeasTable(){
   document.getElementById('measBody').innerHTML=L.map((m,i)=>`<tr data-idx="${i}" onclick="selectMeas(${i})" style="cursor:pointer"><td>${i+1}</td><td>${m.channel||1}</td><td class="fwhm-cell">${m.fwhm.toFixed(1)}</td><td>${m.r2.toFixed(3)}</td><td>${m.lineLength.toFixed(0)}</td><td><button class="del-btn" onclick="event.stopPropagation();delMeas(${i})">✕</button></td></tr>`).join('');
   if(L.length){const fs=L.map(m=>m.fwhm),mean=fs.reduce((a,b)=>a+b,0)/fs.length;const std=fs.length>1?Math.sqrt(fs.reduce((s,v)=>s+(v-mean)**2,0)/(fs.length-1)):0;document.getElementById('meanFwhm').textContent=mean.toFixed(1)+' nm';document.getElementById('stdFwhm').textContent=std.toFixed(1)+' nm';}
   else{document.getElementById('meanFwhm').textContent='—';document.getElementById('stdFwhm').textContent='—';}
+  persistMeas();
+}
+/* ---------- lightweight session persistence (measurements only, not the image) ---------- */
+const PERSIST_KEY='imgtkt_size_analysis_measurements';
+function persistMeas(){ try{ S.measurements.length? localStorage.setItem(PERSIST_KEY,JSON.stringify(S.measurements)) : localStorage.removeItem(PERSIST_KEY); }catch(e){} }
+function restoreMeas(){
+  let n=0;
+  try{ const raw=localStorage.getItem(PERSIST_KEY); if(raw){ const a=JSON.parse(raw); if(Array.isArray(a)&&a.length){ S.measurements=a; n=a.length; } } }catch(e){}
+  refreshMeasTable();
+  if(n) showRestoreBanner(n, ()=>{ S.measurements=[]; refreshMeasTable(); if(S.imageData) renderOverlay(); });
+}
+// On-load prompt when a previous session's measurements were restored: keep them or clear them.
+function showRestoreBanner(n, onClear){
+  const back=document.createElement('div');
+  back.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(32,33,36,.28);display:flex;align-items:center;justify-content:center;font-family:Roboto,sans-serif';
+  const bar=document.createElement('div');
+  bar.style.cssText='background:#fff;border:1px solid #dadce0;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:9px 12px 9px 18px;display:flex;align-items:center;gap:12px;font-size:13px;color:#202124';
+  bar.innerHTML='<span>↩ Restored <b>'+n+'</b> measurement'+(n>1?'s':'')+' from your previous session.</span>';
+  const mk=(txt,fill)=>{const b=document.createElement('button');b.textContent=txt;
+    b.style.cssText='font-family:Roboto,sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;border-radius:999px;padding:6px 14px;'+(fill?'border:1px solid #5FC44A;background:#5FC44A;color:#fff':'border:1px solid #F763AA;background:#fff;color:#F763AA');return b;};
+  const keep=mk('Keep',true), clr=mk('Clear',false);
+  keep.onclick=()=>back.remove();
+  clr.onclick=()=>{ onClear(); back.remove(); };
+  bar.appendChild(keep); bar.appendChild(clr);
+  back.appendChild(bar); document.body.appendChild(back);
 }
 
 window.selectMeas=function(idx){
@@ -696,6 +941,15 @@ document.getElementById('btnDownloadCSV').addEventListener('click',()=>{
   const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='size_analysis_measurements.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);
 });
 
+// Hand the measurements table off to the Plot Data page (clean tabular block only, no stats/profile appendices).
+function openInPlotter(name,csv){try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name,csv}));}catch(e){alert('Could not hand off data: '+e.message);return;}window.open('plot_data.html','_blank');}
+document.getElementById('btnPlotData').addEventListener('click',()=>{
+  const L=S.measurements;if(!L.length)return;
+  let csv='Measurement,Channel,FWHM_nm,Amplitude,Center_nm,Sigma_nm,Offset,R2,LineLength_nm,PixelSize_nm\n';
+  L.forEach((m,i)=>{csv+=`${i+1},${m.channel||1},${m.fwhm.toFixed(2)},${m.amplitude.toFixed(2)},${m.center.toFixed(2)},${m.sigma.toFixed(2)},${m.offset.toFixed(2)},${m.r2.toFixed(4)},${m.lineLength.toFixed(2)},${m.pixelSize}\n`;});
+  openInPlotter('size_analysis.csv',csv);
+});
+
 document.querySelectorAll('.lut-chip[data-lut]').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('.lut-chip[data-lut]').forEach(x=>x.classList.remove('active'));c.classList.add('active');S.lut=c.dataset.lut;renderImage();renderColorbar();});});
 document.querySelectorAll('.color-swatch').forEach(sw=>{sw.addEventListener('click',()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');S.lineColor=sw.dataset.color;renderOverlay();});});
 document.getElementById('pixelSize').addEventListener('change',()=>{if(S.profileData)fitGaussian(S.profileData,parseFloat(document.getElementById('pixelSize').value)||20);});
@@ -708,6 +962,7 @@ window.addEventListener('mouseup',()=>{isR=false;});
 window.addEventListener('resize',()=>{if(S.imageData)fitToView();});
 
 document.getElementById('statusText').textContent=(typeof GeoTIFF!=='undefined'||typeof UTIF!=='undefined')?'Ready — multi-channel TIFF support loaded':'Ready (TIFF unavailable — use PNG/JPG)';
+restoreMeas();
 </script>
 </body>
 </html>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%" role="img" aria-label="imgTKT — a HeLa cell with its mitochondrial network">
+  <title>imgTKT</title>
+  <!-- rounded tile -->
+  <rect x="5" y="5" width="90" height="90" rx="20" fill="#f4faf1"/>
+  <!-- flat, spread HeLa cell body -->
+  <path d="M18 52 C16 37 27 26 42 23 C56 20 71 25 81 37 C89 47 86 63 73 73 C61 82 43 84 29 76 C21 71 19 62 18 52 Z" fill="#dff1d6"/>
+  <path d="M18 52 C16 37 27 26 42 23 C56 20 71 25 81 37 C89 47 86 63 73 73 C61 82 43 84 29 76 C21 71 19 62 18 52 Z" fill="none" stroke="#5FC44A" stroke-width="3.2"/>
+  <!-- mitochondrial network (branching tubules) -->
+  <g fill="none" stroke="#1f9aa8" stroke-width="2.3" stroke-linecap="round">
+    <path d="M27 41 C33 37 37 43 43 40"/>
+    <path d="M25 51 C31 49 34 56 40 52"/>
+    <path d="M31 65 C37 63 41 69 48 66"/>
+    <path d="M45 30 C51 28 55 34 60 31"/>
+    <path d="M70 38 C66 34 72 31 77 37"/>
+    <path d="M74 49 C68 49 70 57 76 58"/>
+    <path d="M62 69 C67 65 71 70 68 75"/>
+    <path d="M35 47 C39 51 35 56 39 60"/>
+    <path d="M67 45 C63 49 67 54 63 58"/>
+    <path d="M28 58 C32 61 29 64 26 62"/>
+    <path d="M55 72 C57 68 53 66 50 69"/>
+  </g>
+  <!-- nucleus -->
+  <ellipse cx="52" cy="52" rx="14.5" ry="11.5" fill="#F763AA"/>
+</svg>

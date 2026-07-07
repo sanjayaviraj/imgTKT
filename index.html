@@ -1,9 +1,11 @@
 <!DOCTYPE html>
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. All rights reserved. Proprietary; do not copy, modify, or distribute without written permission. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Analysis Tools</title>
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<title>imgTKT — A Quick Image Analysis Tool Kit</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
   :root{
@@ -20,8 +22,9 @@
   body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased}
   .container{max-width:920px;margin:0 auto;padding:72px 24px 80px}
   header{margin-bottom:8px}
-  h1{font-family:var(--font);font-weight:500;font-size:32px;letter-spacing:0;margin:0 0 12px}
+  h1{font-family:var(--font);font-weight:700;font-size:38px;letter-spacing:-0.5px;margin:0 0 4px}
   h1 .dot{color:var(--pink)}
+  .tagline{font-family:var(--font);font-size:18px;font-weight:500;color:var(--text);margin:0 0 12px}
   .lede{color:var(--text-secondary);font-size:15px;max-width:620px}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-top:40px}
   .card{
@@ -30,52 +33,134 @@
     transition:box-shadow .18s,border-color .18s,transform .18s;
   }
   .card:hover{transform:translateY(-2px);border-color:transparent;box-shadow:var(--shadow-2)}
-  .card .icon{font-size:28px;margin-bottom:16px}
+  .card .icon{height:46px;margin-bottom:16px;display:flex;align-items:center}
+  .card .icon img{height:46px;width:auto;display:block}
+  .card .icon img[src*="roi_inspector"]{height:38px}
   .card h2{font-family:var(--font);font-size:18px;font-weight:500;margin-bottom:8px}
   .card p{color:var(--text-secondary);font-size:14px;flex:1;line-height:1.6}
   .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
   .tag{font-family:var(--mono);font-size:11px;letter-spacing:.3px;color:var(--blue);
     background:var(--blue-light);border-radius:4px;padding:4px 10px}
   .card .go{margin-top:20px;font-size:14px;font-weight:500;color:var(--blue);letter-spacing:.25px}
+  .search{position:relative;max-width:620px;margin-top:26px}
+  .search input{width:100%;font-family:var(--font);font-size:15px;color:var(--text);background:var(--surface);
+    border:1px solid var(--border);border-radius:999px;padding:12px 18px 12px 46px;outline:none;
+    transition:border-color .15s,box-shadow .15s;box-shadow:var(--shadow-1)}
+  .search input::placeholder{color:var(--text-muted)}
+  .search input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-light)}
+  .search .icon-search{position:absolute;left:17px;top:50%;transform:translateY(-50%);width:18px;height:18px;
+    fill:none;stroke:var(--text-muted);stroke-width:2;stroke-linecap:round;pointer-events:none}
+  .no-results{display:none;color:var(--text-secondary);font-size:15px;margin-top:24px;text-align:center;padding:44px 24px;
+    background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius)}
+  .bmc{display:inline-flex;align-items:center;gap:9px;margin-top:16px;text-decoration:none;
+    background:#FFDD00;color:#0D0C22;font-family:var(--font);font-weight:600;font-size:14.5px;letter-spacing:.2px;
+    padding:9px 18px;border-radius:999px;box-shadow:var(--shadow-1);transition:transform .15s,box-shadow .15s}
+  .bmc:hover{transform:translateY(-1px);box-shadow:var(--shadow-2)}
+  .bmc img{height:22px;width:auto;display:block}
+  .bmc .heart{display:inline-block;animation:heartGlow 1.6s ease-in-out infinite}
+  @keyframes heartGlow{
+    0%,100%{filter:drop-shadow(0 0 1px rgba(233,48,55,.35));transform:scale(1)}
+    50%{filter:drop-shadow(0 0 8px rgba(233,48,55,.98));transform:scale(1.2)}}
+  @media (prefers-reduced-motion:reduce){.bmc .heart{animation:none}}
+  .foot-copy{margin-top:52px;color:var(--text-muted);font-size:12px;text-align:center;line-height:1.6}
 </style>
 </head>
 <body>
 <div class="container">
   <header>
-    <h1>Image Analysis Tools<span class="dot">.</span></h1>
+    <h1>imgTKT<span class="dot">.</span></h1>
+    <p class="tagline">A Quick Image Analysis Tool Kit</p>
     <p class="lede">A small collection of browser-based tools for microscopy and scientific image analysis.
       Everything runs locally in your browser — images are never uploaded to a server.</p>
   </header>
 
-  <div class="grid">
+  <div class="search">
+    <svg class="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="20.5" y1="20.5" x2="16.5" y2="16.5"/></svg>
+    <input type="text" id="toolSearch" placeholder="Search tools — e.g. FWHM, ROI, channel, CSV…" autocomplete="off" aria-label="Search tools">
+  </div>
+
+  <div>
+    <a class="bmc" href="https://buymeacoffee.com/sanjaya_ag" target="_blank" rel="noopener noreferrer">
+      <img src="icons/bmc-logo.svg" alt="Buy Me a Coffee logo">
+      <span>Buy me a coffee&nbsp;<span class="heart">❤️</span></span>
+    </a>
+  </div>
+
+  <div class="grid" id="grid">
     <a class="card" href="size_analysis.html">
-      <div class="icon">📈</div>
+      <div class="icon"><img src="icons/size_analysis.svg" alt="Size Analysis icon"></div>
       <h2>Size Analysis</h2>
       <p>Draw a line across a feature, extract its intensity profile, and fit a Gaussian to measure
         FWHM. Loads multi-channel TIFF/OME-TIFF with a channel selector, plus LUTs, calibrated
-        pixel size, and CSV export of measurements.</p>
+        pixel size, and CSV export of measurements — which you can plot right away.</p>
       <div class="tags"><span class="tag">FWHM</span><span class="tag">Gaussian fit</span><span class="tag">Multi-channel</span></div>
       <div class="go">Open tool →</div>
     </a>
 
     <a class="card" href="line_profile.html">
-      <div class="icon">📊</div>
+      <div class="icon"><img src="icons/line_profile.svg" alt="Line Profile icon"></div>
       <h2>Line Profile</h2>
       <p>Draw a line across a multi-channel image and read out the intensity profile of every channel
-        at once. Clean grid-free plot with per-channel colors, and one-click CSV export of the data.</p>
+        at once. Clean grid-free plot with per-channel colors, one-click CSV export, and send the data
+        straight to the plotter.</p>
       <div class="tags"><span class="tag">Multi-channel</span><span class="tag">Intensity</span><span class="tag">CSV</span></div>
       <div class="go">Open tool →</div>
     </a>
 
     <a class="card" href="roi_inspector.html">
-      <div class="icon">🎯</div>
+      <div class="icon"><img src="icons/roi_inspector.svg" alt="ROI Inspector icon"></div>
       <h2>ROI Inspector</h2>
       <p>Load multi-channel TIFF / OME-TIFF stacks with automatic channel detection. Place circular
-        and rectangular ROIs to measure mean intensity per channel, then export the readings as CSV.</p>
+        and rectangular ROIs to measure mean intensity per channel, then export the readings as CSV
+        or plot them directly.</p>
       <div class="tags"><span class="tag">Multi-channel</span><span class="tag">ROI</span><span class="tag">OME-TIFF</span></div>
       <div class="go">Open tool →</div>
     </a>
+
+    <a class="card" href="correlations.html">
+      <div class="icon"><img src="icons/correlations.svg" alt="Correlations icon"></div>
+      <h2>Correlations</h2>
+      <p>Measure colocalization between any two channels — Pearson and Manders coefficients — within a
+        freehand, circular, rectangular, or whole-image region. Record results, export as CSV, and
+        plot them right away.</p>
+      <div class="tags"><span class="tag">Pearson</span><span class="tag">Manders</span><span class="tag">Colocalization</span></div>
+      <div class="go">Open tool →</div>
+    </a>
+
+    <a class="card" href="plot_data.html">
+      <div class="icon"><img src="icons/plot_data.svg" alt="Plot Data icon"></div>
+      <h2>Plot Data</h2>
+      <p>Plot the CSV / TSV data you export from any tool. Pick columns in the data table, then draw
+        scatter, line, bar, histogram, or pie charts. Export the figure as PNG or the plotted values as CSV.</p>
+      <div class="tags"><span class="tag">Scatter</span><span class="tag">Histogram</span><span class="tag">CSV</span></div>
+      <div class="go">Open tool →</div>
+    </a>
   </div>
+  <div class="no-results" id="noResults">No tools match your search.</div>
+  <footer class="foot-copy">© 2026 Sanjaya VBD Aththawala Gedara · imgTKT. All rights reserved.</footer>
 </div>
+<script>
+  // Client-side tool filter: matches the query against each card's title, description and tags.
+  const q = document.getElementById('toolSearch');
+  const cards = [...document.querySelectorAll('#grid .card')];
+  const noResults = document.getElementById('noResults');
+  function filterTools(){
+    const s = q.value.trim().toLowerCase();
+    let shown = 0;
+    cards.forEach(card=>{
+      const match = !s || card.textContent.toLowerCase().includes(s);
+      card.style.display = match ? '' : 'none';
+      if(match) shown++;
+    });
+    noResults.style.display = shown ? 'none' : 'block';
+  }
+  q.addEventListener('input', filterTools);
+  // Press Enter to open the tool if exactly one matches.
+  q.addEventListener('keydown', e=>{
+    if(e.key!=='Enter') return;
+    const visible = cards.filter(c=>c.style.display!=='none');
+    if(visible.length===1) window.location.href = visible[0].getAttribute('href');
+  });
+</script>
 </body>
 </html>

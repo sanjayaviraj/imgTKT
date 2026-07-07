@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
-<title>ROI_Inspector — Multi-Channel TIFF</title>
+<title>Correlations — Colocalization</title>
 <script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.min.js"></script>
 <script>
   // Fallback to the package-root browser bundle if the pinned path fails.
@@ -54,12 +54,14 @@
   input[type=file]{display:none}
 
   .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
-  .filename{font-family:var(--disp);font-size:13px;font-weight:500;color:var(--ink);margin:0 0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pill{
     background:var(--panel-2);border:1px solid var(--line);border-radius:999px;
     padding:7px 14px;color:var(--muted);font-size:12px;
   }
   .pill b{color:var(--ink)}
+  .filename{font-family:var(--disp);font-size:13px;font-weight:500;color:var(--ink);margin:0 0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .top-result{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--accent);letter-spacing:.3px;
+    padding:5px 14px;background:var(--accent-light);border:1px solid var(--accent);border-radius:999px;white-space:nowrap}
   button{
     font-family:var(--disp);font-size:13px;font-weight:500;letter-spacing:.25px;cursor:pointer;border-radius:999px;
     border:1px solid var(--line);background:var(--panel);color:var(--ink);
@@ -147,16 +149,16 @@
 </head>
 <body>
 <header>
-  <h1>ROI_Inspector<span class="dot">.</span></h1>
-  <nav style="display:flex;gap:6px">
+  <h1>Correlations<span class="dot">.</span></h1>
+  <nav style="display:flex;gap:6px;flex-wrap:wrap">
     <a href="index.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Home</a>
     <a href="size_analysis.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Size Analysis</a>
     <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Line Profile</a>
-    <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;background:var(--accent);color:#fff">ROI Inspector</a>
-    <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Correlations</a>
+    <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">ROI Inspector</a>
+    <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;background:var(--accent);color:#fff">Correlations</a>
     <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Plot Data</a>
   </nav>
-  <span class="sub">Multi-channel TIFF / OME-TIFF · auto channel detection · circular &amp; rectangular ROI mean &amp; sum intensity · CSV export</span>
+  <span class="sub">Pearson &amp; Manders colocalization · freehand / circle / rectangle / whole-image regions · pick any two channels</span>
 </header>
 
 <div class="wrap">
@@ -172,6 +174,7 @@
         <button id="clearRoi">Clear ROI</button>
         <button id="reset">Load another</button>
       </span>
+      <span class="top-result" id="topResult" style="display:none;margin-left:auto"></span>
     </div>
     <div class="toolbar" style="margin-bottom:10px">
       <span class="pill" style="display:flex;align-items:center;gap:8px">
@@ -188,7 +191,7 @@
     <div id="drop" class="drop">
       <strong>Drop a TIFF / OME-TIFF here</strong>
       <span>or click to browse · convert your .czi to OME-TIFF first (Bio-Formats / Fiji / QuPath)</span>
-      <p class="drop-desc">Load multi-channel TIFF / OME-TIFF stacks with automatic channel detection. Place circular and rectangular ROIs to measure the mean and sum intensity per channel, then export the readings as CSV.</p>
+      <p class="drop-desc">Load a multi-channel TIFF / OME-TIFF stack, pick a region (freehand, circle, rectangle, or the whole image) and any two channels, then compute Pearson or Manders colocalization coefficients and export them as CSV.</p>
       <input type="file" id="file" accept=".tif,.tiff,.ome.tif,.ome.tiff,image/tiff">
     </div>
 
@@ -199,7 +202,7 @@
         </div>
         <canvas id="cvOv" class="cv-overlay"></canvas>
       </div>
-      <p class="hint">Scroll over the image to <b>zoom</b> toward the cursor. Pick <b>Circle</b> or <b>Rectangle</b> on the right. Drag to draw the ROI — or enable <b>Fixed size</b> and click to drop a shape. Mean is computed on raw pixel values for every channel.</p>
+      <p class="hint">Scroll over the image to <b>zoom</b> toward the cursor. Pick a <b>region</b> and two <b>channels</b> on the right, then click <b>Pearson</b> or <b>Manders</b>. Coefficients are computed on raw pixel values.</p>
     </div>
     </div>
   </section>
@@ -213,11 +216,12 @@
     </div>
 
     <div class="group">
-      <h3>ROI shape &amp; size</h3>
+      <h3>Region</h3>
       <div class="shape-toggles">
         <button id="shapeFree" class="shape-btn active">✎ Freehand</button>
         <button id="shapeCircle" class="shape-btn">● Circle</button>
         <button id="shapeRect" class="shape-btn">▭ Rectangle</button>
+        <button id="shapeWhole" class="shape-btn">▢ Whole</button>
       </div>
       <div class="field" style="margin-top:12px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
@@ -238,13 +242,30 @@
     </div>
 
     <div class="group">
-      <h3>Current ROI</h3>
-      <div class="measure-box">
-        <div id="readings"><div class="empty">No ROI drawn.</div></div>
+      <h3>Channels to correlate</h3>
+      <div class="field"><label>Channel A</label><select id="chanA" class="num" style="flex:1;min-width:0"></select></div>
+      <div class="field"><label>Channel B</label><select id="chanB" class="num" style="flex:1;min-width:0"></select></div>
+    </div>
+
+    <div class="group">
+      <h3>Coefficient</h3>
+      <div class="shape-toggles">
+        <button class="primary" id="btnPearson" style="flex:1" disabled>Pearson</button>
+        <button class="primary" id="btnManders" style="flex:1" disabled>Manders</button>
+      </div>
+      <div style="margin-top:10px">
+        <div class="field"><label>Manders threshold A</label><input type="number" id="thrA" min="0" step="1" value="0" class="num"><span class="val">a.u.</span></div>
+        <div class="field"><label>Manders threshold B</label><input type="number" id="thrB" min="0" step="1" value="0" class="num"><span class="val">a.u.</span></div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:8px;color:var(--muted);font-size:12.5px">
+          <input type="checkbox" id="threshPreview" style="accent-color:var(--accent)"> Preview thresholds on image (below → black)
+        </label>
+      </div>
+      <div class="measure-box" style="margin-top:12px">
+        <div id="results"><div class="empty">Pick a region &amp; channels, then choose a coefficient.</div></div>
         <div class="status-row">
-          <input id="statusIn" placeholder="Status (e.g. positive, control, cell-1)…">
+          <input id="statusIn" placeholder="Label (e.g. cell-1, control)…">
         </div>
-        <button class="primary" id="record" style="width:100%" disabled>Record measurement →</button>
+        <button class="primary" id="record" style="width:100%" disabled>Record result →</button>
       </div>
     </div>
 
@@ -261,7 +282,7 @@
         <button id="plotData" disabled>📊 Plot this data →</button>
         <button class="warn" id="clearAll" disabled>Clear all</button>
       </div>
-      <p class="note">Per channel, <b>mean</b> and <b>sum</b> are of the raw intensities inside the ROI (all channels measured regardless of which are displayed). Coordinates are in full-resolution image pixels.</p>
+      <p class="note">Coefficients are computed on raw pixel values within the selected region. Pearson r ranges −1…1; Manders M1/M2 range 0…1 (fraction of A overlapping B, and B overlapping A, above the thresholds).</p>
     </div>
   </aside>
 </div>
@@ -304,7 +325,8 @@ let state = {
   records:[],
   scale:1,              // image->canvas px (always 1; native-res render)
   zoom:1,               // CSS display zoom factor
-  dragging:false, startX:0, startY:0
+  dragging:false, startX:0, startY:0,
+  threshPreview:false   // when true, display shows only channels A & B masked by their thresholds
 };
 
 /* ---------- file loading ---------- */
@@ -402,13 +424,13 @@ async function loadFile(file){
   }
 }
 
-// Navigate to a different Z-slice / time point (re-reads raw pixels for that plane; measurements follow).
+// Navigate to a different Z-slice / time point (re-reads raw pixels; stale result is cleared).
 async function gotoPlane(z,t){
   const D=state.dims;
   z=Math.max(0,Math.min(D.nZ-1,z)); t=Math.max(0,Math.min(D.nT-1,t));
   state.z=z; state.t=t;
   state.channels=await readPlaneChannels(z,t);
-  render(); refreshReadings();
+  render(); resetResult();
 }
 // For metadata-less multi-page files: let the user say what the pages actually are.
 async function reinterpret(mode){
@@ -422,7 +444,7 @@ async function reinterpret(mode){
   state.bright=Array.from({length:state.nCh},()=>1);
   state.channels=await readPlaneChannels(0,0);
   $('pCh').textContent=state.nCh;
-  buildChannelUI(); buildZT(); render(); refreshReadings();
+  buildChannelUI(); populateChannelSelects(); buildZT(); render(); resetResult();
 }
 
 function toChannel(arr){
@@ -511,19 +533,34 @@ function initViewer(name){
   cv.height=state.height;
   applyFitZoom();
   bindCanvas();
+  populateChannelSelects();
   renderTableHead();
   render();
-  refreshReadings();
+  resetResult();
   renderTable();
+}
+function populateChannelSelects(){
+  const opts=Array.from({length:state.nCh},(_,i)=>'<option value="'+i+'">Channel '+(i+1)+'</option>').join('');
+  $('chanA').innerHTML=opts; $('chanB').innerHTML=opts;
+  $('chanA').value='0'; $('chanB').value=String(Math.min(1,state.nCh-1));
 }
 
 /* ---------- rendering ---------- */
+// Map a raw pixel value to 0..1 using the channel's display range, then its brightness.
+function chNorm(c,v){
+  const lo=state.dispMin[c], hi=state.dispMax[c];
+  return Math.max(0, Math.min(1, ((v-lo)/((hi-lo)||1))*(state.bright[c]||1)));
+}
 function render(){
   const cv=$('cv'), ctx=cv.getContext('2d');
   const w=cv.width, h=cv.height;
   const img=ctx.createImageData(w,h);
   const data=img.data;
   const sc=state.scale;
+  // Threshold preview: show ONLY channels A & B, each masked by its threshold (pixels below → black).
+  const preview=state.threshPreview && state.nCh>0;
+  const pa=+$('chanA').value, pb=+$('chanB').value;
+  const ptA=parseFloat($('thrA').value)||0, ptB=parseFloat($('thrB').value)||0;
 
   for(let y=0;y<h;y++){
     const sy=Math.min(state.height-1, Math.floor(y/sc));
@@ -531,14 +568,18 @@ function render(){
       const sx=Math.min(state.width-1, Math.floor(x/sc));
       const si=sy*state.width+sx;
       let R=0,G=0,B=0;
-      for(let c=0;c<state.nCh;c++){
-        if(!state.visible[c]) continue;
-        const ch=state.channels[c];
-        const lo=state.dispMin[c], hi=state.dispMax[c];
-        let nv=(ch.data[si]-lo)/((hi-lo)||1); // display range -> 0..1
-        nv=Math.max(0, Math.min(1, nv*(state.bright[c]||1)));
-        const col=state.colors[c];
-        R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2];
+      if(preview){
+        const av=state.channels[pa].data[si];
+        if(state.visible[pa] && av>ptA){ const col=state.colors[pa]; const nv=chNorm(pa,av); R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2]; }
+        const bv=state.channels[pb].data[si];
+        if(state.visible[pb] && bv>ptB){ const col=state.colors[pb]; const nv=chNorm(pb,bv); R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2]; }
+      } else {
+        for(let c=0;c<state.nCh;c++){
+          if(!state.visible[c]) continue;
+          const nv=chNorm(c, state.channels[c].data[si]);
+          const col=state.colors[c];
+          R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2];
+        }
       }
       const di=(y*w+x)*4;
       data[di]=Math.min(255,R); data[di+1]=Math.min(255,G); data[di+2]=Math.min(255,B); data[di+3]=255;
@@ -568,32 +609,7 @@ function drawShapes(){
   const s=cvR.width/state.width;          // display px per image px
   const P=(ix,iy)=>[ox+ix*s, oy+iy*s];
 
-  // recorded ROIs (amber)
-  octx.save();
-  octx.lineWidth=1.5; octx.font='13px "Roboto Mono", monospace';
-  octx.textAlign='center'; octx.textBaseline='middle';
-  state.records.forEach((rec,i)=>{
-    let lx,ly;
-    octx.strokeStyle='#f0b429'; octx.fillStyle='rgba(240,180,41,0.10)';
-    octx.beginPath();
-    if(rec.shape==='circle'){
-      const [cx,cy]=P(rec.cx,rec.cy); octx.arc(cx,cy,rec.r*s,0,Math.PI*2); lx=cx; ly=cy;
-    } else if(rec.shape==='rect'){
-      const [rx,ry]=P(rec.x,rec.y); octx.rect(rx,ry,rec.w*s,rec.h*s);
-      const m=P(rec.x+rec.w/2,rec.y+rec.h/2); lx=m[0]; ly=m[1];
-    } else {
-      rec.points.forEach((p,k)=>{ const q=P(p.x,p.y); if(k===0)octx.moveTo(q[0],q[1]); else octx.lineTo(q[0],q[1]); });
-      octx.closePath();
-      const m=P(rec.cx,rec.cy); lx=m[0]; ly=m[1];
-    }
-    octx.stroke(); octx.fill();
-    octx.lineWidth=3; octx.strokeStyle='#1a1205'; octx.strokeText(String(i+1),lx,ly);
-    octx.fillStyle='#f0b429'; octx.fillText(String(i+1),lx,ly);
-    octx.lineWidth=1.5;
-  });
-  octx.restore();
-
-  // active ROI (teal)
+  // active region outline (teal)
   if(state.roi){
     octx.save();
     octx.strokeStyle='#5ad1c7'; octx.lineWidth=2; octx.fillStyle='rgba(90,209,199,0.12)';
@@ -635,6 +651,7 @@ function bindCanvas(){
     return {x:px/state.scale, y:py/state.scale};
   };
   cv.onpointerdown=ev=>{
+    if(state.shape==='whole') return;   // whole-image region: nothing to draw
     cv.setPointerCapture(ev.pointerId);
     const p=pos(ev);
     if(state.shape==='free'){
@@ -647,7 +664,7 @@ function bindCanvas(){
       if(fixed){
         const fr=Math.max(1, parseFloat($('fixedR').value)||1);
         state.roi={type:'circle',cx:p.x,cy:p.y,r:fr};
-        state.dragging=false; render(); refreshReadings(); return;
+        state.dragging=false; render(); resetResult(); return;
       }
       state.dragging=true; state.startX=p.x; state.startY=p.y;
       state.roi={type:'circle',cx:p.x,cy:p.y,r:0};
@@ -656,7 +673,7 @@ function bindCanvas(){
         const fw=Math.max(1, parseFloat($('fixedW').value)||1);
         const fh=Math.max(1, parseFloat($('fixedH').value)||1);
         state.roi={type:'rect',x:p.x-fw/2,y:p.y-fh/2,w:fw,h:fh};
-        state.dragging=false; render(); refreshReadings(); return;
+        state.dragging=false; render(); resetResult(); return;
       }
       state.dragging=true; state.startX=p.x; state.startY=p.y;
       state.roi={type:'rect',x:p.x,y:p.y,w:0,h:0};
@@ -686,7 +703,7 @@ function bindCanvas(){
     state.dragging=false;
     if(state.roi && !roiValid(state.roi)) state.roi=null;
     drawShapes();          // redraw overlay (closes the freehand outline now that the drag ended)
-    refreshReadings();
+    resetResult();
   };
 
   // mouse-wheel zoom, anchored to the cursor
@@ -707,12 +724,7 @@ function bindCanvas(){
   shell.addEventListener('scroll', drawShapes);
 }
 
-/* ---------- measurement ---------- */
-function measureROI(roi){
-  if(roi.type==='circle') return measureCircle(roi);
-  if(roi.type==='rect') return measureRect(roi);
-  return measureFree(roi);
-}
+/* ---------- region iteration + correlation ---------- */
 // even-odd point-in-polygon test (pixel center inside the drawn outline)
 function pointInPoly(px,py,pts){
   let inside=false;
@@ -722,153 +734,122 @@ function pointInPoly(px,py,pts){
   }
   return inside;
 }
-function measureFree(roi){
-  const pts=roi.points;
-  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-  for(const p of pts){ if(p.x<minx)minx=p.x; if(p.x>maxx)maxx=p.x; if(p.y<miny)miny=p.y; if(p.y>maxy)maxy=p.y; }
-  const x0=Math.max(0,Math.floor(minx)), x1=Math.min(state.width-1,Math.ceil(maxx));
-  const y0=Math.max(0,Math.floor(miny)), y1=Math.min(state.height-1,Math.ceil(maxy));
-  const sums=new Array(state.nCh).fill(0);
-  let n=0;
-  for(let y=y0;y<=y1;y++){
-    for(let x=x0;x<=x1;x++){
-      if(pointInPoly(x+0.5,y+0.5,pts)){
-        const i=y*state.width+x;
-        for(let c=0;c<state.nCh;c++) sums[c]+=state.channels[c].data[i];
-        n++;
-      }
-    }
+// Call cb(pixelIndex) for every pixel in the active region (whole image or drawn ROI).
+function forEachRegionPixel(cb){
+  const W=state.width, H=state.height;
+  if(state.shape==='whole'){ const N=W*H; for(let i=0;i<N;i++) cb(i); return; }
+  const roi=state.roi;
+  if(!roiValid(roi)) return;
+  if(roi.type==='circle'){
+    const {cx,cy,r}=roi, r2=r*r;
+    const x0=Math.max(0,Math.floor(cx-r)), x1=Math.min(W-1,Math.ceil(cx+r));
+    const y0=Math.max(0,Math.floor(cy-r)), y1=Math.min(H-1,Math.ceil(cy+r));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ const dx=x+0.5-cx, dy=y+0.5-cy; if(dx*dx+dy*dy<=r2) cb(y*W+x); }
+  } else if(roi.type==='rect'){
+    const x0=Math.max(0,Math.floor(roi.x)), x1=Math.min(W-1,Math.ceil(roi.x+roi.w));
+    const y0=Math.max(0,Math.floor(roi.y)), y1=Math.min(H-1,Math.ceil(roi.y+roi.h));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ const px=x+0.5, py=y+0.5; if(px>=roi.x&&px<roi.x+roi.w&&py>=roi.y&&py<roi.y+roi.h) cb(y*W+x); }
+  } else {
+    const pts=roi.points;
+    let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+    for(const p of pts){ if(p.x<minx)minx=p.x; if(p.x>maxx)maxx=p.x; if(p.y<miny)miny=p.y; if(p.y>maxy)maxy=p.y; }
+    const x0=Math.max(0,Math.floor(minx)), x1=Math.min(W-1,Math.ceil(maxx));
+    const y0=Math.max(0,Math.floor(miny)), y1=Math.min(H-1,Math.ceil(maxy));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ if(pointInPoly(x+0.5,y+0.5,pts)) cb(y*W+x); }
   }
-  return {means:sums.map(s=> n? s/n : 0), sums:sums.slice(), pixels:n};
 }
-function measureCircle(roi){
-  const {cx,cy,r}=roi, r2=r*r;
-  const x0=Math.max(0,Math.floor(cx-r)), x1=Math.min(state.width-1,Math.ceil(cx+r));
-  const y0=Math.max(0,Math.floor(cy-r)), y1=Math.min(state.height-1,Math.ceil(cy+r));
-  const sums=new Array(state.nCh).fill(0);
-  let n=0;
-  for(let y=y0;y<=y1;y++){
-    for(let x=x0;x<=x1;x++){
-      const dx=x+0.5-cx, dy=y+0.5-cy;
-      if(dx*dx+dy*dy<=r2){
-        const i=y*state.width+x;
-        for(let c=0;c<state.nCh;c++) sums[c]+=state.channels[c].data[i];
-        n++;
-      }
-    }
-  }
-  return {means:sums.map(s=> n? s/n : 0), sums:sums.slice(), pixels:n};
+function regionReady(){ return state.nCh>0 && (state.shape==='whole' || roiValid(state.roi)); }
+function regionName(){ return state.shape==='whole' ? 'whole image' : (state.roi ? shapeName(state.roi.type) : '—'); }
+function updateButtons(){
+  const ready=regionReady();
+  $('btnPearson').disabled=!ready;
+  $('btnManders').disabled=!ready;
 }
-function measureRect(roi){
-  const x0=Math.max(0,Math.floor(roi.x)), x1=Math.min(state.width-1,Math.ceil(roi.x+roi.w));
-  const y0=Math.max(0,Math.floor(roi.y)), y1=Math.min(state.height-1,Math.ceil(roi.y+roi.h));
-  const sums=new Array(state.nCh).fill(0);
-  let n=0;
-  for(let y=y0;y<=y1;y++){
-    for(let x=x0;x<=x1;x++){
-      const px=x+0.5, py=y+0.5;
-      if(px>=roi.x && px<roi.x+roi.w && py>=roi.y && py<roi.y+roi.h){
-        const i=y*state.width+x;
-        for(let c=0;c<state.nCh;c++) sums[c]+=state.channels[c].data[i];
-        n++;
-      }
-    }
-  }
-  return {means:sums.map(s=> n? s/n : 0), sums:sums.slice(), pixels:n};
+function resetResult(){
+  $('results').innerHTML='<div class="empty">Pick a region &amp; channels, then choose a coefficient.</div>';
+  $('record').disabled=true;
+  state._result=null;
+  const tr=$('topResult'); if(tr) tr.style.display='none';
+  updateButtons();
 }
 
-// Compact display for (possibly large) intensity sums; grouped digits, integer unless it isn't.
-function fmtSum(v){return (Number.isInteger(v)?v:+v.toFixed(2)).toLocaleString('en-US');}
-function refreshReadings(){
-  const box=$('readings');
-  if(!roiValid(state.roi)){
-    box.innerHTML='<div class="empty">No ROI drawn.</div>';
-    $('record').disabled=true; return;
-  }
-  const m=measureROI(state.roi);
-  state._current=m;
-  let html='';
-  for(let c=0;c<state.nCh;c++){
-    const sw='<span class="sw" style="background:'+rgb(state.colors[c])+'"></span>';
-    html+='<div class="reading"><span class="lbl">'+sw+'mean C'+(c+1)+'</span><b>'+m.means[c].toFixed(2)+'</b></div>';
-    html+='<div class="reading"><span class="lbl">'+sw+'sum C'+(c+1)+'</span><b>'+fmtSum(m.sums[c])+'</b></div>';
-  }
-  html+='<div class="reading"><span class="lbl">ROI pixels</span><b>'+m.pixels+'</b></div>';
-  let geo;
-  if(state.roi.type==='circle'){
-    geo='center '+Math.round(state.roi.cx)+', '+Math.round(state.roi.cy)+' · r='+state.roi.r.toFixed(1);
-  } else if(state.roi.type==='rect'){
-    geo='x,y '+Math.round(state.roi.x)+', '+Math.round(state.roi.y)+' · '+Math.round(state.roi.w)+'×'+Math.round(state.roi.h);
-  } else {
-    geo=state.roi.points.length+' vertices';
-  }
-  html+='<div class="reading"><span class="lbl">'+shapeName(state.roi.type)+'</span><b>'+geo+'</b></div>';
-  box.innerHTML=html;
+// Single pass over the region accumulating everything Pearson & Manders need.
+function computeCorr(method){
+  if(!regionReady()) return;
+  const a=+$('chanA').value, b=+$('chanB').value;
+  const A=state.channels[a].data, B=state.channels[b].data;
+  const tA=parseFloat($('thrA').value)||0, tB=parseFloat($('thrB').value)||0;
+  let n=0,sA=0,sB=0,sAA=0,sBB=0,sAB=0,sAco=0,sBco=0;
+  forEachRegionPixel(i=>{
+    const av=A[i], bv=B[i];
+    n++; sA+=av; sB+=bv; sAA+=av*av; sBB+=bv*bv; sAB+=av*bv;
+    if(bv>tB) sAco+=av;
+    if(av>tA) sBco+=bv;
+  });
+  if(n===0){ $('results').innerHTML='<div class="empty">No pixels in the selected region.</div>'; $('record').disabled=true; return; }
+  const denom=Math.sqrt((n*sAA - sA*sA)*(n*sBB - sB*sB));
+  const pearson = denom>0 ? (n*sAB - sA*sB)/denom : 0;
+  const M1 = sA>0 ? sAco/sA : 0;
+  const M2 = sB>0 ? sBco/sB : 0;
+  state._result={method, a:a+1, b:b+1, region:regionName(), pixels:n, pearson, M1, M2, tA, tB};
+  showResult(state._result);
   $('record').disabled=false;
 }
+function showResult(r){
+  let html='';
+  if(r.method==='pearson'){
+    html+='<div class="reading"><span class="lbl">Pearson r</span><b>'+r.pearson.toFixed(4)+'</b></div>';
+  } else {
+    html+='<div class="reading"><span class="lbl">Manders M1</span><b>'+r.M1.toFixed(4)+'</b></div>';
+    html+='<div class="reading"><span class="lbl">Manders M2</span><b>'+r.M2.toFixed(4)+'</b></div>';
+  }
+  html+='<div class="reading"><span class="lbl">Channels</span><b>C'+r.a+' ↔ C'+r.b+'</b></div>';
+  html+='<div class="reading"><span class="lbl">Region · pixels</span><b>'+r.region+' · '+r.pixels+'</b></div>';
+  $('results').innerHTML=html;
+  const tr=$('topResult');
+  tr.textContent = r.method==='pearson'
+    ? 'Pearson r = '+r.pearson.toFixed(4)
+    : 'M1 = '+r.M1.toFixed(4)+'   M2 = '+r.M2.toFixed(4);
+  tr.style.display='';
+}
+$('btnPearson').onclick=()=>computeCorr('pearson');
+$('btnManders').onclick=()=>computeCorr('manders');
+function onCorrInputChange(){ resetResult(); if(state.threshPreview && state.width) render(); }
+$('chanA').onchange=onCorrInputChange; $('chanB').onchange=onCorrInputChange;
+$('thrA').oninput=onCorrInputChange; $('thrB').oninput=onCorrInputChange;
+$('threshPreview').onchange=e=>{ state.threshPreview=e.target.checked; if(state.width) render(); };
 
 /* ---------- records ---------- */
 $('record').onclick=()=>{
-  if(!roiValid(state.roi)||!state._current) return;
-  const m=state._current, roi=state.roi;
-  const rec={shape:roi.type, pixels:m.pixels, means:m.means.slice(), sums:(m.sums||[]).slice(), status:$('statusIn').value.trim()};
-  if(roi.type==='circle'){
-    rec.cx=Math.round(roi.cx); rec.cy=Math.round(roi.cy); rec.r=+roi.r.toFixed(2);
-  } else if(roi.type==='rect'){
-    rec.x=Math.round(roi.x); rec.y=Math.round(roi.y);
-    rec.w=Math.round(roi.w); rec.h=Math.round(roi.h);
-  } else {
-    rec.points=roi.points.map(p=>({x:Math.round(p.x), y:Math.round(p.y)}));
-    let sx=0,sy=0; for(const p of rec.points){ sx+=p.x; sy+=p.y; }
-    rec.cx=Math.round(sx/rec.points.length); rec.cy=Math.round(sy/rec.points.length);
-  }
-  state.records.push(rec);
+  if(!state._result) return;
+  state.records.push(Object.assign({}, state._result, {status:$('statusIn').value.trim()}));
   $('statusIn').value='';
-  state.roi=null;          // recorded ROI now shown persistently in amber
-  state._current=null;
   renderTable();
-  render();
-  refreshReadings();
 };
 
-// Column count for the table/CSV: the loaded image's channels, or (when records were restored from a
-// previous session before an image is reloaded) the channel count baked into the saved records.
-function recNCh(){return state.nCh||state._restoredNCh||state.records.reduce((m,r)=>Math.max(m,(r.means||[]).length),0);}
 function renderTableHead(){
-  let h='<tr><th class="l">#</th><th class="l">shape</th><th>cx</th><th>cy</th><th class="l">size</th><th>px</th>';
-  const nc=recNCh();
-  for(let c=0;c<nc;c++){
-    const col=rgb(state.colors[c]||channelColor(c));
-    h+='<th style="color:'+col+'">mean C'+(c+1)+'</th><th style="color:'+col+'">sum C'+(c+1)+'</th>';
-  }
-  h+='<th class="l">Status</th><th></th></tr>';
-  $('thead').innerHTML=h;
+  $('thead').innerHTML='<tr><th class="l">#</th><th class="l">method</th><th class="l">A↔B</th><th class="l">region</th><th>r / M1</th><th>M2</th><th>px</th><th class="l">Label</th><th></th></tr>';
 }
 
 function renderTable(){
   const tb=$('tbody');
-  const span=8+2*(recNCh()||1);
   if(!state.records.length){
-    tb.innerHTML='<tr><td colspan="'+span+'" class="empty">No records yet.</td></tr>';
+    tb.innerHTML='<tr><td colspan="9" class="empty">No records yet.</td></tr>';
     $('export').disabled=true; $('clearAll').disabled=true; $('plotData').disabled=true; $('recCount').textContent=''; persistRecords(); return;
   }
   $('export').disabled=false; $('clearAll').disabled=false; $('plotData').disabled=false;
   $('recCount').textContent='('+state.records.length+')';
-  const nc=recNCh();
   tb.innerHTML=state.records.map((r,i)=>{
-    const cx = r.shape==='rect'? Math.round(r.x+r.w/2) : r.cx;
-    const cy = r.shape==='rect'? Math.round(r.y+r.h/2) : r.cy;
-    const size = r.shape==='circle'? ('r='+r.r) : (r.shape==='rect'? (r.w+'×'+r.h) : (r.points.length+' pts'));
-    let chCells='';
-    for(let c=0;c<nc;c++) chCells+='<td>'+(r.means[c]!=null? r.means[c].toFixed(2):'—')+'</td>'
-      +'<td>'+(r.sums&&r.sums[c]!=null? fmtSum(r.sums[c]):'—')+'</td>';
+    const v1 = r.method==='pearson' ? r.pearson.toFixed(4) : r.M1.toFixed(4);
+    const v2 = r.method==='pearson' ? '—' : r.M2.toFixed(4);
     return '<tr>'
       +'<td class="l">'+(i+1)+'</td>'
-      +'<td class="l">'+shapeName(r.shape)+'</td>'
-      +'<td>'+cx+'</td><td>'+cy+'</td>'
-      +'<td class="l">'+size+'</td>'
+      +'<td class="l">'+r.method+'</td>'
+      +'<td class="l">C'+r.a+'↔C'+r.b+'</td>'
+      +'<td class="l">'+r.region+'</td>'
+      +'<td>'+v1+'</td>'
+      +'<td>'+v2+'</td>'
       +'<td>'+r.pixels+'</td>'
-      +chCells
       +'<td class="l"><input class="stat-in" data-i="'+i+'" value="'+escapeHtml(r.status)+'" placeholder="…"></td>'
       +'<td><button class="del" data-i="'+i+'">✕</button></td>'
       +'</tr>';
@@ -877,7 +858,7 @@ function renderTable(){
     inp.oninput=e=>{ state.records[+e.target.dataset.i].status=e.target.value; persistRecords(); };
   });
   tb.querySelectorAll('.del').forEach(btn=>{
-    btn.onclick=e=>{ state.records.splice(+e.target.dataset.i,1); renderTable(); render(); };
+    btn.onclick=e=>{ state.records.splice(+e.target.dataset.i,1); renderTable(); };
   });
   persistRecords();
 }
@@ -885,22 +866,17 @@ function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
 
 /* ---------- CSV export ---------- */
 function buildRecordsCSV(){
-  const head=['record','shape','center_x','center_y','radius_px','width_px','height_px','roi_pixels'];
-  const nc=recNCh();
-  for(let c=0;c<nc;c++){ head.push('mean_C'+(c+1)); head.push('sum_C'+(c+1)); }
-  head.push('status');
+  const head=['record','method','channel_A','channel_B','region','pearson_r','manders_M1','manders_M2','threshold_A','threshold_B','pixels','label'];
   const rows=state.records.map((r,i)=>{
-    const cx = r.shape==='rect'? Math.round(r.x+r.w/2) : r.cx;
-    const cy = r.shape==='rect'? Math.round(r.y+r.h/2) : r.cy;
     const cells=[
-      i+1, r.shape, cx, cy,
-      r.shape==='circle'? r.r : '',
-      r.shape==='rect'? r.w : '',
-      r.shape==='rect'? r.h : '',
-      r.pixels
+      i+1, r.method, r.a, r.b, r.region,
+      r.method==='pearson'? r.pearson.toFixed(6) : '',
+      r.method==='manders'? r.M1.toFixed(6) : '',
+      r.method==='manders'? r.M2.toFixed(6) : '',
+      r.method==='manders'? r.tA : '',
+      r.method==='manders'? r.tB : '',
+      r.pixels, csvCell(r.status)
     ];
-    for(let c=0;c<nc;c++){ cells.push(r.means[c]!=null? r.means[c].toFixed(4):''); cells.push(r.sums&&r.sums[c]!=null? r.sums[c].toFixed(4):''); }
-    cells.push(csvCell(r.status));
     return cells.join(',');
   });
   return [head.join(','),...rows].join('\n');
@@ -910,13 +886,13 @@ $('export').onclick=()=>{
   const blob=new Blob([buildRecordsCSV()],{type:'text/csv'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='roi_inspector_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
+  a.download='correlations_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
   a.click(); URL.revokeObjectURL(a.href);
 };
 // Hand the records table off to the Plot Data page.
 $('plotData').onclick=()=>{
   if(!state.records.length)return;
-  try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name:'roi_inspector.csv',csv:buildRecordsCSV()}));}
+  try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name:'correlations.csv',csv:buildRecordsCSV()}));}
   catch(e){alert('Could not hand off data: '+e.message);return;}
   window.open('plot_data.html','_blank');
 };
@@ -928,27 +904,30 @@ function setShape(s){
   $('shapeFree').classList.toggle('active',s==='free');
   $('shapeCircle').classList.toggle('active',s==='circle');
   $('shapeRect').classList.toggle('active',s==='rect');
-  $('shapeHint').textContent = s==='free'
-    ? 'Draw a closed outline around your region — release to close it.'
-    : (s==='circle'
-      ? 'Drag out from the center to set the radius. Enable fixed size to click-drop a circle.'
-      : 'Drag from one corner to the opposite. Enable fixed size to click-drop a rectangle.');
+  $('shapeWhole').classList.toggle('active',s==='whole');
+  $('shapeHint').textContent =
+      s==='whole' ? 'The whole image is used as the region — no drawing needed.'
+    : s==='free'  ? 'Draw a closed outline around your region — release to close it.'
+    : s==='circle'? 'Drag out from the center to set the radius. Enable fixed size to click-drop a circle.'
+    :               'Drag from one corner to the opposite. Enable fixed size to click-drop a rectangle.';
   state.roi=null;
   updateFixedUI();
-  if($('cv').width){ render(); refreshReadings(); }
+  if($('cv').width){ render(); }
+  resetResult();
 }
 function updateFixedUI(){
-  const free = state.shape==='free';
-  $('fixedMode').disabled = free;
-  const on=$('fixedMode').checked && !free;
+  const drawShape = (state.shape==='circle' || state.shape==='rect');
+  $('fixedMode').disabled = !drawShape;
+  const on=$('fixedMode').checked && drawShape;
   $('fixedCircle').style.display=(on && state.shape==='circle')?'flex':'none';
   $('fixedRect').style.display=(on && state.shape==='rect')?'block':'none';
   const cv=$('cv');
-  if(cv) cv.style.cursor = on ? 'pointer' : 'crosshair';
+  if(cv) cv.style.cursor = state.shape==='whole' ? 'default' : (on ? 'pointer' : 'crosshair');
 }
 $('shapeFree').onclick=()=>setShape('free');
 $('shapeCircle').onclick=()=>setShape('circle');
 $('shapeRect').onclick=()=>setShape('rect');
+$('shapeWhole').onclick=()=>setShape('whole');
 updateFixedUI();
 
 $('fixedMode').onchange=()=>{
@@ -963,7 +942,7 @@ $('fixedMode').onchange=()=>{
       const fh=Math.max(1, parseFloat($('fixedH').value)||1);
       state.roi.x=cx-fw/2; state.roi.y=cy-fh/2; state.roi.w=fw; state.roi.h=fh;
     }
-    render(); refreshReadings();
+    render(); resetResult();
   }
 };
 function reSnap(){
@@ -976,13 +955,13 @@ function reSnap(){
     const fh=Math.max(1, parseFloat($('fixedH').value)||1);
     state.roi.x=cx-fw/2; state.roi.y=cy-fh/2; state.roi.w=fw; state.roi.h=fh;
   }
-  render(); refreshReadings();
+  render(); resetResult();
 }
 $('fixedR').oninput=reSnap;
 $('fixedW').oninput=reSnap;
 $('fixedH').oninput=reSnap;
 
-$('clearRoi').onclick=()=>{ state.roi=null; render(); refreshReadings(); };
+$('clearRoi').onclick=()=>{ state.roi=null; render(); resetResult(); };
 $('clearAll').onclick=()=>{ if(confirm('Clear all records?')){ state.records=[]; renderTable(); render(); } };
 
 /* ---------- zoom ---------- */
@@ -1017,14 +996,12 @@ $('reset').onclick=()=>{
 };
 
 /* ---------- lightweight session persistence (records only, not the image) ---------- */
-const PERSIST_KEY='imgtkt_roi_inspector_records';
-function persistRecords(){ try{ state.records.length? localStorage.setItem(PERSIST_KEY,JSON.stringify({nCh:recNCh(),records:state.records})) : localStorage.removeItem(PERSIST_KEY); }catch(e){} }
+const PERSIST_KEY='imgtkt_correlations_records';
+function persistRecords(){ try{ state.records.length? localStorage.setItem(PERSIST_KEY,JSON.stringify(state.records)) : localStorage.removeItem(PERSIST_KEY); }catch(e){} }
 function restoreRecords(){
   let n=0;
-  try{ const raw=localStorage.getItem(PERSIST_KEY);
-    if(raw){ const o=JSON.parse(raw); if(o&&o.records&&o.records.length){ state.records=o.records; state._restoredNCh=o.nCh||0; n=o.records.length; } }
-  }catch(e){}
-  renderTableHead(); renderTable();
+  try{ const raw=localStorage.getItem(PERSIST_KEY); if(raw){ const a=JSON.parse(raw); if(Array.isArray(a)&&a.length){ state.records=a; n=a.length; } } }catch(e){}
+  renderTable();
   if(n) showRestoreBanner(n, ()=>{ state.records=[]; renderTable(); if(state.width) render(); });
 }
 // On-load prompt when a previous session's records were restored: keep them or clear them.

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="85 50 315 200" width="100%" height="100%">
+  <!-- Hand-drawn ROI outline -->
+  <path d="M 100,65
+           L 320,65
+           C 335,80 315,100 335,110
+           C 350,118 335,135 355,145
+           C 375,155 385,180 385,190
+           C 365,200 345,190 335,200
+           C 325,210 330,225 320,235
+           L 100,235
+           Z"
+        fill="none"
+        stroke="#5FC44A"
+        stroke-width="6"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>

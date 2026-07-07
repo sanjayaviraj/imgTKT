@@ -1,8 +1,10 @@
 <!DOCTYPE html>
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. All rights reserved. Proprietary; do not copy, modify, or distribute without written permission. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
 <title>Line Profile</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
@@ -18,7 +20,7 @@
   :root {
     --bg-primary:#f8f9fa;--bg-secondary:#ffffff;--bg-panel:#ffffff;--bg-input:#ffffff;
     --border:#dadce0;--text-primary:#202124;--text-secondary:#5f6368;--text-muted:#80868b;
-    --accent:#5FC44A;--accent-glow:rgba(95,196,74,0.16);--green:#188038;--green-glow:rgba(24,128,56,0.10);
+    --accent:#5FC44A;--accent-glow:rgba(95,196,74,0.16);--accent-hover:#4CAF3C;--green:#188038;--green-glow:rgba(24,128,56,0.10);
     --red:#d93025;--yellow:#e37400;--pink:#F763AA;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
@@ -27,23 +29,22 @@
   .header-title{font-family:'Roboto',sans-serif;font-size:22px;font-weight:500;letter-spacing:0;color:var(--text-primary);}
   .header-subtitle{font-size:12px;color:var(--text-muted);font-family:'Roboto',sans-serif;}
   .main{display:flex;flex:1;overflow:hidden;}
-  .left-panel{width:290px;min-width:290px;background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
-  .panel-section{padding:14px 16px;border-bottom:1px solid var(--border);}
-  .section-label{font-family:'Roboto Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;}
+  .left-panel{width:440px;min-width:440px;background:var(--bg-panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;order:2;}
+  .panel-section{padding:18px 22px;border-bottom:1px solid var(--border);}
+  .section-label{font-family:'Roboto',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.3px;text-transform:none;color:var(--text-primary);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:7px;}
   .form-group{margin-bottom:10px;}
   .form-group label{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;}
   .form-group input{width:100%;padding:8px 11px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:'Roboto Mono',monospace;font-size:13px;outline:none;transition:border-color 0.2s;box-shadow:none;}
   .form-group input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
   .hint{font-size:11px;color:var(--text-muted);line-height:1.5;}
-  .btn{width:100%;padding:9px 16px;border:1px solid var(--border);border-radius:999px;background:var(--bg-input);color:var(--text-primary);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:none;}
-  .btn:hover{background:var(--bg-secondary);border-color:var(--accent);color:var(--accent);}
-  .btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .btn.danger{border-color:var(--red);color:var(--red);}
-  .btn.danger:hover{background:rgba(217,48,37,0.07);}
-  .btn.success{border-color:var(--green);color:var(--green);}
-  .btn.success:hover{background:rgba(24,128,56,0.08);}
-  .btn:disabled{opacity:0.45;cursor:not-allowed;}
-  .btn:disabled:hover{background:var(--bg-input);border-color:var(--border);color:var(--text-primary);}
+  .btn{width:100%;padding:9px 18px;border:1px solid var(--border);border-radius:999px;background:var(--bg-input);color:var(--text-primary);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:none;}
+  .btn:hover:not(:disabled){background:var(--bg-primary);border-color:var(--accent);color:var(--accent);}
+  .btn.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent);}
+  .btn.danger{border-color:var(--pink);color:var(--pink);}
+  .btn.danger:hover:not(:disabled){background:rgba(247,99,170,0.08);border-color:var(--pink);color:var(--pink);}
+  .btn.success{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.success:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);color:#fff;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
   .btn-row{display:flex;gap:8px;margin-top:8px;}
   .btn-row .btn{flex:1;}
   .color-options{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
@@ -57,8 +58,20 @@
   .ch .nm{flex:1;color:var(--text-secondary);white-space:nowrap;}
   .ch input[type=range]{width:64px;accent-color:var(--accent);height:3px;}
   .ch.off{opacity:0.4;}
-  .image-viewer{flex:1;display:flex;flex-direction:column;position:relative;background:#1a1d21;overflow:hidden;}
-  .viewer-toolbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;}
+  .ch-block{display:flex;flex-direction:column;gap:6px;}
+  .rng{display:flex;align-items:center;gap:6px;padding:0 6px;}
+  .rng label{font-size:10px;color:var(--text-muted);white-space:nowrap;}
+  .rng .num{width:60px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;
+    color:var(--text-primary);padding:5px 7px;font-family:'Roboto Mono',monospace;font-size:11px;}
+  .auto-btn{background:var(--bg-input);border:1px solid var(--border);color:var(--text-muted);border-radius:4px;
+    padding:4px 7px;font-family:'Roboto Mono',monospace;font-size:10px;cursor:pointer;}
+  .auto-btn:hover{color:var(--accent);border-color:var(--accent);}
+  .image-viewer{flex:1;display:flex;flex-direction:column;position:relative;background:var(--bg-primary);overflow:hidden;}
+  .viewer-head{background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;}
+  .filename{padding:9px 14px 0;font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pill{background:var(--bg-primary);border:1px solid var(--border);border-radius:999px;padding:6px 13px;color:var(--text-secondary);font-size:12px;font-family:'Roboto Mono',monospace;white-space:nowrap;}
+  .pill b{color:var(--text-primary)}
+  .viewer-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;flex-shrink:0;flex-wrap:wrap;}
   .toolbar-btn{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:999px;color:var(--text-secondary);font-size:11px;cursor:pointer;font-family:'Roboto Mono',monospace;transition:all 0.15s;}
   .toolbar-btn:hover{border-color:var(--accent);color:var(--accent);}
   .toolbar-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
@@ -68,12 +81,15 @@
   .canvas-wrap canvas{position:absolute;top:0;left:0;}
   #imageCanvas{image-rendering:pixelated;}
   #overlayCanvas{cursor:crosshair;z-index:2;}
-  .empty-state{text-align:center;color:#9aa0a6;font-size:13px;line-height:1.8;}
-  .empty-state .icon{font-size:48px;margin-bottom:12px;opacity:0.4;}
+  .empty-state{position:absolute;top:24px;left:24px;right:24px;bottom:24px;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:var(--bg-secondary);border:1.5px dashed var(--border);border-radius:8px;padding:42px 24px;cursor:pointer;transition:border-color 0.2s,background 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+  .empty-state:hover{border-color:var(--accent);background:var(--accent-glow);}
+  .empty-state strong{font-family:'Roboto',sans-serif;font-size:17px;font-weight:600;display:block;margin-bottom:6px;color:var(--text-primary);}
+  .empty-state span{color:var(--text-muted);font-size:12.5px;}
   .bottom-panel{height:250px;min-height:160px;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;flex-shrink:0;position:relative;box-shadow:0 -1px 3px rgba(0,0,0,0.05);}
   .chart-container{flex:1;padding:12px 18px 10px 12px;position:relative;}
   .chart-container canvas{width:100%!important;height:100%!important;}
-  .chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;font-family:'Roboto Mono',monospace;}
+  .chart-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 24px;color:var(--text-muted);font-size:12px;font-family:'Roboto Mono',monospace;}
+  .chart-empty .chart-desc{max-width:560px;font-family:'Roboto',sans-serif;font-size:13px;line-height:1.6;color:var(--text-secondary);}
   .resize-handle{position:absolute;top:-3px;left:0;right:0;height:6px;cursor:ns-resize;z-index:10;}
   .status-bar{padding:4px 20px;background:var(--bg-secondary);border-top:1px solid var(--border);font-family:'Roboto Mono',monospace;font-size:10px;color:var(--text-muted);display:flex;gap:20px;flex-shrink:0;}
   ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
@@ -87,22 +103,20 @@
       <a href="size_analysis.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Size Analysis</a>
       <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;background:var(--accent);color:#fff">Line Profile</a>
       <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">ROI Inspector</a>
+      <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Correlations</a>
+      <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Plot Data</a>
     </nav>
+    <div class="header-subtitle">Multi-Channel Intensity Profile</div>
   </div>
-  <div class="header-subtitle">Multi-Channel Intensity Profile</div>
 </div>
 <div class="main">
   <div class="left-panel">
-    <div class="panel-section">
-      <div class="section-label">Image Input</div>
-      <input type="file" id="fileInput" accept=".tif,.tiff,.png,.jpg,.jpeg,.bmp" style="display:none">
-      <button class="btn" id="btnBrowse">📂 Browse image…</button>
-      <div id="fileInfo" style="margin-top:6px;font-size:11px;color:var(--text-muted);display:none"></div>
-    </div>
+    <input type="file" id="fileInput" accept=".tif,.tiff,.png,.jpg,.jpeg,.bmp" style="display:none">
     <div class="panel-section" id="channelSection" style="display:none">
       <div class="section-label">Channels</div>
       <div class="ch-toggles" id="chToggles"></div>
-      <div class="hint" style="margin-top:8px">Click a channel to show / hide it. Slider adjusts display brightness (profiles use raw values).</div>
+      <div class="hint" style="margin-top:8px">Click a channel to show / hide it. Slider adjusts display brightness; set display min / max to fix the contrast range (profiles use raw values).</div>
+      <button class="btn" id="btnNormalize" style="margin-top:10px">Normalize (0–1)</button>
     </div>
     <div class="panel-section">
       <div class="section-label">Calibration</div>
@@ -114,6 +128,13 @@
     </div>
     <div class="panel-section">
       <div class="section-label">Line</div>
+      <div class="form-group">
+        <label>Line Type</label>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn active" id="btnLineStraight">╱ Straight</button>
+          <button class="btn" id="btnLineFree">✎ Freehand</button>
+        </div>
+      </div>
       <div class="form-group">
         <label>Line Width (px)</label>
         <input type="number" id="lineWidth" value="1" min="1" max="50" step="1">
@@ -139,23 +160,39 @@
     <div class="panel-section">
       <div class="section-label">Export</div>
       <button class="btn success" id="btnDownloadCSV" disabled>⬇ Download CSV</button>
+      <div class="btn-row"><button class="btn" id="btnPlotData" disabled>📊 Plot this data →</button></div>
     </div>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
     <div class="image-viewer" id="imageViewer">
-      <div class="viewer-toolbar">
-        <button class="toolbar-btn" id="btnZoomIn">＋</button>
-        <button class="toolbar-btn" id="btnZoomOut">－</button>
-        <button class="toolbar-btn" id="btnFit">⊞ Fit</button>
-        <button class="toolbar-btn" id="btn1to1">1:1</button>
-        <div class="toolbar-sep"></div>
-        <span class="toolbar-info" id="zoomInfo">100%</span>
-        <span class="toolbar-info" id="cursorInfo">—</span>
+      <div class="viewer-head">
+        <div class="filename" id="fileName" style="display:none"></div>
+        <div class="viewer-toolbar">
+          <span class="pill">Size <b id="pSize">–</b></span>
+          <span class="pill">Channels <b id="pCh">–</b></span>
+          <span class="pill">Bit depth <b id="pBits">–</b></span>
+          <span id="loadActions" style="display:none">
+            <button class="toolbar-btn" id="btnClearTop">Clear line</button>
+            <button class="toolbar-btn" id="btnReset">Load another</button>
+          </span>
+          <span class="toolbar-info" id="cursorInfo">—</span>
+        </div>
+        <div class="viewer-toolbar" style="padding-top:0">
+          <span class="pill" style="display:flex;align-items:center;gap:8px">Zoom
+            <input type="range" id="zoomSlider" min="0.25" max="8" step="0.05" value="1" style="width:130px;accent-color:var(--accent)">
+            <b id="zoomInfo" style="min-width:42px;text-align:right;color:var(--text-primary)">100%</b>
+          </span>
+          <button class="toolbar-btn" id="btnZoomOut">−</button>
+          <button class="toolbar-btn" id="btn1to1">100%</button>
+          <button class="toolbar-btn" id="btnFit">Fit</button>
+          <button class="toolbar-btn" id="btnZoomIn">+</button>
+        </div>
+        <div class="viewer-toolbar" id="ztBar" style="display:none;padding-top:0"></div>
       </div>
       <div class="canvas-wrap" id="canvasWrap">
-        <div class="empty-state" id="emptyState" style="cursor:pointer">
-          <div class="icon">📷</div>Drag &amp; drop an image here, or click to browse<br>
-          <span style="font-size:11px">Multi-channel TIFF / OME-TIFF · RGB PNG/JPG</span>
+        <div class="empty-state" id="emptyState">
+          <strong>Drop an image here</strong>
+          <span>or click to browse · multi-channel TIFF / OME-TIFF · RGB PNG/JPG</span>
         </div>
         <canvas id="imageCanvas"></canvas>
         <canvas id="overlayCanvas"></canvas>
@@ -164,7 +201,10 @@
     <div class="bottom-panel" id="bottomPanel">
       <div class="resize-handle" id="resizeHandle"></div>
       <div class="chart-container">
-        <div class="chart-empty" id="chartEmpty">Draw a line to see its intensity profile</div>
+        <div class="chart-empty" id="chartEmpty">
+          <p class="chart-desc">Draw a line across a multi-channel image and read out the intensity profile of every channel at once. Clean grid-free plot with per-channel colors, and one-click CSV export of the data.</p>
+          Draw a line to see its intensity profile
+        </div>
         <canvas id="profileChart"></canvas>
       </div>
     </div>
@@ -176,16 +216,18 @@
 </div>
 <script>
 const $=id=>document.getElementById(id);
-const S={channels:[],nCh:0,colors:[],visible:[],bright:[],width:0,height:0,zoom:1,panX:0,panY:0,
-  drawMode:false,drawing:false,lineStart:null,lineEnd:null,lineColor:'#ffffff',xData:null,profiles:null};
+const S={channels:[],nCh:0,colors:[],visible:[],bright:[],dispMin:[],dispMax:[],width:0,height:0,zoom:1,panX:0,panY:0,
+  drawMode:true,drawing:false,lineType:'straight',linePts:null,lineStart:null,lineEnd:null,lineColor:'#ffffff',normalize:false,xData:null,profiles:null};
 const iC=$('imageCanvas'),oC=$('overlayCanvas');
 const iCtx=iC.getContext('2d'),oCtx=oC.getContext('2d');
 const wrap=$('canvasWrap');
 
 /* ---------- channel colors (any number of channels) ---------- */
+// Shared channel palette — kept identical across tools: magenta, green, cyan, yellow, red, blue, orange, purple, mint, pink
 const BASE_COLORS=[
-  [95,196,74],[247,99,170],[77,166,255],[255,209,77],
-  [120,235,235],[255,140,77],[200,120,255],[120,255,160],[255,77,120],[160,200,120]
+  [236,64,209],[95,196,74],[64,208,224],[255,206,84],
+  [237,85,101],[93,156,236],[246,146,30],[172,127,244],
+  [120,255,160],[236,120,170]
 ];
 function hslToRgb(h,s,l){h/=360;const f=n=>{const k=(n+h*12)%12;const a=s*Math.min(l,1-l);return l-a*Math.max(-1,Math.min(k-3,9-k,1));};return[Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];}
 function channelColor(i){return i<BASE_COLORS.length?BASE_COLORS[i].slice():hslToRgb((i*137.508)%360,0.65,0.6);}
@@ -193,7 +235,6 @@ const rgb=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
 
 /* ---------- file loading ---------- */
 const fi=$('fileInput');
-$('btnBrowse').addEventListener('click',()=>fi.click());
 fi.addEventListener('change',e=>{if(e.target.files.length)handleFile(e.target.files[0]);});
 wrap.addEventListener('dragover',e=>{e.preventDefault();wrap.style.outline='2px dashed var(--accent)';wrap.style.outlineOffset='-6px';});
 wrap.addEventListener('dragleave',()=>{wrap.style.outline='none';});
@@ -202,13 +243,93 @@ $('emptyState').addEventListener('click',()=>fi.click());
 
 function handleFile(file){
   const ext=file.name.split('.').pop().toLowerCase();
-  $('fileInfo').style.display='block';
-  $('fileInfo').textContent=`${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  const fn=$('fileName'); fn.textContent=file.name; fn.title=file.name; fn.style.display='block';
   $('statusText').textContent='Loading…';
   if(ext==='tif'||ext==='tiff')loadTiff(file);else loadStd(file);
 }
 
 function toChannel(arr){let mn=Infinity,mx=-Infinity;for(let i=0;i<arr.length;i++){const v=arr[i];if(v<mn)mn=v;if(v>mx)mx=v;}if(mx===mn)mx=mn+1;return{data:arr,min:mn,max:mx};}
+
+/* ---------- dimension metadata (separate channels from Z-slices / time points) ---------- */
+// TIFF pages can be channels, Z-slices, or time points; read the real layout from OME-XML or ImageJ
+// metadata so a z-stack / time series isn't mistaken for N "channels".
+function parseDims(desc){
+  if(!desc) return null;
+  const pm=desc.match(/<Pixels\b[^>]*>/i);
+  if(pm){
+    const gi=k=>{const r=pm[0].match(new RegExp(k+'\\s*=\\s*"(\\d+)"'));return r?+r[1]:null;};
+    const nC=gi('SizeC');
+    if(nC){const od=pm[0].match(/DimensionOrder\s*=\s*"([A-Za-z]+)"/);
+      return {nC:nC,nZ:gi('SizeZ')||1,nT:gi('SizeT')||1,order:od?od[1].toUpperCase():'XYCZT',source:'OME'};}
+  }
+  if(/ImageJ\s*=/.test(desc)){
+    const gi=k=>{const r=desc.match(new RegExp('(?:^|[\\n\\r])'+k+'\\s*=\\s*(\\d+)'));return r?+r[1]:null;};
+    const nC=gi('channels'),nZ=gi('slices'),nT=gi('frames');
+    if(nC||nZ||nT) return {nC:nC||1,nZ:nZ||1,nT:nT||1,order:'XYCZT',source:'ImageJ'};
+  }
+  return null;
+}
+function planeIndex(c,z,t,D){
+  const val={C:c,Z:z,T:t},num={C:D.nC,Z:D.nZ,T:D.nT};
+  const seq=(D.order||'XYCZT').replace(/[^CZT]/g,'').split('');
+  let idx=0,stride=1;
+  for(const ch of seq){ idx+=val[ch]*stride; stride*=num[ch]; }
+  return idx;
+}
+async function readPlaneChannels(z,t){
+  const D=S.dims,out=[];
+  if(S.planeMode==='samples'){
+    const r=await S.first.readRasters();
+    for(let c=0;c<D.nC;c++) out.push(toChannel(r[c]));
+  }else{
+    for(let c=0;c<D.nC;c++){
+      const img=await S.tiff.getImage(planeIndex(c,z,t,D));
+      const r=await img.readRasters();
+      out.push(toChannel(r[0]));
+    }
+  }
+  return out;
+}
+async function gotoPlane(z,t){
+  const D=S.dims; z=Math.max(0,Math.min(D.nZ-1,z)); t=Math.max(0,Math.min(D.nT-1,t));
+  S.z=z; S.t=t;
+  S.channels=await readPlaneChannels(z,t);
+  render(); renderOverlay();
+  if(S.profiles) extractProfiles();     // refresh the plotted profile for the new plane
+}
+async function reinterpret(mode){
+  const N=S.pageCount;
+  S.dims = mode==='z' ? {nC:1,nZ:N,nT:1,order:'XYCZT'}
+        : mode==='t' ? {nC:1,nZ:1,nT:N,order:'XYCZT'}
+        : {nC:N,nZ:1,nT:1,order:'XYCZT'};
+  S.z=0; S.t=0;
+  const ch=await readPlaneChannels(0,0);
+  setChannels(ch,S.width,S.height,S.bits);
+}
+function makeSlider(label,n,getV,onSet){
+  const pill=document.createElement('span'); pill.className='pill'; pill.style.cssText='display:inline-flex;align-items:center;gap:8px';
+  const sl=document.createElement('input'); sl.type='range'; sl.min=0; sl.max=n-1; sl.step=1; sl.value=getV();
+  sl.style.cssText='width:118px;accent-color:var(--accent)';
+  const lab=document.createElement('b'); lab.style.cssText='min-width:52px;text-align:right;color:var(--text-primary)'; lab.textContent=(getV()+1)+' / '+n;
+  sl.oninput=()=>{ lab.textContent=(+sl.value+1)+' / '+n; onSet(+sl.value); };
+  pill.append(label+' ', sl, lab);
+  return pill;
+}
+function buildZT(){
+  const bar=$('ztBar'); if(!bar) return; bar.innerHTML=''; const D=S.dims;
+  if(S.ambiguous){
+    const wrap=document.createElement('span'); wrap.className='pill'; wrap.style.cssText='display:inline-flex;align-items:center;gap:8px';
+    const sel=document.createElement('select'); sel.style.cssText='background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:Roboto Mono,monospace;font-size:12px;padding:3px 6px';
+    sel.innerHTML='<option value="channels">'+S.pageCount+' channels</option><option value="z">'+S.pageCount+' Z-slices</option><option value="t">'+S.pageCount+' time points</option>';
+    sel.value = D.nZ>1?'z':(D.nT>1?'t':'channels');
+    sel.onchange=()=>reinterpret(sel.value);
+    wrap.append(S.pageCount+' pages =', sel);
+    bar.appendChild(wrap);
+  }
+  if(D.nZ>1) bar.appendChild(makeSlider('Z slice',D.nZ,()=>S.z,v=>gotoPlane(v,S.t)));
+  if(D.nT>1) bar.appendChild(makeSlider('Time',D.nT,()=>S.t,v=>gotoPlane(S.z,v)));
+  bar.style.display=(S.ambiguous||D.nZ>1||D.nT>1)?'flex':'none';
+}
 
 async function loadTiff(file){
   if(typeof GeoTIFF==='undefined'){loadTiffUTIF(file);return;}
@@ -219,16 +340,17 @@ async function loadTiff(file){
     const first=await tiff.getImage(0);
     const w=first.getWidth(),h=first.getHeight();
     const spp=first.getSamplesPerPixel();
-    let channels=[];
-    if(count>=2){
-      for(let i=0;i<count;i++){const img=await tiff.getImage(i);if(img.getWidth()!==w||img.getHeight()!==h)continue;const r=await img.readRasters();for(let b=0;b<r.length;b++)channels.push(toChannel(r[b]));}
-      if(!channels.length){const r=await first.readRasters();for(let b=0;b<r.length;b++)channels.push(toChannel(r[b]));}
-    } else if(spp>=2){
-      const r=await first.readRasters();for(let i=0;i<r.length;i++)channels.push(toChannel(r[i]));
-    } else {
-      const r=await first.readRasters();channels.push(toChannel(r[0]));
-    }
-    setChannels(channels,w,h);
+    const bits=(first.getBitsPerSample&&first.getBitsPerSample()[0])||16;
+    const desc=first.fileDirectory?first.fileDirectory.ImageDescription:'';
+    let dims,planeMode='pages',ambiguous=false;
+    const meta=parseDims(desc);
+    if(meta && spp===1 && meta.nC*meta.nZ*meta.nT===count){ dims=meta; }
+    else if(spp>=2){ dims={nC:spp,nZ:1,nT:1,order:'XYCZT'}; planeMode='samples'; }
+    else if(count>=2){ dims={nC:count,nZ:1,nT:1,order:'XYCZT'}; ambiguous=true; }
+    else { dims={nC:1,nZ:1,nT:1,order:'XYCZT'}; planeMode='samples'; }
+    S.tiff=tiff; S.first=first; S.pageCount=count; S.dims=dims; S.planeMode=planeMode; S.ambiguous=ambiguous; S.z=0; S.t=0;
+    const channels=await readPlaneChannels(0,0);
+    setChannels(channels,w,h,bits);
   }catch(err){console.error(err);loadTiffUTIF(file);}
 }
 
@@ -237,6 +359,7 @@ function loadTiffUTIF(file){
   const reader=new FileReader();
   reader.onload=function(e){
     try{
+      S.dims=null;                       // fallback decoder: plain channels, no Z/T
       const buf=new Uint8Array(e.target.result);
       const ifds=UTIF.decode(buf);UTIF.decodeImage(buf,ifds[0]);
       const ifd=ifds[0],w=ifd.width,h=ifd.height;
@@ -244,7 +367,7 @@ function loadTiffUTIF(file){
       const gray=new Float32Array(w*h);
       for(let i=0;i<w*h;i++)gray[i]=.299*rgba[i*4]+.587*rgba[i*4+1]+.114*rgba[i*4+2];
       if(ifd.t258&&ifd.t258[0]>8){const data=ifd.data,samples=ifd.t277?ifd.t277[0]:1;if(samples===1&&data.length>=w*h*2)for(let i=0;i<w*h;i++)gray[i]=data[i*2]|(data[i*2+1]<<8);}
-      setChannels([toChannel(gray)],w,h);
+      setChannels([toChannel(gray)],w,h,(ifd.t258&&ifd.t258[0])||8);
     }catch(err){console.error(err);loadStd(file);}
   };
   reader.readAsArrayBuffer(file);
@@ -253,6 +376,7 @@ function loadTiffUTIF(file){
 function loadStd(file){
   const img=new Image();
   img.onload=function(){
+    S.dims=null;                         // PNG/JPG: plain RGB channels, no Z/T
     const w=img.width,h=img.height,N=w*h;
     const tc=document.createElement('canvas');tc.width=w;tc.height=h;
     const tctx=tc.getContext('2d');tctx.drawImage(img,0,0);
@@ -260,30 +384,43 @@ function loadStd(file){
     const R=new Float32Array(N),G=new Float32Array(N),B=new Float32Array(N);
     let color=false;
     for(let i=0;i<N;i++){const r=id[i*4],g=id[i*4+1],b=id[i*4+2];R[i]=r;G[i]=g;B[i]=b;if(r!==g||g!==b)color=true;}
-    setChannels(color?[toChannel(R),toChannel(G),toChannel(B)]:[toChannel(R)],w,h);
+    setChannels(color?[toChannel(R),toChannel(G),toChannel(B)]:[toChannel(R)],w,h,8);
   };
   img.src=URL.createObjectURL(file);
 }
 
-function setChannels(channels,w,h){
+function setChannels(channels,w,h,bits){
+  // Non-TIFF / fallback loaders don't set dimension metadata — treat those as plain channels.
+  if(!S.dims){ S.dims={nC:channels.length,nZ:1,nT:1,order:'XYCZT'}; S.ambiguous=false; S.planeMode='samples'; S.pageCount=channels.length; S.z=0; S.t=0; }
+  S.bits=bits;
   S.channels=channels;S.nCh=channels.length;S.width=w;S.height=h;
+  $('pSize').textContent=w+' × '+h;
+  $('pCh').textContent=channels.length;
+  $('pBits').textContent=(bits||8)+'-bit';
+  $('loadActions').style.display='contents';
   S.colors=channels.map((_,i)=>channelColor(i));
   S.visible=channels.map(()=>true);
   S.bright=channels.map(()=>1);
-  S.lineStart=null;S.lineEnd=null;S.xData=null;S.profiles=null;
+  S.lineStart=null;S.lineEnd=null;S.linePts=null;S.xData=null;S.profiles=null;
   buildChannelToggles();
+  buildZT();
   $('emptyState').style.display='none';
   $('statusDim').textContent=`${w} × ${h} px | ${S.nCh} channel${S.nCh>1?'s':''}`;
   $('statusText').textContent='Image loaded';
   $('btnDownloadCSV').disabled=true;
   clearChart();
+  $('btnPlotData').disabled=true;
   fitToView();render();renderOverlay();
 }
 
 function buildChannelToggles(){
   const box=$('chToggles');box.innerHTML='';
   $('channelSection').style.display='block';
+  // Display range defaults to each channel's data min/max.
+  S.dispMin=S.channels.map(c=>c.min);
+  S.dispMax=S.channels.map(c=>c.max);
   for(let i=0;i<S.nCh;i++){
+    const block=document.createElement('div');block.className='ch-block';
     const el=document.createElement('div');
     el.className='ch';el.dataset.c=i;
     el.innerHTML='<span class="sw" style="background:'+rgb(S.colors[i])+'"></span>'
@@ -293,7 +430,17 @@ function buildChannelToggles(){
     const sl=el.querySelector('input');
     sl.addEventListener('input',e=>{S.bright[i]=parseFloat(e.target.value);render();});
     sl.addEventListener('click',e=>e.stopPropagation());
-    box.appendChild(el);
+    const rng=document.createElement('div');rng.className='rng';
+    rng.innerHTML='<label>min/max</label>'
+      +'<input type="number" class="num rmin" step="1" value="'+Math.round(S.dispMin[i])+'">'
+      +'<input type="number" class="num rmax" step="1" value="'+Math.round(S.dispMax[i])+'">'
+      +'<button type="button" class="auto-btn" title="Reset to data range">auto</button>';
+    const rmin=rng.querySelector('.rmin'),rmax=rng.querySelector('.rmax');
+    rmin.addEventListener('input',()=>{S.dispMin[i]=parseFloat(rmin.value);render();});
+    rmax.addEventListener('input',()=>{S.dispMax[i]=parseFloat(rmax.value);render();});
+    rng.querySelector('.auto-btn').addEventListener('click',()=>{const ch=S.channels[i];S.dispMin[i]=ch.min;S.dispMax[i]=ch.max;rmin.value=Math.round(ch.min);rmax.value=Math.round(ch.max);render();});
+    block.appendChild(el);block.appendChild(rng);
+    box.appendChild(block);
   }
 }
 
@@ -307,7 +454,8 @@ function render(){
     for(let c=0;c<S.nCh;c++){
       if(!S.visible[c])continue;
       const ch=S.channels[c];
-      let t=((ch.data[p]-ch.min)/(ch.max-ch.min))*S.bright[c];
+      const lo=S.dispMin[c],hi=S.dispMax[c];
+      let t=((ch.data[p]-lo)/((hi-lo)||1))*S.bright[c];
       if(t<0)t=0;else if(t>1)t=1;
       const col=S.colors[c];r+=t*col[0];g+=t*col[1];b+=t*col[2];
     }
@@ -326,6 +474,7 @@ function applyTransform(){
   oCtx.setTransform(dpr,0,0,dpr,0,0);
   renderOverlay();
   $('zoomInfo').textContent=Math.round(S.zoom*100)+'%';
+  const zs=$('zoomSlider'); if(zs) zs.value=Math.max(0.25,Math.min(8,S.zoom));
 }
 // image px -> screen (CSS) px within the wrap
 function toScreen(p){return{x:S.panX+p.x*S.zoom,y:S.panY+p.y*S.zoom};}
@@ -336,10 +485,18 @@ function fitToView(){
   S.zoom=Math.min(sx,sy,8);S.panX=(ww-S.width*S.zoom)/2;S.panY=(wh-S.height*S.zoom)/2;applyTransform();
 }
 
-$('btnZoomIn').addEventListener('click',()=>{S.zoom*=1.3;applyTransform();});
-$('btnZoomOut').addEventListener('click',()=>{S.zoom/=1.3;applyTransform();});
+function setZoomCentered(z){
+  if(!S.nCh)return;
+  z=Math.max(0.1,Math.min(50,z));
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  const cx=(ww/2-S.panX)/S.zoom, cy=(wh/2-S.panY)/S.zoom;   // image point under the viewport center
+  S.zoom=z;S.panX=ww/2-cx*z;S.panY=wh/2-cy*z;applyTransform();
+}
+$('btnZoomIn').addEventListener('click',()=>setZoomCentered(S.zoom*1.3));
+$('btnZoomOut').addEventListener('click',()=>setZoomCentered(S.zoom/1.3));
 $('btnFit').addEventListener('click',fitToView);
-$('btn1to1').addEventListener('click',()=>{S.zoom=1;S.panX=(wrap.clientWidth-S.width)/2;S.panY=(wrap.clientHeight-S.height)/2;applyTransform();});
+$('btn1to1').addEventListener('click',()=>setZoomCentered(1));
+$('zoomSlider').addEventListener('input',e=>setZoomCentered(parseFloat(e.target.value)));
 
 wrap.addEventListener('wheel',e=>{
   if(!S.nCh)return;e.preventDefault();
@@ -357,10 +514,36 @@ window.addEventListener('mouseup',()=>{isPan=false;oC.style.cursor=S.drawMode?'c
 function canvasCoords(e){const r=wrap.getBoundingClientRect();return{x:(e.clientX-r.left-S.panX)/S.zoom,y:(e.clientY-r.top-S.panY)/S.zoom};}
 
 const btnDraw=$('btnDraw');
+btnDraw.classList.toggle('active',S.drawMode);          // Draw is selected by default
+oC.style.cursor=S.drawMode?'crosshair':'grab';
 btnDraw.addEventListener('click',()=>{S.drawMode=!S.drawMode;btnDraw.classList.toggle('active',S.drawMode);oC.style.cursor=S.drawMode?'crosshair':'grab';});
-$('btnClear').addEventListener('click',()=>{S.lineStart=null;S.lineEnd=null;S.xData=null;S.profiles=null;renderOverlay();clearChart();$('btnDownloadCSV').disabled=true;});
+function clearCurrentLine(){S.lineStart=null;S.lineEnd=null;S.linePts=null;S.xData=null;S.profiles=null;renderOverlay();clearChart();$('btnDownloadCSV').disabled=true;$('btnPlotData').disabled=true;}
+$('btnClear').addEventListener('click',clearCurrentLine);
+function setLineType(t){S.lineType=t;$('btnLineStraight').classList.toggle('active',t==='straight');$('btnLineFree').classList.toggle('active',t==='freehand');clearCurrentLine();}
+$('btnLineStraight').addEventListener('click',()=>setLineType('straight'));
+$('btnLineFree').addEventListener('click',()=>setLineType('freehand'));
+$('btnClearTop').addEventListener('click',clearCurrentLine);
+$('btnReset').addEventListener('click',resetImage);
+function resetImage(){
+  S.channels=[];S.nCh=0;S.width=0;S.height=0;
+  clearCurrentLine();
+  $('emptyState').style.display='';
+  $('channelSection').style.display='none';
+  $('chToggles').innerHTML='';
+  $('fileName').style.display='none';
+  $('loadActions').style.display='none';
+  $('pSize').textContent='–';$('pCh').textContent='–';$('pBits').textContent='–';
+  $('statusDim').textContent='—';$('statusText').textContent='Ready';$('cursorInfo').textContent='—';
+  oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
+  fi.value='';
+}
 
-oC.addEventListener('mousedown',e=>{if(!S.drawMode||e.button!==0||!S.nCh)return;S.drawing=true;S.lineStart=canvasCoords(e);S.lineEnd=null;});
+oC.addEventListener('mousedown',e=>{
+  if(!S.drawMode||e.button!==0||!S.nCh)return;
+  S.drawing=true;const p=canvasCoords(e);
+  if(S.lineType==='freehand'){S.linePts=[p];S.lineStart=p;S.lineEnd=null;}
+  else{S.lineStart=p;S.lineEnd=null;}
+});
 oC.addEventListener('mousemove',e=>{
   if(!S.nCh)return;
   const c=canvasCoords(e),px=Math.floor(c.x),py=Math.floor(c.y);
@@ -368,13 +551,31 @@ oC.addEventListener('mousemove',e=>{
     const vals=S.channels.map(ch=>ch.data[py*S.width+px].toFixed(0)).join(', ');
     $('cursorInfo').textContent=`x:${px} y:${py} [${vals}]`;
   }
-  if(S.drawing){S.lineEnd=c;renderOverlay();}
+  if(S.drawing){
+    if(S.lineType==='freehand'){const last=S.linePts[S.linePts.length-1];const dx=c.x-last.x,dy=c.y-last.y;if(dx*dx+dy*dy>=1)S.linePts.push(c);S.lineEnd=c;}
+    else S.lineEnd=c;
+    renderOverlay();
+  }
 });
-oC.addEventListener('mouseup',e=>{if(S.drawing){S.drawing=false;S.lineEnd=canvasCoords(e);if(S.lineStart&&S.lineEnd)extractProfiles();}});
+oC.addEventListener('mouseup',e=>{
+  if(!S.drawing)return;S.drawing=false;const c=canvasCoords(e);
+  if(S.lineType==='freehand'){const lp=S.linePts;if(lp&&(c.x!==lp[lp.length-1].x||c.y!==lp[lp.length-1].y))lp.push(c);S.lineEnd=c;if(lp&&lp.length>=2)extractProfiles();}
+  else{S.lineEnd=c;if(S.lineStart&&S.lineEnd)extractProfiles();}
+});
 
 function renderOverlay(){
   oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
-  if(S.lineStart&&S.lineEnd)drawLine(oCtx,toScreen(S.lineStart),toScreen(S.lineEnd));
+  if(S.lineType==='freehand'){ if(S.linePts&&S.linePts.length>=2)drawPolyline(oCtx,S.linePts); }
+  else if(S.lineStart&&S.lineEnd)drawLine(oCtx,toScreen(S.lineStart),toScreen(S.lineEnd));
+}
+// pts in image px -> crisp screen-space polyline.
+function drawPolyline(ctx,pts){
+  ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
+  const trace=()=>{ctx.beginPath();pts.forEach((p,i)=>{const q=toScreen(p);if(i===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y);});ctx.stroke();};
+  ctx.lineWidth=4;ctx.strokeStyle='rgba(0,0,0,0.45)';trace();
+  ctx.lineWidth=2;ctx.strokeStyle=S.lineColor;trace();
+  [pts[0],pts[pts.length-1]].forEach(p=>{const q=toScreen(p);ctx.fillStyle=S.lineColor;ctx.beginPath();ctx.arc(q.x,q.y,4,0,Math.PI*2);ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.stroke();});
+  ctx.restore();
 }
 // s, en are in screen (CSS) px; widths are constant so the line is crisp at any zoom.
 function drawLine(ctx,s,en){
@@ -387,40 +588,58 @@ function drawLine(ctx,s,en){
   ctx.restore();
 }
 
-function extractProfiles(){
-  if(!S.nCh||!S.lineStart||!S.lineEnd)return;
-  const s=S.lineStart,en=S.lineEnd;
-  const dx=en.x-s.x,dy=en.y-s.y,len=Math.sqrt(dx*dx+dy*dy);
-  if(len<1){S.lineEnd=null;renderOverlay();return;}
-  const steps=Math.max(Math.round(len),2);
-  const lw=parseInt($('lineWidth').value)||1;
-  const nx=dx/len,ny=dy/len,perpX=-ny,perpY=nx;
-  const pxSz=parseFloat($('pixelSize').value)||1;
-  const xData=[],profiles=S.channels.map(()=>[]);
-  for(let i=0;i<=steps;i++){
-    const t=i/steps,cx=s.x+dx*t,cy=s.y+dy*t;
-    xData.push(t*len*pxSz);
-    for(let c=0;c<S.nCh;c++){
-      let sum=0,cnt=0;
-      for(let w=-(lw-1)/2;w<=(lw-1)/2;w++){
-        const px=Math.round(cx+perpX*w),py=Math.round(cy+perpY*w);
-        if(px>=0&&px<S.width&&py>=0&&py<S.height){sum+=S.channels[c].data[py*S.width+px];cnt++;}
-      }
-      profiles[c].push(cnt>0?sum/cnt:0);
+// Average each channel's raw pixels across the line width, perpendicular to the local direction.
+function sampleAllAt(cx,cy,perpX,perpY,lw,out){
+  for(let c=0;c<S.nCh;c++){
+    let sum=0,cnt=0;
+    for(let w=-(lw-1)/2;w<=(lw-1)/2;w++){
+      const px=Math.round(cx+perpX*w),py=Math.round(cy+perpY*w);
+      if(px>=0&&px<S.width&&py>=0&&py<S.height){sum+=S.channels[c].data[py*S.width+px];cnt++;}
     }
+    out[c].push(cnt>0?sum/cnt:0);
   }
+}
+function extractProfiles(){
+  if(!S.nCh)return;
+  const lw=parseInt($('lineWidth').value)||1, pxSz=parseFloat($('pixelSize').value)||1;
+  const xData=[],profiles=S.channels.map(()=>[]);
+  if(S.lineType==='freehand'&&S.linePts&&S.linePts.length>=2){
+    const pts=S.linePts,seg=[];let total=0;
+    for(let i=1;i<pts.length;i++){const dx=pts[i].x-pts[i-1].x,dy=pts[i].y-pts[i-1].y,L=Math.hypot(dx,dy);seg.push({L,dx,dy,x:pts[i-1].x,y:pts[i-1].y});total+=L;}
+    if(total<1){S.linePts=null;renderOverlay();return;}
+    const steps=Math.max(Math.round(total),2);
+    for(let i=0;i<=steps;i++){
+      const target=total*i/steps;let acc=0,si=0;while(si<seg.length-1&&acc+seg[si].L<target){acc+=seg[si].L;si++;}
+      const sg=seg[si],f=sg.L>0?(target-acc)/sg.L:0,nx=sg.L>0?sg.dx/sg.L:1,ny=sg.L>0?sg.dy/sg.L:0;
+      xData.push(target*pxSz);
+      sampleAllAt(sg.x+sg.dx*f,sg.y+sg.dy*f,-ny,nx,lw,profiles);
+    }
+  } else if(S.lineStart&&S.lineEnd){
+    const s=S.lineStart,en=S.lineEnd,dx=en.x-s.x,dy=en.y-s.y,len=Math.sqrt(dx*dx+dy*dy);
+    if(len<1){S.lineEnd=null;renderOverlay();return;}
+    const steps=Math.max(Math.round(len),2),nx=dx/len,ny=dy/len;
+    for(let i=0;i<=steps;i++){const t=i/steps;xData.push(t*len*pxSz);sampleAllAt(s.x+dx*t,s.y+dy*t,-ny,nx,lw,profiles);}
+  } else return;
   S.xData=xData;S.profiles=profiles;
   plotProfiles();renderOverlay();
-  $('btnDownloadCSV').disabled=false;
+  $('btnDownloadCSV').disabled=false;$('btnPlotData').disabled=false;
 }
 
 let chart=null;
 function plotProfiles(){
   $('chartEmpty').style.display='none';
+  const norm=S.normalize;
   const datasets=[];
   S.profiles.forEach((p,c)=>{
     if(!S.visible[c])return;
-    datasets.push({label:'Channel '+(c+1),data:p,borderColor:rgb(S.colors[c]),backgroundColor:'transparent',
+    let data=p;
+    if(norm){
+      let mn=Infinity,mx=-Infinity;
+      for(const v of p){if(v<mn)mn=v;if(v>mx)mx=v;}
+      const rng=(mx-mn)||1;
+      data=p.map(v=>(v-mn)/rng);
+    }
+    datasets.push({label:'Channel '+(c+1),data,borderColor:rgb(S.colors[c]),backgroundColor:'transparent',
       borderWidth:2,pointRadius:0,tension:0.25,fill:false});
   });
   if(chart)chart.destroy();
@@ -432,21 +651,21 @@ function plotProfiles(){
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{display:S.nCh>1,position:'top',align:'end',labels:{boxWidth:8,boxHeight:8,usePointStyle:true,pointStyle:'circle',color:'#5f6368',font:{family:'Roboto',size:11},padding:14}},
-        tooltip:{backgroundColor:'#ffffff',titleColor:'#202124',bodyColor:'#5f6368',borderColor:'#dadce0',borderWidth:1,padding:10,titleFont:{family:'Roboto Mono',size:11},bodyFont:{family:'Roboto Mono',size:11},callbacks:{title:i=>'Distance: '+i[0].label+' nm',label:i=>`${i.dataset.label}: ${i.parsed.y.toFixed(1)}`}}
+        tooltip:{backgroundColor:'#ffffff',titleColor:'#202124',bodyColor:'#5f6368',borderColor:'#dadce0',borderWidth:1,padding:10,titleFont:{family:'Roboto Mono',size:11},bodyFont:{family:'Roboto Mono',size:11},callbacks:{title:i=>'Distance: '+i[0].label+' nm',label:i=>`${i.dataset.label}: ${i.parsed.y.toFixed(norm?3:1)}`}}
       },
       scales:{
         x:{title:{display:true,text:'Distance (nm)',color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10},maxTicksLimit:12},grid:{display:false},border:{color:'#dadce0'}},
-        y:{title:{display:true,text:'Intensity (a.u.)',color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:false},border:{color:'#dadce0'}}
+        y:{title:{display:true,text:norm?'Normalized intensity (0–1)':'Intensity (a.u.)',color:'#80868b',font:{family:'Roboto Mono',size:11}},min:norm?0:undefined,max:norm?1.05:undefined,ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:false},border:{color:'#dadce0'}}
       }
     }
   });
 }
 function clearChart(){if(chart){chart.destroy();chart=null;}$('chartEmpty').style.display='flex';}
 
-$('btnDownloadCSV').addEventListener('click',()=>{
-  if(!S.profiles)return;
+function buildProfileCSV(){
+  if(!S.profiles)return null;
   const cols=[];for(let c=0;c<S.nCh;c++)if(S.visible[c])cols.push(c);
-  if(!cols.length)return;
+  if(!cols.length)return null;
   let head='Distance_nm';cols.forEach(c=>head+=',Channel_'+(c+1));
   let csv=head+'\n';
   for(let i=0;i<S.xData.length;i++){
@@ -454,11 +673,19 @@ $('btnDownloadCSV').addEventListener('click',()=>{
     cols.forEach(c=>row+=','+S.profiles[c][i].toFixed(3));
     csv+=row+'\n';
   }
+  return csv;
+}
+$('btnDownloadCSV').addEventListener('click',()=>{
+  const csv=buildProfileCSV();if(!csv)return;
   const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download='line_profile.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);
 });
+// Hand the current profile off to the Plot Data page.
+function openInPlotter(name,csv){try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name,csv}));}catch(e){alert('Could not hand off data: '+e.message);return;}window.open('plot_data.html','_blank');}
+$('btnPlotData').addEventListener('click',()=>{const csv=buildProfileCSV();if(!csv)return;openInPlotter('line_profile.csv',csv);});
 
 document.querySelectorAll('.color-swatch').forEach(sw=>{sw.addEventListener('click',()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');S.lineColor=sw.dataset.color;renderOverlay();});});
+$('btnNormalize').addEventListener('click',()=>{S.normalize=!S.normalize;$('btnNormalize').classList.toggle('active',S.normalize);if(S.profiles)plotProfiles();});
 $('lineWidth').addEventListener('change',()=>{if(S.lineStart&&S.lineEnd)extractProfiles();});
 $('pixelSize').addEventListener('change',()=>{if(S.lineStart&&S.lineEnd)extractProfiles();});
 

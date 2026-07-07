@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. All rights reserved. Proprietary; do not copy, modify, or distribute without written permission. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<title>Plot Data</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/gliffy/canvas2svg@master/canvas2svg.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+  :root {
+    --bg-primary:#f8f9fa;--bg-secondary:#ffffff;--bg-panel:#ffffff;--bg-input:#ffffff;
+    --border:#dadce0;--text-primary:#202124;--text-secondary:#5f6368;--text-muted:#80868b;
+    --accent:#5FC44A;--accent-glow:rgba(95,196,74,0.16);--accent-hover:#4CAF3C;--green:#188038;--green-glow:rgba(24,128,56,0.10);
+    --red:#d93025;--yellow:#e37400;--pink:#F763AA;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Roboto',sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+  .header-title{font-family:'Roboto',sans-serif;font-size:22px;font-weight:500;letter-spacing:0;color:var(--text-primary);}
+  .header-subtitle{font-size:12px;color:var(--text-muted);font-family:'Roboto',sans-serif;}
+  .main{display:flex;flex:1;overflow:hidden;}
+
+  /* ---- LEFT: plot ---- */
+  .plot-panel{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg-primary);overflow:hidden;}
+  .plot-head{background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px;padding:8px 14px;flex-wrap:wrap;}
+  .plot-title{font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .plot-info{margin-left:auto;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text-muted);}
+  .plot-body{flex:1;position:relative;padding:16px 18px;overflow:hidden;background:var(--bg-secondary);}
+  .plot-body canvas{width:100%!important;height:100%!important;}
+  .plot-empty{position:absolute;inset:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 24px;color:var(--text-muted);font-size:12px;font-family:'Roboto Mono',monospace;border:1.5px dashed var(--border);border-radius:8px;background:var(--bg-secondary);}
+  .plot-empty .plot-desc{max-width:520px;font-family:'Roboto',sans-serif;font-size:13px;line-height:1.6;color:var(--text-secondary);}
+
+  /* ---- MIDDLE: data table ---- */
+  .data-panel{width:360px;min-width:0;background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
+  .col-resize{width:7px;flex-shrink:0;cursor:col-resize;background:var(--border);position:relative;transition:background .15s;}
+  .col-resize:hover,.col-resize.drag{background:var(--accent);}
+  .col-resize::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2px;height:26px;border-radius:2px;background:var(--text-muted);opacity:.5;}
+  .col-resize:hover::after,.col-resize.drag::after{background:#fff;opacity:.9;}
+  .data-head{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg-secondary);}
+  .data-name{font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .data-dims{font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text-muted);margin-left:auto;}
+  .data-body{flex:1;overflow:auto;position:relative;}
+  table.dt{border-collapse:collapse;width:100%;font-family:'Roboto Mono',monospace;font-size:11px;}
+  table.dt th{position:sticky;top:0;background:var(--bg-secondary);border-bottom:1px solid var(--border);padding:7px 9px;text-align:left;color:var(--text-secondary);font-weight:500;white-space:nowrap;cursor:pointer;z-index:1;user-select:none;}
+  table.dt th .cidx{color:var(--text-muted);font-size:9px;display:block;font-weight:400;}
+  table.dt td{padding:5px 9px;border-bottom:1px solid var(--bg-primary);color:var(--text-primary);white-space:nowrap;}
+  table.dt tr:hover td{background:var(--bg-primary);}
+  table.dt .cx{background:var(--accent-glow)!important;box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent);}
+  table.dt .cy{background:rgba(247,99,170,0.12)!important;box-shadow:inset 2px 0 0 var(--pink),inset -2px 0 0 var(--pink);}
+  .data-empty{position:absolute;inset:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:32px 20px;border:1.5px dashed var(--border);border-radius:8px;cursor:pointer;background:var(--bg-secondary);transition:border-color .2s,background .2s;}
+  .data-empty:hover{border-color:var(--accent);background:var(--accent-glow);}
+  .data-empty strong{font-size:15px;font-weight:600;color:var(--text-primary);}
+  .data-empty span{font-size:12px;color:var(--text-muted);line-height:1.5;}
+  .paste-wrap{padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;display:block;}
+  .paste-wrap textarea{width:100%;height:80px;resize:vertical;font-family:'Roboto Mono',monospace;font-size:11px;border:1px solid var(--border);border-radius:6px;padding:8px;outline:none;color:var(--text-primary);}
+  .paste-wrap textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+
+  /* ---- RIGHT: controls ---- */
+  .left-panel{width:440px;min-width:440px;background:var(--bg-panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+  .panel-section{padding:16px 22px;border-bottom:1px solid var(--border);}
+  .section-label{font-family:'Roboto',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.3px;color:var(--text-primary);margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:7px;}
+  .form-group{margin-bottom:10px;}
+  .form-group label{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;}
+  .form-group input[type=text],.form-group input[type=number],.form-group select{width:100%;padding:8px 11px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:'Roboto Mono',monospace;font-size:13px;outline:none;transition:border-color 0.2s;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+  .hint{font-size:11px;color:var(--text-muted);line-height:1.5;}
+  .btn{width:100%;padding:9px 18px;border:1px solid var(--border);border-radius:999px;background:var(--bg-input);color:var(--text-primary);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .btn:hover:not(:disabled){background:var(--bg-primary);border-color:var(--accent);color:var(--accent);}
+  .btn.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent);}
+  .btn.danger{border-color:var(--pink);color:var(--pink);}
+  .btn.danger:hover:not(:disabled){background:rgba(247,99,170,0.08);border-color:var(--pink);color:var(--pink);}
+  .btn.success{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.success:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);color:#fff;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-row{display:flex;gap:8px;margin-top:8px;}
+  .btn-row .btn{flex:1;}
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .ylist{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:8px;}
+  .ychk{display:flex;align-items:center;gap:8px;font-family:'Roboto Mono',monospace;font-size:12px;color:var(--text-primary);cursor:pointer;padding:2px 0;}
+  .ychk input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;}
+  .ychk .sw{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .toggle{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-secondary);padding:5px 0;}
+  .toggle input{accent-color:var(--accent);width:15px;height:15px;cursor:pointer;}
+  ::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  .status-bar{padding:4px 20px;background:var(--bg-secondary);border-top:1px solid var(--border);font-family:'Roboto Mono',monospace;font-size:10px;color:var(--text-muted);display:flex;gap:20px;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="header-title">Plot Data<span style="color:var(--accent)">.</span></div>
+    <nav style="display:flex;gap:4px">
+      <a href="index.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Home</a>
+      <a href="size_analysis.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Size Analysis</a>
+      <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Line Profile</a>
+      <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">ROI Inspector</a>
+      <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Correlations</a>
+      <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;background:var(--accent);color:#fff">Plot Data</a>
+    </nav>
+    <div class="header-subtitle">Plot exported CSV / TSV data</div>
+  </div>
+</div>
+
+<div class="main">
+  <input type="file" id="fileInput" accept=".csv,.tsv,.txt" style="display:none">
+
+  <!-- LEFT: plot -->
+  <div class="plot-panel">
+    <div class="plot-head">
+      <span class="plot-title" id="plotTitle">Plot</span>
+      <span class="plot-info" id="plotInfo">—</span>
+    </div>
+    <div class="plot-body" id="plotBody">
+      <div class="plot-empty" id="plotEmpty">
+        <p class="plot-desc">A dedicated plotting page for the data you export from the other tools. Load a CSV/TSV, pick the columns in the middle, and choose a chart type on the right — scatter, line, bar, histogram, or pie. Everything runs locally; nothing is uploaded. Export the figure as PNG or the plotted values as CSV.</p>
+        Load data to start plotting
+      </div>
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <!-- draggable divider: widen the data table (plot shrinks) -->
+  <div class="col-resize" id="dataResize" title="Drag to resize the data panel"></div>
+
+  <!-- MIDDLE: data table -->
+  <div class="data-panel">
+    <div class="data-head">
+      <span class="data-name" id="dataName">No data loaded</span>
+      <span class="data-dims" id="dataDims">—</span>
+    </div>
+    <div class="data-body" id="dataBody">
+      <div class="data-empty" id="dataEmpty">
+        <strong>Drop CSV / TSV here</strong>
+        <span>or click to browse · exported data from any imgTKT tool</span>
+        <span style="color:var(--accent);margin-top:6px">or paste data below ↓</span>
+      </div>
+      <table class="dt" id="dataTable" style="display:none"><thead></thead><tbody></tbody></table>
+    </div>
+    <div class="paste-wrap" id="pasteWrap">
+      <textarea id="pasteBox" placeholder="Paste comma / tab separated data with a header row…"></textarea>
+      <div class="btn-row"><button class="btn" id="btnPasteLoad">Load pasted data</button></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: controls -->
+  <div class="left-panel">
+    <div class="panel-section">
+      <div class="section-label">Data</div>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn" id="btnLoad">⬆ Load CSV / TSV</button>
+        <button class="btn active" id="btnPasteToggle">Paste</button>
+      </div>
+      <div class="btn-row"><button class="btn danger" id="btnClear" disabled>✕ Clear data</button></div>
+      <div class="hint" style="margin-top:8px">First row is treated as column headers.</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Chart Type</div>
+      <div class="type-grid" id="typeGrid">
+        <button class="btn active" data-type="scatter">◦ Scatter</button>
+        <button class="btn" data-type="line">╱ Line</button>
+        <button class="btn" data-type="bar">▮ Bar</button>
+        <button class="btn" data-type="histogram">▤ Histogram</button>
+        <button class="btn" data-type="pie">◕ Pie</button>
+        <button class="btn" data-type="doughnut">◯ Doughnut</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Data Mapping</div>
+
+      <!-- scatter / line / bar -->
+      <div id="mapXY">
+        <div class="form-group">
+          <label>X axis</label>
+          <select id="selX"></select>
+        </div>
+        <div class="form-group">
+          <label>Y series</label>
+          <div class="ylist" id="yList"></div>
+        </div>
+      </div>
+
+      <!-- histogram -->
+      <div id="mapHist" style="display:none">
+        <div class="form-group">
+          <label>Column</label>
+          <select id="selHistCol"></select>
+        </div>
+        <div class="form-group">
+          <label>Bins</label>
+          <input type="number" id="bins" value="20" min="1" max="500" step="1">
+        </div>
+      </div>
+
+      <!-- pie / doughnut -->
+      <div id="mapPie" style="display:none">
+        <div class="form-group">
+          <label>Slice labels</label>
+          <select id="selPieLabel"></select>
+        </div>
+        <div class="form-group">
+          <label>Slice values</label>
+          <select id="selPieVal"></select>
+        </div>
+        <div class="hint">Choose “Count occurrences” to tally how often each label appears.</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Appearance</div>
+      <div class="form-group">
+        <label>Chart title</label>
+        <input type="text" id="optTitle" placeholder="(auto)">
+      </div>
+      <div class="form-group" id="grpXLabel">
+        <label>X axis label</label>
+        <input type="text" id="optXLabel" placeholder="(auto)">
+      </div>
+      <div class="form-group" id="grpYLabel">
+        <label>Y axis label</label>
+        <input type="text" id="optYLabel" placeholder="(auto)">
+      </div>
+      <div class="form-group" id="grpPoint">
+        <label>Point size</label>
+        <input type="number" id="optPoint" value="4" min="0" max="20" step="0.5">
+      </div>
+      <label class="toggle" id="grpSmooth"><span>Smooth line</span><input type="checkbox" id="optSmooth"></label>
+      <label class="toggle" id="grpFill"><span>Fill area</span><input type="checkbox" id="optFill"></label>
+      <label class="toggle"><span>Show legend</span><input type="checkbox" id="optLegend" checked></label>
+      <label class="toggle" id="grpGrid"><span>Show grid</span><input type="checkbox" id="optGrid"></label>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Export</div>
+      <button class="btn success" id="btnPNG" disabled>⬇ Download PNG</button>
+      <div class="btn-row"><button class="btn" id="btnSVG" disabled>⬇ SVG (vector, editable)</button></div>
+      <div class="btn-row"><button class="btn" id="btnCSV" disabled>⬇ Download plotted CSV</button></div>
+      <div class="hint" style="margin-top:8px">SVG opens directly in Illustrator / Inkscape with every line, bar, and label as an editable vector object.</div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span id="statusText">Ready — load a CSV or TSV file to plot</span>
+  <span id="statusDim">—</span>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+
+// Shared channel palette — kept identical across tools: magenta, green, cyan, yellow, red, blue, orange, purple, mint, pink
+const BASE_COLORS=[
+  [236,64,209],[95,196,74],[64,208,224],[255,206,84],
+  [237,85,101],[93,156,236],[246,146,30],[172,127,244],
+  [120,255,160],[236,120,170]
+];
+function hslToRgb(h,s,l){h/=360;const f=n=>{const k=(n+h*12)%12;const a=s*Math.min(l,1-l);return l-a*Math.max(-1,Math.min(k-3,9-k,1));};return[Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];}
+function seriesColor(i){return i<BASE_COLORS.length?BASE_COLORS[i].slice():hslToRgb((i*137.508)%360,0.65,0.6);}
+const rgb=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
+const rgba=(c,a)=>'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';
+
+const PIE_KEYS='pie doughnut';
+const COUNT='__count__';
+
+// ---- state ----
+const D={name:'',headers:[],rows:[],numeric:[],type:'scatter',x:0,y:[],histCol:0,pieLabel:0,pieVal:COUNT};
+let chart=null;
+
+// ---------- CSV / TSV parsing ----------
+function detectDelim(text){
+  const first=text.split(/\r?\n/,1)[0]||'';
+  const t=(first.match(/\t/g)||[]).length, c=(first.match(/,/g)||[]).length, s=(first.match(/;/g)||[]).length;
+  if(t>=c&&t>=s&&t>0)return '\t';
+  if(s>c&&s>0)return ';';
+  return ',';
+}
+function parseDelim(text,delim){
+  const rows=[];let row=[],field='',inq=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(inq){
+      if(ch==='"'){if(text[i+1]==='"'){field+='"';i++;}else inq=false;}
+      else field+=ch;
+    }else{
+      if(ch==='"')inq=true;
+      else if(ch===delim){row.push(field);field='';}
+      else if(ch==='\n'){row.push(field);rows.push(row);row=[];field='';}
+      else if(ch==='\r'){/* ignore */}
+      else field+=ch;
+    }
+  }
+  if(field.length||row.length){row.push(field);rows.push(row);}
+  // drop fully-empty trailing rows
+  return rows.filter(r=>!(r.length===1&&r[0].trim()===''));
+}
+const isNum=v=>v!==''&&v!=null&&isFinite(+v);
+
+function ingest(text,name){
+  const delim=detectDelim(text);
+  const raw=parseDelim(text,delim);
+  if(!raw.length){setStatus('No rows found in file');return;}
+  // header row if it isn't all-numeric
+  let headers,body;
+  const firstAllNum=raw[0].every(isNum);
+  if(firstAllNum){headers=raw[0].map((_,i)=>'Col '+(i+1));body=raw;}
+  else{headers=raw[0].map((h,i)=>h.trim()||'Col '+(i+1));body=raw.slice(1);}
+  const nCols=headers.length;
+  const rows=body.map(r=>{const o=r.slice(0,nCols);while(o.length<nCols)o.push('');return o;});
+  // numeric column = every non-empty cell parses as a finite number
+  const numeric=headers.map((_,c)=>{let seen=false;for(const r of rows){const v=r[c];if(v==='')continue;seen=true;if(!isNum(v))return false;}return seen;});
+
+  D.name=name;D.headers=headers;D.rows=rows;D.numeric=numeric;
+  // sensible defaults
+  const numCols=numeric.map((n,i)=>n?i:-1).filter(i=>i>=0);
+  D.x=numCols.length?numCols[0]:0;
+  D.y=numCols.length>1?[numCols[1]]:(numCols.length?[numCols[0]]:[]);
+  D.histCol=numCols.length?numCols[0]:0;
+  D.pieLabel=0;D.pieVal=COUNT;
+
+  renderTable();
+  $('dataEmpty').style.display='none';
+  $('dataTable').style.display='';
+  $('dataName').textContent=name;
+  $('dataName').title=name;
+  $('dataDims').textContent=rows.length+' × '+nCols;
+  $('btnClear').disabled=false;$('btnPNG').disabled=false;$('btnSVG').disabled=false;$('btnCSV').disabled=false;
+  $('statusDim').textContent=rows.length+' rows · '+nCols+' cols · '+numCols.length+' numeric';
+  setStatus('Loaded '+name);
+  $('pasteWrap').style.display='none';$('btnPasteToggle').classList.remove('active');
+  refreshMapping();
+}
+
+function renderTable(){
+  const thead=$('dataTable').querySelector('thead');
+  const tbody=$('dataTable').querySelector('tbody');
+  thead.innerHTML='';tbody.innerHTML='';
+  const tr=document.createElement('tr');
+  D.headers.forEach((h,i)=>{
+    const th=document.createElement('th');th.dataset.c=i;
+    th.innerHTML='<span class="cidx">'+(i+1)+(D.numeric[i]?' · num':' · text')+'</span>'+h;
+    th.title='Click to plot this column';
+    th.addEventListener('click',()=>onHeaderClick(i));
+    tr.appendChild(th);
+  });
+  thead.appendChild(tr);
+  const N=D.rows.length;
+  const frag=document.createDocumentFragment();
+  for(let r=0;r<N;r++){
+    const row=document.createElement('tr');
+    for(let c=0;c<D.headers.length;c++){
+      const td=document.createElement('td');td.dataset.c=c;td.textContent=D.rows[r][c];
+      row.appendChild(td);
+    }
+    frag.appendChild(row);
+  }
+  tbody.appendChild(frag);
+}
+
+// Clicking a column header assigns it based on the active chart type.
+function onHeaderClick(i){
+  if(!D.headers.length)return;
+  if(PIE_KEYS.includes(D.type)){
+    // first click sets labels, next sets values (numeric only)
+    if(D.numeric[i])D.pieVal=String(i);else D.pieLabel=i;
+  }else if(D.type==='histogram'){
+    if(D.numeric[i])D.histCol=i;else{setStatus('Histogram needs a numeric column');return;}
+  }else{
+    // scatter/line/bar: toggle numeric col as Y, or (for scatter) set X if it's the only sensible move
+    if(!D.numeric[i]){D.x=i;}                 // text column → X category
+    else if(D.y.includes(i))D.y=D.y.filter(y=>y!==i);
+    else D.y.push(i);
+    if(!D.y.length&&D.numeric[i])D.y=[i];
+  }
+  refreshMapping();
+}
+
+// ---------- mapping UI ----------
+function opt(sel,i,label){const o=document.createElement('option');o.value=i;o.textContent=label;sel.appendChild(o);}
+function refreshMapping(){
+  const pie=PIE_KEYS.includes(D.type), hist=D.type==='histogram';
+  $('mapXY').style.display=(!pie&&!hist)?'':'none';
+  $('mapHist').style.display=hist?'':'none';
+  $('mapPie').style.display=pie?'':'none';
+  // appearance toggles relevance
+  $('grpXLabel').style.display=pie?'none':'';
+  $('grpYLabel').style.display=pie?'none':'';
+  $('grpGrid').style.display=pie?'none':'';
+  $('grpPoint').style.display=(D.type==='scatter'||D.type==='line')?'':'none';
+  $('grpSmooth').style.display=D.type==='line'?'':'none';
+  $('grpFill').style.display=(D.type==='line'||D.type==='scatter')?'':'none';
+
+  const numCols=D.numeric.map((n,i)=>n?i:-1).filter(i=>i>=0);
+
+  if(!pie&&!hist){
+    const selX=$('selX');selX.innerHTML='';
+    // scatter needs numeric X; line/bar accept any column as labels
+    const xChoices=D.type==='scatter'?numCols:D.headers.map((_,i)=>i);
+    xChoices.forEach(i=>opt(selX,i,D.headers[i]+(D.numeric[i]?'':' (text)')));
+    if(!xChoices.includes(D.x))D.x=xChoices[0];
+    selX.value=D.x;
+    // Y checkboxes (numeric only)
+    const box=$('yList');box.innerHTML='';
+    D.y=D.y.filter(i=>numCols.includes(i));
+    if(!D.y.length&&numCols.length)D.y=[numCols.find(i=>i!==D.x)??numCols[0]];
+    numCols.forEach(i=>{
+      const lab=document.createElement('label');lab.className='ychk';
+      const yi=D.y.indexOf(i);                                   // series color follows order within the selected set
+      const sw=yi>=0?rgb(seriesColor(yi)):'var(--border)';
+      lab.innerHTML='<input type="checkbox" '+(yi>=0?'checked':'')+'><span class="sw" style="background:'+sw+'"></span>'+D.headers[i];
+      lab.querySelector('input').addEventListener('change',e=>{
+        if(e.target.checked){if(!D.y.includes(i))D.y.push(i);}else D.y=D.y.filter(y=>y!==i);
+        refreshMapping();                                         // recolor swatches to match new series order
+      });
+      box.appendChild(lab);
+    });
+    if(!numCols.length)box.innerHTML='<span class="hint">No numeric columns detected.</span>';
+  }
+  if(hist){
+    const s=$('selHistCol');s.innerHTML='';
+    numCols.forEach(i=>opt(s,i,D.headers[i]));
+    if(!numCols.includes(D.histCol))D.histCol=numCols[0]??0;
+    s.value=D.histCol;
+    if(!numCols.length)s.innerHTML='<option>No numeric columns</option>';
+  }
+  if(pie){
+    const sl=$('selPieLabel');sl.innerHTML='';
+    D.headers.forEach((h,i)=>opt(sl,i,h));
+    sl.value=D.pieLabel;
+    const sv=$('selPieVal');sv.innerHTML='';
+    opt(sv,COUNT,'Count occurrences');
+    numCols.forEach(i=>opt(sv,i,D.headers[i]));
+    if(D.pieVal!==COUNT&&!numCols.includes(+D.pieVal))D.pieVal=COUNT;
+    sv.value=D.pieVal;
+  }
+  render();
+}
+
+// ---------- column helpers ----------
+const colStr=i=>D.rows.map(r=>r[i]);
+const colNum=i=>D.rows.map(r=>+r[i]);
+
+// ---------- render ----------
+function render(){
+  if(!D.rows.length){if(chart){chart.destroy();chart=null;}$('plotEmpty').style.display='flex';$('plotInfo').textContent='—';return;}
+  const cfg=buildConfig();
+  if(!cfg){if(chart){chart.destroy();chart=null;}$('plotEmpty').style.display='flex';return;}
+  $('plotEmpty').style.display='none';
+  if(chart)chart.destroy();
+  chart=new Chart($('chart').getContext('2d'),cfg);
+  $('plotTitle').textContent=cfg._title||'Plot';
+  $('plotInfo').textContent=cfg._info||'';
+  highlightCols();
+}
+
+function baseScales(xTitle,yTitle){
+  const grid=$('optGrid').checked;
+  const gridCol='rgba(0,0,0,0.06)';
+  return {
+    x:{title:{display:!!xTitle,text:xTitle,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10},maxTicksLimit:14},grid:{display:grid,color:gridCol},border:{color:'#dadce0'}},
+    y:{title:{display:!!yTitle,text:yTitle,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:grid,color:gridCol},border:{color:'#dadce0'}}
+  };
+}
+function basePlugins(title,legend){
+  return {
+    title:{display:!!title,text:title,color:'#202124',font:{family:'Roboto',size:14,weight:'500'},padding:{bottom:12}},
+    legend:{display:legend&&$('optLegend').checked,position:'top',align:'end',labels:{boxWidth:8,boxHeight:8,usePointStyle:true,pointStyle:'circle',color:'#5f6368',font:{family:'Roboto',size:11},padding:14}},
+    tooltip:{backgroundColor:'#ffffff',titleColor:'#202124',bodyColor:'#5f6368',borderColor:'#dadce0',borderWidth:1,padding:10,titleFont:{family:'Roboto Mono',size:11},bodyFont:{family:'Roboto Mono',size:11}}
+  };
+}
+const autoTitle=()=>$('optTitle').value.trim();
+const autoX=d=>$('optXLabel').value.trim()||d;
+const autoY=d=>$('optYLabel').value.trim()||d;
+
+function buildConfig(){
+  const t=D.type;
+  const pr=parseFloat($('optPoint').value)||0;
+  const smooth=$('optSmooth').checked, fill=$('optFill').checked;
+
+  if(t==='scatter'||t==='line'||t==='bar'){
+    if(!D.y.length)return null;
+    const datasets=D.y.map((yi,k)=>{
+      const col=seriesColor(k);
+      if(t==='scatter'){
+        const xs=colNum(D.x),ys=colNum(yi);
+        const data=[];for(let r=0;r<D.rows.length;r++)if(isFinite(xs[r])&&isFinite(ys[r]))data.push({x:xs[r],y:ys[r]});
+        return{label:D.headers[yi],data,backgroundColor:fill?rgba(col,0.35):rgb(col),borderColor:rgb(col),pointRadius:pr||3,pointHoverRadius:(pr||3)+2,showLine:false};
+      }
+      if(t==='line'){
+        return{label:D.headers[yi],data:colNum(yi),borderColor:rgb(col),backgroundColor:fill?rgba(col,0.15):'transparent',borderWidth:2,pointRadius:pr,pointHoverRadius:pr+2,tension:smooth?0.35:0,fill:fill};
+      }
+      // bar
+      return{label:D.headers[yi],data:colNum(yi),backgroundColor:rgba(col,0.75),borderColor:rgb(col),borderWidth:1};
+    });
+    const labels=(t==='scatter')?undefined:colStr(D.x);
+    const xt=autoX(D.headers[D.x]);
+    const yt=autoY(D.y.length===1?D.headers[D.y[0]]:'Value');
+    return{
+      type:(t==='scatter')?'scatter':t,
+      data:labels?{labels,datasets}:{datasets},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},
+        interaction:{mode:t==='bar'?'index':'nearest',intersect:t==='scatter'},
+        parsing:t==='scatter'?false:undefined,
+        plugins:basePlugins(autoTitle(),true),
+        scales:t==='scatter'?{
+          x:{type:'linear',title:{display:true,text:xt,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:$('optGrid').checked,color:'rgba(0,0,0,0.06)'},border:{color:'#dadce0'}},
+          y:{title:{display:true,text:yt,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:$('optGrid').checked,color:'rgba(0,0,0,0.06)'},border:{color:'#dadce0'}}
+        }:baseScales(xt,yt)
+      },
+      _title:autoTitle()||(D.y.map(i=>D.headers[i]).join(', ')+' vs '+D.headers[D.x]),
+      _info:datasets.length+' series'
+    };
+  }
+
+  if(t==='histogram'){
+    const vals=colNum(D.histCol).filter(isFinite);
+    if(!vals.length)return null;
+    let mn=Math.min(...vals),mx=Math.max(...vals);
+    if(mn===mx){mn-=0.5;mx+=0.5;}
+    const nb=Math.max(1,Math.min(500,parseInt($('bins').value)||20));
+    const w=(mx-mn)/nb,counts=new Array(nb).fill(0);
+    for(const v of vals){let b=Math.floor((v-mn)/w);if(b<0)b=0;if(b>=nb)b=nb-1;counts[b]++;}
+    const labels=counts.map((_,i)=>(mn+i*w).toFixed(2));
+    const col=seriesColor(0);
+    const xt=autoX(D.headers[D.histCol]),yt=autoY('Count');
+    return{
+      type:'bar',
+      data:{labels,datasets:[{label:D.headers[D.histCol],data:counts,backgroundColor:rgba(col,0.75),borderColor:rgb(col),borderWidth:1,barPercentage:1,categoryPercentage:1}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},
+        plugins:basePlugins(autoTitle(),false),
+        scales:baseScales(xt,yt)},
+      _title:autoTitle()||('Histogram — '+D.headers[D.histCol]),
+      _info:vals.length+' values · '+nb+' bins'
+    };
+  }
+
+  if(PIE_KEYS.includes(t)){
+    let labels,data;
+    if(D.pieVal===COUNT){
+      const map=new Map();
+      for(const v of colStr(D.pieLabel)){const k=v===''?'(blank)':v;map.set(k,(map.get(k)||0)+1);}
+      labels=[...map.keys()];data=[...map.values()];
+    }else{
+      labels=colStr(D.pieLabel);data=colNum(+D.pieVal);
+    }
+    if(!labels.length)return null;
+    const colors=labels.map((_,i)=>rgba(seriesColor(i),0.82));
+    return{
+      type:t,
+      data:{labels,datasets:[{data,backgroundColor:colors,borderColor:'#ffffff',borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},
+        plugins:{...basePlugins(autoTitle(),true),legend:{...basePlugins(autoTitle(),true).legend,position:'right',align:'center'}}},
+      _title:autoTitle()||(D.pieVal===COUNT?('Counts of '+D.headers[D.pieLabel]):(D.headers[+D.pieVal]+' by '+D.headers[D.pieLabel])),
+      _info:labels.length+' slices'
+    };
+  }
+  return null;
+}
+
+function highlightCols(){
+  document.querySelectorAll('#dataTable .cx,#dataTable .cy').forEach(el=>el.classList.remove('cx','cy'));
+  const mark=(c,cls)=>document.querySelectorAll('#dataTable [data-c="'+c+'"]').forEach(el=>el.classList.add(cls));
+  if(PIE_KEYS.includes(D.type)){mark(D.pieLabel,'cx');if(D.pieVal!==COUNT)mark(+D.pieVal,'cy');}
+  else if(D.type==='histogram'){mark(D.histCol,'cx');}
+  else{mark(D.x,'cx');D.y.forEach(i=>mark(i,'cy'));}
+}
+
+// ---------- file / paste / clear ----------
+const fi=$('fileInput');
+fi.addEventListener('change',e=>{if(e.target.files.length)readFile(e.target.files[0]);});
+function readFile(file){const rd=new FileReader();rd.onload=e=>ingest(e.target.result,file.name);rd.readAsText(file);}
+$('btnLoad').addEventListener('click',()=>fi.click());
+$('dataEmpty').addEventListener('click',()=>fi.click());
+['dragover','dragleave','drop'].forEach(ev=>$('dataBody').addEventListener(ev,e=>e.preventDefault()));
+$('dataBody').addEventListener('dragover',()=>$('dataEmpty').style.borderColor='var(--accent)');
+$('dataBody').addEventListener('dragleave',()=>$('dataEmpty').style.borderColor='');
+$('dataBody').addEventListener('drop',e=>{$('dataEmpty').style.borderColor='';if(e.dataTransfer.files.length)readFile(e.dataTransfer.files[0]);});
+
+$('btnPasteToggle').addEventListener('click',()=>{
+  const w=$('pasteWrap');const show=w.style.display==='none'||!w.style.display;
+  w.style.display=show?'block':'none';$('btnPasteToggle').classList.toggle('active',show);
+  if(show)$('pasteBox').focus();
+});
+$('btnPasteLoad').addEventListener('click',()=>{
+  const txt=$('pasteBox').value.trim();
+  if(!txt){setStatus('Nothing pasted');return;}
+  ingest(txt,'pasted data');
+});
+$('btnClear').addEventListener('click',()=>{
+  D.name='';D.headers=[];D.rows=[];D.numeric=[];D.y=[];
+  if(chart){chart.destroy();chart=null;}
+  $('dataTable').style.display='none';$('dataTable').querySelector('thead').innerHTML='';$('dataTable').querySelector('tbody').innerHTML='';
+  $('dataEmpty').style.display='';$('plotEmpty').style.display='flex';
+  $('dataName').textContent='No data loaded';$('dataDims').textContent='—';$('plotInfo').textContent='—';$('plotTitle').textContent='Plot';
+  $('btnClear').disabled=true;$('btnPNG').disabled=true;$('btnSVG').disabled=true;$('btnCSV').disabled=true;
+  $('statusDim').textContent='—';setStatus('Cleared');
+  fi.value='';$('pasteBox').value='';
+});
+
+// ---------- type + options wiring ----------
+$('typeGrid').querySelectorAll('button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    $('typeGrid').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');D.type=b.dataset.type;refreshMapping();
+  });
+});
+$('selX').addEventListener('change',e=>{D.x=+e.target.value;render();});
+$('selHistCol').addEventListener('change',e=>{D.histCol=+e.target.value;render();});
+$('bins').addEventListener('input',render);
+$('selPieLabel').addEventListener('change',e=>{D.pieLabel=+e.target.value;render();});
+$('selPieVal').addEventListener('change',e=>{D.pieVal=e.target.value;render();});
+['optTitle','optXLabel','optYLabel','optPoint'].forEach(id=>$(id).addEventListener('input',render));
+['optSmooth','optFill','optLegend','optGrid'].forEach(id=>$(id).addEventListener('change',render));
+
+// ---------- export ----------
+$('btnPNG').addEventListener('click',()=>{
+  if(!chart)return;
+  // paint a white background behind the transparent chart canvas
+  const src=chart.canvas,out=document.createElement('canvas');
+  out.width=src.width;out.height=src.height;
+  const c=out.getContext('2d');c.fillStyle='#ffffff';c.fillRect(0,0,out.width,out.height);c.drawImage(src,0,0);
+  const a=document.createElement('a');a.href=out.toDataURL('image/png');a.download=(D.name.replace(/\.[^.]+$/,'')||'plot')+'_'+D.type+'.png';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+});
+// Vector SVG export — render the same config into a canvas2svg context so Chart.js emits real
+// <path>/<rect>/<text> elements (editable in Illustrator / Inkscape) instead of a raster bitmap.
+function chartToSVG(){
+  if(typeof C2S==='undefined'){setStatus('SVG library failed to load — check connection and reload');return null;}
+  const cfg=buildConfig();if(!cfg)return null;
+  // Fixed, predictable figure size (not the on-screen size, which depends on window/panel width).
+  const W=960,H=600;
+  const c2s=new C2S(W,H);
+  // Polyfill the few 2D-context methods Chart.js calls that canvas2svg doesn't implement.
+  if(!c2s.resetTransform)c2s.resetTransform=function(){this.setTransform(1,0,0,1,0,0);};
+  if(!c2s.getLineDash)c2s.getLineDash=function(){return this.__lineDash||[];};
+  if(!c2s.roundRect)c2s.roundRect=function(x,y,w,h){this.rect(x,y,w,h);};   // approximate: square corners
+  // Back the SVG context with a real (detached) canvas element so every DOM method Chart.js's
+  // platform touches (getAttribute/style/getBoundingClientRect/…) exists. We only redirect getContext
+  // to the SVG context, so all drawing is captured as vector while Chart.js thinks it has a canvas.
+  const host=document.createElement('canvas');host.width=W;host.height=H;
+  host.getContext=()=>c2s;c2s.canvas=host;
+  cfg.options=Object.assign({},cfg.options,{responsive:false,maintainAspectRatio:false,animation:false,devicePixelRatio:1,events:[]});
+  let svg=null,err=null;
+  const _ce=console.error;                 // silence canvas2svg's harmless "path command to node g" warnings
+  try{
+    console.error=function(){};
+    const tmp=new Chart(host,cfg);
+    tmp.draw();
+    // canvas2svg can't capture Chart.js's line-segment stroke, so lines vanish. Redraw the connecting
+    // lines (and optional area fill) directly into the SVG context from the resolved point positions.
+    if(D.type==='line'){
+      const base=tmp.chartArea.bottom;
+      tmp.data.datasets.forEach((ds,di)=>{
+        const meta=tmp.getDatasetMeta(di);if(meta.hidden)return;
+        const pts=meta.data.filter(p=>p&&isFinite(p.x)&&isFinite(p.y));
+        if(pts.length<2)return;
+        if(ds.fill){
+          c2s.save();c2s.beginPath();pts.forEach((p,i)=>i?c2s.lineTo(p.x,p.y):c2s.moveTo(p.x,p.y));
+          c2s.lineTo(pts[pts.length-1].x,base);c2s.lineTo(pts[0].x,base);c2s.closePath();
+          c2s.fillStyle=ds.backgroundColor;c2s.fill();c2s.restore();
+        }
+        c2s.save();c2s.beginPath();pts.forEach((p,i)=>i?c2s.lineTo(p.x,p.y):c2s.moveTo(p.x,p.y));
+        c2s.lineJoin='round';c2s.lineCap='round';c2s.lineWidth=ds.borderWidth||2;c2s.strokeStyle=ds.borderColor;c2s.stroke();c2s.restore();
+      });
+    }
+    svg=c2s.getSerializedSvg();
+    tmp.destroy();
+  }catch(e){err=e;}
+  finally{console.error=_ce;}
+  if(err){console.error(err);setStatus('SVG export failed: '+err.message);return null;}
+  // Add a viewBox (canvas2svg omits it) so the figure scales cleanly, plus an editable white
+  // background rect so it isn't transparent.
+  svg=svg.replace(/<svg([^>]*)>/,(m,a)=>'<svg'+a+(/viewBox=/.test(a)?'':' viewBox="0 0 '+W+' '+H+'"')
+    +'><rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#ffffff"/>');
+  return svg;
+}
+$('btnSVG').addEventListener('click',()=>{
+  if(!chart)return;
+  const svg=chartToSVG();if(!svg)return;
+  const blob=new Blob([svg],{type:'image/svg+xml'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=(D.name.replace(/\.[^.]+$/,'')||'plot')+'_'+D.type+'.svg';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);
+});
+$('btnCSV').addEventListener('click',()=>{
+  if(!chart)return;
+  const rows=plottedCSV();if(!rows){setStatus('Nothing to export');return;}
+  const blob=new Blob([rows],{type:'text/csv'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=(D.name.replace(/\.[^.]+$/,'')||'plot')+'_'+D.type+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+});
+function esc(v){v=String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function plottedCSV(){
+  const t=D.type;
+  if(t==='scatter'){
+    let out='';D.y.forEach((yi)=>{out+=esc(D.headers[D.x])+','+esc(D.headers[yi])+'\n';
+      const xs=colNum(D.x),ys=colNum(yi);for(let r=0;r<D.rows.length;r++)if(isFinite(xs[r])&&isFinite(ys[r]))out+=xs[r]+','+ys[r]+'\n';out+='\n';});
+    return out;
+  }
+  if(t==='line'||t==='bar'){
+    let head=esc(D.headers[D.x]);D.y.forEach(i=>head+=','+esc(D.headers[i]));let out=head+'\n';
+    for(let r=0;r<D.rows.length;r++){let row=esc(D.rows[r][D.x]);D.y.forEach(i=>row+=','+esc(D.rows[r][i]));out+=row+'\n';}
+    return out;
+  }
+  if(t==='histogram'||PIE_KEYS.includes(t)){
+    const ds=chart.data;let out='label,value\n';
+    ds.labels.forEach((l,i)=>out+=esc(l)+','+esc(ds.datasets[0].data[i])+'\n');
+    return out;
+  }
+  return '';
+}
+
+function setStatus(s){$('statusText').textContent=s;}
+
+// ---- draggable divider: widen the data panel (the plot shrinks to fit) ----
+(function(){
+  const handle=$('dataResize'), panel=document.querySelector('.data-panel');
+  let dragging=false, rightEdge=0;
+  handle.addEventListener('mousedown',e=>{
+    dragging=true; rightEdge=panel.getBoundingClientRect().right;   // right edge is anchored (controls are fixed-width)
+    handle.classList.add('drag'); document.body.style.userSelect='none'; e.preventDefault();
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    const maxW=Math.max(240, window.innerWidth-440-260);            // leave room for controls (440) + a min plot (~260)
+    panel.style.width=Math.max(220,Math.min(maxW,rightEdge-e.clientX))+'px';
+  });
+  window.addEventListener('mouseup',()=>{ if(!dragging)return; dragging=false; handle.classList.remove('drag'); document.body.style.userSelect=''; if(chart)chart.resize(); });
+})();
+
+// ---- receive data handed off from another imgTKT tool ("Plot this data →") ----
+(function(){
+  try{
+    const raw=localStorage.getItem('imgtkt_plot_data');
+    if(!raw)return;
+    localStorage.removeItem('imgtkt_plot_data');      // one-shot: consume it so a reload doesn't re-import
+    const p=JSON.parse(raw);
+    if(p&&p.csv&&p.csv.trim())ingest(p.csv,p.name||'imported data');
+  }catch(e){/* ignore malformed handoff */}
+})();
+</script>
+</body>
+</html>
