@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. All rights reserved. Proprietary; do not copy, modify, or distribute without written permission. -->
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. Free to use for any purpose at no cost. All other rights reserved; do not copy, modify, redistribute, or sell without written permission. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -58,6 +58,17 @@
   .ch .nm{flex:1;color:var(--text-secondary);white-space:nowrap;}
   .ch input[type=range]{width:64px;accent-color:var(--accent);height:3px;}
   .ch.off{opacity:0.4;}
+  .color-pop{position:fixed;z-index:100000;background:#fff;border:1px solid #dadce0;border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px;display:flex;flex-direction:column;gap:7px}
+  .pop-row{display:flex;gap:6px}
+  .cp-swatch{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
+  .cp-swatch:hover{transform:scale(1.12);border-color:rgba(0,0,0,.35)}
+  .cp-swatch.sel{outline:2px solid #202124;outline-offset:1px}
+  .lut-swatch{flex:1;height:20px;border-radius:6px;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
+  .lut-swatch:hover{transform:scale(1.05);border-color:rgba(0,0,0,.35)}
+  .lut-swatch.sel{outline:2px solid #202124;outline-offset:1px}
+  .pop-custom{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#5f6368;cursor:pointer}
+  .pop-custom input{width:34px;height:22px;border:1px solid #dadce0;border-radius:5px;background:none;cursor:pointer;padding:0}
   .ch-block{display:flex;flex-direction:column;gap:6px;}
   .rng{display:flex;align-items:center;gap:6px;padding:0 6px;}
   .rng label{font-size:10px;color:var(--text-muted);white-space:nowrap;}
@@ -72,8 +83,8 @@
   .pill{background:var(--bg-primary);border:1px solid var(--border);border-radius:999px;padding:6px 13px;color:var(--text-secondary);font-size:12px;font-family:'Roboto Mono',monospace;white-space:nowrap;}
   .pill b{color:var(--text-primary)}
   .viewer-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;flex-shrink:0;flex-wrap:wrap;}
-  .toolbar-btn{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:999px;color:var(--text-secondary);font-size:11px;cursor:pointer;font-family:'Roboto Mono',monospace;transition:all 0.15s;}
-  .toolbar-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .toolbar-btn{padding:9px 18px;background:var(--bg-input);border:1px solid var(--border);border-radius:999px;color:var(--text-primary);font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;font-family:'Roboto',sans-serif;transition:all 0.15s;}
+  .toolbar-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--bg-primary);}
   .toolbar-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
   .toolbar-sep{width:1px;height:20px;background:var(--border);}
   .toolbar-info{margin-left:auto;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text-muted);}
@@ -104,6 +115,8 @@
       <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;background:var(--accent);color:#fff">Line Profile</a>
       <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">ROI Inspector</a>
       <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Correlations</a>
+      <a href="measure_angles.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Measure Angles</a>
+      <a href="particle_analyzer.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Particle Analyzer</a>
       <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Plot Data</a>
     </nav>
     <div class="header-subtitle">Multi-Channel Intensity Profile</div>
@@ -162,6 +175,15 @@
       <button class="btn success" id="btnDownloadCSV" disabled>⬇ Download CSV</button>
       <div class="btn-row"><button class="btn" id="btnPlotData" disabled>📊 Plot this data →</button></div>
     </div>
+    <div class="panel-section">
+      <div class="section-label">Export figure</div>
+      <div class="hint" style="margin-bottom:8px">Save the image with the drawn line overlaid — at full image resolution. SVG keeps the line as a true vector.</div>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn" id="expPng" disabled>PNG</button>
+        <button class="btn" id="expJpg" disabled>JPG</button>
+        <button class="btn" id="expSvg" disabled>SVG</button>
+      </div>
+    </div>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
     <div class="image-viewer" id="imageViewer">
@@ -216,7 +238,7 @@
 </div>
 <script>
 const $=id=>document.getElementById(id);
-const S={channels:[],nCh:0,colors:[],visible:[],bright:[],dispMin:[],dispMax:[],width:0,height:0,zoom:1,panX:0,panY:0,
+const S={channels:[],nCh:0,colors:[],lut:[],visible:[],bright:[],dispMin:[],dispMax:[],width:0,height:0,zoom:1,panX:0,panY:0,
   drawMode:true,drawing:false,lineType:'straight',linePts:null,lineStart:null,lineEnd:null,lineColor:'#ffffff',normalize:false,xData:null,profiles:null};
 const iC=$('imageCanvas'),oC=$('overlayCanvas');
 const iCtx=iC.getContext('2d'),oCtx=oC.getContext('2d');
@@ -399,6 +421,7 @@ function setChannels(channels,w,h,bits){
   $('pBits').textContent=(bits||8)+'-bit';
   $('loadActions').style.display='contents';
   S.colors=channels.map((_,i)=>channelColor(i));
+  S.lut=channels.map(()=>null);
   S.visible=channels.map(()=>true);
   S.bright=channels.map(()=>1);
   S.lineStart=null;S.lineEnd=null;S.linePts=null;S.xData=null;S.profiles=null;
@@ -410,6 +433,7 @@ function setChannels(channels,w,h,bits){
   $('btnDownloadCSV').disabled=true;
   clearChart();
   $('btnPlotData').disabled=true;
+  $('expPng').disabled=$('expJpg').disabled=$('expSvg').disabled=false;
   fitToView();render();renderOverlay();
 }
 
@@ -427,6 +451,8 @@ function buildChannelToggles(){
       +'<span class="nm">Channel '+(i+1)+'</span>'
       +'<input type="range" min="0.2" max="8" step="0.1" value="1">';
     el.addEventListener('click',ev=>{if(ev.target.tagName==='INPUT')return;S.visible[i]=!S.visible[i];el.classList.toggle('off',!S.visible[i]);render();if(S.profiles)plotProfiles();});
+    const sw=el.querySelector('.sw'); sw.style.cursor='pointer'; sw.title='Change channel color';
+    sw.addEventListener('click',ev=>{ ev.stopPropagation(); openColorPicker(i, sw); });
     const sl=el.querySelector('input');
     sl.addEventListener('input',e=>{S.bright[i]=parseFloat(e.target.value);render();});
     sl.addEventListener('click',e=>e.stopPropagation());
@@ -444,6 +470,74 @@ function buildChannelToggles(){
   }
 }
 
+/* ---------- channel colour picker (solid colours + LUTs + custom) ---------- */
+// Gray + 6 colour-blind-safe additive colours (blend correctly in the composite; avoid the red/green pair).
+const PICK_COLORS=[
+  ['Gray',[176,176,176]],['Magenta',[255,0,255]],['Green',[0,255,0]],['Cyan',[0,255,255]],
+  ['Yellow',[255,255,0]],['Orange',[255,140,0]],['Blue',[64,140,255]]
+];
+// Popular microscopy LUTs (gradient control points, low→high). Sampled per pixel in the composite; the
+// profile plot uses a representative solid colour for a LUT channel (a line can't be a gradient).
+const LUTS={
+  fire:   [[0,0,0],[20,0,70],[120,0,130],[200,20,20],[240,120,0],[255,200,0],[255,255,120],[255,255,255]],
+  viridis:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],
+  gfb:    [[0,0,0],[0,0,150],[0,120,180],[0,200,80],[180,240,40],[255,255,180],[255,255,255]]
+};
+const LUT_LABEL={fire:'Fire',viridis:'Viridis',gfb:'Green Fire Blue'};
+function lutRGB(name,x){ const s=LUTS[name]; if(!s) return [0,0,0];
+  const n=s.length-1, p=Math.max(0,Math.min(1,x))*n, i=Math.min(n-1,Math.floor(p)), f=p-i, a=s[i], b=s[i+1];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f]; }
+function lutCss(name){ const s=LUTS[name]; return 'linear-gradient(90deg,'+s.map((c,k)=>rgb(c)+' '+Math.round(k/(s.length-1)*100)+'%').join(',')+')'; }
+function lutLabelColor(name){ return rgb(lutRGB(name,0.8).map(Math.round)); }
+const hex2rgb=h=>{ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; };
+const rgb2hex=c=>'#'+c.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+let _pickPop=null, _pickOutside=null;
+function closeColorPicker(){
+  if(_pickOutside){ document.removeEventListener('pointerdown',_pickOutside); _pickOutside=null; }
+  if(_pickPop){ _pickPop.remove(); _pickPop=null; }
+}
+function paintChannelSwatch(i){
+  const lut=S.lut&&S.lut[i];
+  const sw=document.querySelector('#chToggles .ch[data-c="'+i+'"] .sw');
+  if(sw) sw.style.background = lut ? lutCss(lut) : rgb(S.colors[i]);
+}
+function refreshChannelColor(){ if(S.nCh) render(); if(S.profiles) plotProfiles(); }
+function setChannelColor(i,col){ S.colors[i]=col.slice(); if(S.lut) S.lut[i]=null; paintChannelSwatch(i); refreshChannelColor(); }
+function setChannelLUT(i,name){ if(!S.lut) S.lut=[]; S.lut[i]=name; paintChannelSwatch(i); refreshChannelColor(); }
+function openColorPicker(i,anchor){
+  closeColorPicker();
+  const pop=document.createElement('div'); pop.className='color-pop';
+  const cur=S.colors[i]||[], curLut=(S.lut&&S.lut[i])||null;
+  const solids=document.createElement('div'); solids.className='pop-row';
+  PICK_COLORS.forEach(([name,c])=>{
+    const b=document.createElement('button'); b.type='button'; b.className='cp-swatch'; b.title=name; b.style.background=rgb(c);
+    if(!curLut && cur[0]===c[0]&&cur[1]===c[1]&&cur[2]===c[2]) b.classList.add('sel');
+    b.onclick=ev=>{ ev.stopPropagation(); setChannelColor(i,c); closeColorPicker(); };
+    solids.appendChild(b);
+  });
+  pop.appendChild(solids);
+  const luts=document.createElement('div'); luts.className='pop-row';
+  Object.keys(LUTS).forEach(name=>{
+    const b=document.createElement('button'); b.type='button'; b.className='lut-swatch'; b.title=LUT_LABEL[name]; b.style.background=lutCss(name);
+    if(curLut===name) b.classList.add('sel');
+    b.onclick=ev=>{ ev.stopPropagation(); setChannelLUT(i,name); closeColorPicker(); };
+    luts.appendChild(b);
+  });
+  pop.appendChild(luts);
+  const custom=document.createElement('label'); custom.className='pop-custom';
+  const inp=document.createElement('input'); inp.type='color'; inp.value=rgb2hex(curLut?[255,255,255]:cur);
+  inp.oninput=ev=>{ setChannelColor(i, hex2rgb(ev.target.value)); };
+  custom.append('Custom', inp);
+  pop.appendChild(custom);
+  document.body.appendChild(pop);
+  const r=anchor.getBoundingClientRect();
+  pop.style.left=Math.max(8, Math.min(window.innerWidth-pop.offsetWidth-8, r.left))+'px';
+  pop.style.top=(r.bottom+6)+'px';
+  _pickPop=pop;
+  _pickOutside=ev=>{ if(_pickPop && !_pickPop.contains(ev.target) && ev.target!==anchor) closeColorPicker(); };
+  document.addEventListener('pointerdown',_pickOutside);
+}
+
 /* ---------- rendering ---------- */
 function render(){
   if(!S.nCh)return;
@@ -457,7 +551,9 @@ function render(){
       const lo=S.dispMin[c],hi=S.dispMax[c];
       let t=((ch.data[p]-lo)/((hi-lo)||1))*S.bright[c];
       if(t<0)t=0;else if(t>1)t=1;
-      const col=S.colors[c];r+=t*col[0];g+=t*col[1];b+=t*col[2];
+      const lut=S.lut&&S.lut[c];
+      if(lut){ const rc=lutRGB(lut,t); r+=rc[0]; g+=rc[1]; b+=rc[2]; }
+      else { const col=S.colors[c]; r+=t*col[0]; g+=t*col[1]; b+=t*col[2]; }
     }
     d[p*4]=r>255?255:r;d[p*4+1]=g>255?255:g;d[p*4+2]=b>255?255:b;d[p*4+3]=255;
   }
@@ -532,8 +628,10 @@ function resetImage(){
   $('chToggles').innerHTML='';
   $('fileName').style.display='none';
   $('loadActions').style.display='none';
+  $('expPng').disabled=$('expJpg').disabled=$('expSvg').disabled=true;
   $('pSize').textContent='–';$('pCh').textContent='–';$('pBits').textContent='–';
   $('statusDim').textContent='—';$('statusText').textContent='Ready';$('cursorInfo').textContent='—';
+  iCtx.clearRect(0,0,iC.width,iC.height);
   oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
   fi.value='';
 }
@@ -639,7 +737,8 @@ function plotProfiles(){
       const rng=(mx-mn)||1;
       data=p.map(v=>(v-mn)/rng);
     }
-    datasets.push({label:'Channel '+(c+1),data,borderColor:rgb(S.colors[c]),backgroundColor:'transparent',
+    const lineCol=(S.lut&&S.lut[c])?lutLabelColor(S.lut[c]):rgb(S.colors[c]);
+    datasets.push({label:'Channel '+(c+1),data,borderColor:lineCol,backgroundColor:'transparent',
       borderWidth:2,pointRadius:0,tension:0.25,fill:false});
   });
   if(chart)chart.destroy();
@@ -688,6 +787,57 @@ document.querySelectorAll('.color-swatch').forEach(sw=>{sw.addEventListener('cli
 $('btnNormalize').addEventListener('click',()=>{S.normalize=!S.normalize;$('btnNormalize').classList.toggle('active',S.normalize);if(S.profiles)plotProfiles();});
 $('lineWidth').addEventListener('change',()=>{if(S.lineStart&&S.lineEnd)extractProfiles();});
 $('pixelSize').addEventListener('change',()=>{if(S.lineStart&&S.lineEnd)extractProfiles();});
+
+/* ---------- figure export (image + drawn line overlay) ---------- */
+// Stroke / marker sizes scaled to the image's own resolution.
+function figSizes(){const m=Math.min(S.width,S.height);return{lw:Math.max(1.5,m/250)};}
+function currentLinePts(){
+  if(S.lineType==='freehand'){ return (S.linePts&&S.linePts.length>=2)?S.linePts:null; }
+  return (S.lineStart&&S.lineEnd)?[S.lineStart,S.lineEnd]:null;
+}
+// Draw the current line in image coordinates (P maps image px -> target px), with a dark halo like the live overlay.
+function drawLineFlat(ctx,P,s){
+  const pts=currentLinePts(); if(!pts)return;
+  ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
+  const trace=()=>{ctx.beginPath();pts.forEach((p,i)=>{const q=P(p.x,p.y);if(i===0)ctx.moveTo(q[0],q[1]);else ctx.lineTo(q[0],q[1]);});ctx.stroke();};
+  ctx.lineWidth=s.lw*2;ctx.strokeStyle='rgba(0,0,0,0.45)';trace();
+  ctx.lineWidth=s.lw;ctx.strokeStyle=S.lineColor;trace();
+  [pts[0],pts[pts.length-1]].forEach(p=>{const q=P(p.x,p.y);ctx.fillStyle=S.lineColor;ctx.beginPath();ctx.arc(q[0],q[1],s.lw*1.8,0,Math.PI*2);ctx.fill();ctx.lineWidth=s.lw*0.6;ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.stroke();});
+  ctx.restore();
+}
+// Raster figure: native-resolution image with the line baked on top.
+function renderFigureCanvas(bg){
+  const ec=document.createElement('canvas');ec.width=S.width;ec.height=S.height;
+  const ctx=ec.getContext('2d');
+  if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,ec.width,ec.height);}
+  ctx.drawImage(iC,0,0);
+  drawLineFlat(ctx,(x,y)=>[x,y],figSizes());
+  return ec;
+}
+// Vector figure: the raster image embedded, the line as a true SVG vector.
+function buildFigureSVG(){
+  const s=figSizes(),pts=currentLinePts();let el='';
+  if(pts){
+    const d=pts.map(p=>p.x+','+p.y).join(' ');
+    el+='<polyline points="'+d+'" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="'+(s.lw*2)+'" stroke-linejoin="round" stroke-linecap="round"/>'
+      +'<polyline points="'+d+'" fill="none" stroke="'+S.lineColor+'" stroke-width="'+s.lw+'" stroke-linejoin="round" stroke-linecap="round"/>';
+    [pts[0],pts[pts.length-1]].forEach(p=>{el+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(s.lw*1.8)+'" fill="'+S.lineColor+'" stroke="rgba(0,0,0,0.5)" stroke-width="'+(s.lw*0.6)+'"/>';});
+  }
+  const img=iC.toDataURL('image/png');
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+S.width+'" height="'+S.height+'" viewBox="0 0 '+S.width+' '+S.height+'">'
+    +'<image x="0" y="0" width="'+S.width+'" height="'+S.height+'" href="'+img+'"/>'+el+'</svg>';
+}
+function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);}
+function saveFigure(kind){
+  if(!S.nCh)return;
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  if(kind==='svg'){downloadBlob(new Blob([buildFigureSVG()],{type:'image/svg+xml'}),'line_profile_figure_'+stamp+'.svg');return;}
+  const ec=renderFigureCanvas(kind==='jpg'?'#000':null);
+  ec.toBlob(b=>downloadBlob(b,'line_profile_figure_'+stamp+'.'+kind),kind==='jpg'?'image/jpeg':'image/png',0.95);
+}
+$('expPng').addEventListener('click',()=>saveFigure('png'));
+$('expJpg').addEventListener('click',()=>saveFigure('jpg'));
+$('expSvg').addEventListener('click',()=>saveFigure('svg'));
 
 const rh=$('resizeHandle');let isR=false,rsY,rsH;
 rh.addEventListener('mousedown',e=>{isR=true;rsY=e.clientY;rsH=$('bottomPanel').offsetHeight;e.preventDefault();});

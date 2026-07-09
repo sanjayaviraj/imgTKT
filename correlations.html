@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. All rights reserved. Proprietary; do not copy, modify, or distribute without written permission. -->
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. Free to use for any purpose at no cost. All other rights reserved; do not copy, modify, redistribute, or sell without written permission. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -97,8 +97,19 @@
     display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;
     border:1px solid var(--line);background:var(--panel-2);cursor:pointer;font-size:12px;
   }
-  .ch .sw{width:11px;height:11px;border-radius:3px}
+  .ch .sw{width:11px;height:11px;border-radius:50%}
   .ch.off{opacity:.4}
+  .color-pop{position:fixed;z-index:100000;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px;display:flex;flex-direction:column;gap:7px}
+  .pop-row{display:flex;gap:6px}
+  .color-swatch{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
+  .color-swatch:hover{transform:scale(1.12);border-color:rgba(0,0,0,.35)}
+  .color-swatch.sel{outline:2px solid var(--ink);outline-offset:1px}
+  .lut-swatch{flex:1;height:20px;border-radius:6px;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
+  .lut-swatch:hover{transform:scale(1.05);border-color:rgba(0,0,0,.35)}
+  .lut-swatch.sel{outline:2px solid var(--ink);outline-offset:1px}
+  .pop-custom{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);cursor:pointer}
+  .pop-custom input{width:34px;height:22px;border:1px solid var(--line);border-radius:5px;background:none;cursor:pointer;padding:0}
 
   .shape-toggles{display:flex;gap:8px}
   .shape-btn{flex:1}
@@ -156,6 +167,8 @@
     <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Line Profile</a>
     <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">ROI Inspector</a>
     <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;background:var(--accent);color:#fff">Correlations</a>
+    <a href="measure_angles.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Measure Angles</a>
+    <a href="particle_analyzer.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Particle Analyzer</a>
     <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Plot Data</a>
   </nav>
   <span class="sub">Pearson &amp; Manders colocalization · freehand / circle / rectangle / whole-image regions · pick any two channels</span>
@@ -316,6 +329,7 @@ let state = {
   width:0, height:0, nCh:0, bits:0,
   channels:[],          // array of {data:TypedArray, min, max}
   colors:[],            // [r,g,b] per channel
+  lut:[],               // LUT name per channel (null = solid colour)
   visible:[],           // bool per channel
   bright:[],            // brightness multiplier per channel
   dispMin:[],           // display range low per channel (defaults to data min)
@@ -412,6 +426,7 @@ async function loadFile(file){
     state.dims=dims; state.planeMode=planeMode; state.ambiguous=ambiguous;
     state.z=0; state.t=0; state.width=w; state.height=h; state.nCh=dims.nC; state.bits=bits;
     state.colors=Array.from({length:dims.nC},(_,i)=>channelColor(i));
+    state.lut=Array.from({length:dims.nC},()=>null);
     state.visible=Array.from({length:dims.nC},()=>true);
     state.bright=Array.from({length:dims.nC},()=>1);
     state.roi=null;
@@ -440,6 +455,7 @@ async function reinterpret(mode){
             : {nC:N,nZ:1,nT:1,order:'XYCZT'};
   state.nCh=state.dims.nC; state.z=0; state.t=0; state.roi=null;
   state.colors=Array.from({length:state.nCh},(_,i)=>channelColor(i));
+  state.lut=Array.from({length:state.nCh},()=>null);
   state.visible=Array.from({length:state.nCh},()=>true);
   state.bright=Array.from({length:state.nCh},()=>1);
   state.channels=await readPlaneChannels(0,0);
@@ -461,8 +477,10 @@ function buildChannelUI(){
   for(let i=0;i<state.nCh;i++){
     const el=document.createElement('div');
     el.className='ch'; el.dataset.c=i;
-    el.innerHTML='<span class="sw" style="background:'+rgb(state.colors[i])+'"></span>Channel '+(i+1);
+    el.innerHTML='<span class="sw" style="background:'+rgb(state.colors[i])+'" title="Change channel color"></span>Channel '+(i+1);
     el.onclick=()=>{ state.visible[i]=!state.visible[i]; el.classList.toggle('off',!state.visible[i]); render(); };
+    const sw=el.querySelector('.sw'); sw.style.cursor='pointer';
+    sw.onclick=ev=>{ ev.stopPropagation(); openColorPicker(i, sw); };
     tg.appendChild(el);
   }
   // Display range defaults to each channel's data min/max; kept as a display setting across plane changes.
@@ -471,7 +489,7 @@ function buildChannelUI(){
   const bc=$('brightCtrls'); bc.innerHTML='';
   for(let i=0;i<state.nCh;i++){
     const row=document.createElement('div');
-    row.className='ch-ctrl';
+    row.className='ch-ctrl'; row.dataset.c=i;
     const col=rgb(state.colors[i]);
     row.innerHTML='<div class="field"><label style="color:'+col+'">C'+(i+1)+' brightness</label>'
       +'<input type="range" min="0.2" max="8" step="0.1" value="1" data-c="'+i+'">'
@@ -490,6 +508,74 @@ function buildChannelUI(){
       rmin.value=Math.round(ch.min); rmax.value=Math.round(ch.max); render(); };
     bc.appendChild(row);
   }
+}
+/* ---------- channel colour picker (solid colours + LUTs + custom) ---------- */
+// Gray + 6 colour-blind-safe additive colours (blend correctly in the composite; avoid the red/green pair).
+const PICK_COLORS=[
+  ['Gray',[176,176,176]],['Magenta',[255,0,255]],['Green',[0,255,0]],['Cyan',[0,255,255]],
+  ['Yellow',[255,255,0]],['Orange',[255,140,0]],['Blue',[64,140,255]]
+];
+// Popular microscopy LUTs (gradient control points, low→high). Sampled per pixel in the additive composite.
+const LUTS={
+  fire:   [[0,0,0],[20,0,70],[120,0,130],[200,20,20],[240,120,0],[255,200,0],[255,255,120],[255,255,255]],
+  viridis:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],
+  gfb:    [[0,0,0],[0,0,150],[0,120,180],[0,200,80],[180,240,40],[255,255,180],[255,255,255]]
+};
+const LUT_LABEL={fire:'Fire',viridis:'Viridis',gfb:'Green Fire Blue'};
+function lutRGB(name,x){ const s=LUTS[name]; if(!s) return [0,0,0];
+  const n=s.length-1, p=Math.max(0,Math.min(1,x))*n, i=Math.min(n-1,Math.floor(p)), f=p-i, a=s[i], b=s[i+1];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f]; }
+function lutCss(name){ const s=LUTS[name]; return 'linear-gradient(90deg,'+s.map((c,k)=>rgb(c)+' '+Math.round(k/(s.length-1)*100)+'%').join(',')+')'; }
+function lutLabelColor(name){ return rgb(lutRGB(name,0.8).map(Math.round)); }
+const hex2rgb=h=>{ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; };
+const rgb2hex=c=>'#'+c.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+let _pickPop=null, _pickOutside=null;
+function closeColorPicker(){
+  if(_pickOutside){ document.removeEventListener('pointerdown',_pickOutside); _pickOutside=null; }
+  if(_pickPop){ _pickPop.remove(); _pickPop=null; }
+}
+// Reflect a channel's colour/LUT on its swatch + text labels in place (no panel rebuild → display min/max kept).
+function paintChannelSwatch(i){
+  const lut=state.lut&&state.lut[i];
+  const sw=document.querySelector('#chToggles .ch[data-c="'+i+'"] .sw');
+  const lc = lut ? lutLabelColor(lut) : rgb(state.colors[i]);
+  if(sw) sw.style.background = lut ? lutCss(lut) : rgb(state.colors[i]);
+  document.querySelectorAll('#brightCtrls .ch-ctrl[data-c="'+i+'"] label').forEach(l=>l.style.color=lc);
+}
+function setChannelColor(i,col){ state.colors[i]=col.slice(); if(state.lut) state.lut[i]=null; paintChannelSwatch(i); if(state.width) render(); }
+function setChannelLUT(i,name){ if(!state.lut) state.lut=[]; state.lut[i]=name; paintChannelSwatch(i); if(state.width) render(); }
+function openColorPicker(i,anchor){
+  closeColorPicker();
+  const pop=document.createElement('div'); pop.className='color-pop';
+  const cur=state.colors[i]||[], curLut=(state.lut&&state.lut[i])||null;
+  const solids=document.createElement('div'); solids.className='pop-row';
+  PICK_COLORS.forEach(([name,c])=>{
+    const b=document.createElement('button'); b.type='button'; b.className='color-swatch'; b.title=name; b.style.background=rgb(c);
+    if(!curLut && cur[0]===c[0]&&cur[1]===c[1]&&cur[2]===c[2]) b.classList.add('sel');
+    b.onclick=ev=>{ ev.stopPropagation(); setChannelColor(i,c); closeColorPicker(); };
+    solids.appendChild(b);
+  });
+  pop.appendChild(solids);
+  const luts=document.createElement('div'); luts.className='pop-row';
+  Object.keys(LUTS).forEach(name=>{
+    const b=document.createElement('button'); b.type='button'; b.className='lut-swatch'; b.title=LUT_LABEL[name]; b.style.background=lutCss(name);
+    if(curLut===name) b.classList.add('sel');
+    b.onclick=ev=>{ ev.stopPropagation(); setChannelLUT(i,name); closeColorPicker(); };
+    luts.appendChild(b);
+  });
+  pop.appendChild(luts);
+  const custom=document.createElement('label'); custom.className='pop-custom';
+  const inp=document.createElement('input'); inp.type='color'; inp.value=rgb2hex(curLut?[255,255,255]:cur);
+  inp.oninput=ev=>{ setChannelColor(i, hex2rgb(ev.target.value)); };
+  custom.append('Custom', inp);
+  pop.appendChild(custom);
+  document.body.appendChild(pop);
+  const r=anchor.getBoundingClientRect();
+  pop.style.left=Math.max(8, Math.min(window.innerWidth-pop.offsetWidth-8, r.left))+'px';
+  pop.style.top=(r.bottom+6)+'px';
+  _pickPop=pop;
+  _pickOutside=ev=>{ if(_pickPop && !_pickPop.contains(ev.target) && ev.target!==anchor) closeColorPicker(); };
+  document.addEventListener('pointerdown',_pickOutside);
 }
 // Z-slice / time-point navigation (+ a "what are these pages?" override for metadata-less files).
 function makeSlider(label,n,getV,onSet){
@@ -570,15 +656,18 @@ function render(){
       let R=0,G=0,B=0;
       if(preview){
         const av=state.channels[pa].data[si];
-        if(state.visible[pa] && av>ptA){ const col=state.colors[pa]; const nv=chNorm(pa,av); R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2]; }
+        if(state.visible[pa] && av>ptA){ const nv=chNorm(pa,av); const lut=state.lut&&state.lut[pa];
+          if(lut){ const rc=lutRGB(lut,nv); R+=rc[0]; G+=rc[1]; B+=rc[2]; } else { const col=state.colors[pa]; R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2]; } }
         const bv=state.channels[pb].data[si];
-        if(state.visible[pb] && bv>ptB){ const col=state.colors[pb]; const nv=chNorm(pb,bv); R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2]; }
+        if(state.visible[pb] && bv>ptB){ const nv=chNorm(pb,bv); const lut=state.lut&&state.lut[pb];
+          if(lut){ const rc=lutRGB(lut,nv); R+=rc[0]; G+=rc[1]; B+=rc[2]; } else { const col=state.colors[pb]; R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2]; } }
       } else {
         for(let c=0;c<state.nCh;c++){
           if(!state.visible[c]) continue;
           const nv=chNorm(c, state.channels[c].data[si]);
-          const col=state.colors[c];
-          R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2];
+          const lut=state.lut&&state.lut[c];
+          if(lut){ const rc=lutRGB(lut,nv); R+=rc[0]; G+=rc[1]; B+=rc[2]; }
+          else { const col=state.colors[c]; R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2]; }
         }
       }
       const di=(y*w+x)*4;
@@ -651,6 +740,7 @@ function bindCanvas(){
     return {x:px/state.scale, y:py/state.scale};
   };
   cv.onpointerdown=ev=>{
+    if(ev.button!==0) return;           // left button only (middle = pan, right = context menu)
     if(state.shape==='whole') return;   // whole-image region: nothing to draw
     cv.setPointerCapture(ev.pointerId);
     const p=pos(ev);
@@ -722,6 +812,28 @@ function bindCanvas(){
     drawShapes();
   }, {passive:false});
   shell.addEventListener('scroll', drawShapes);
+
+  // middle-mouse-button drag to pan the image (matches Size Analysis / Line Profile)
+  if(!cv._midPanBound){
+    cv._midPanBound=true;
+    let midPan=false, psx=0, psy=0, pl=0, pt=0, pcur='';
+    cv.addEventListener('mousedown', ev=>{
+      if(ev.button!==1) return;
+      ev.preventDefault();
+      midPan=true; psx=ev.clientX; psy=ev.clientY; pl=shell.scrollLeft; pt=shell.scrollTop;
+      pcur=cv.style.cursor; cv.style.cursor='grabbing';
+    });
+    window.addEventListener('mousemove', ev=>{
+      if(!midPan) return;
+      shell.scrollLeft = pl-(ev.clientX-psx);
+      shell.scrollTop  = pt-(ev.clientY-psy);
+      drawShapes();
+    });
+    window.addEventListener('mouseup', ev=>{
+      if(midPan && ev.button===1){ midPan=false; cv.style.cursor=pcur; }
+    });
+    cv.addEventListener('auxclick', ev=>{ if(ev.button===1) ev.preventDefault(); }); // suppress autoscroll
+  }
 }
 
 /* ---------- region iteration + correlation ---------- */

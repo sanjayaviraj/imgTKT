@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. All rights reserved. Proprietary; do not copy, modify, or distribute without written permission. -->
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. Free to use for any purpose at no cost. All other rights reserved; do not copy, modify, redistribute, or sell without written permission. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -90,8 +90,8 @@
   .pill b{color:var(--text-primary)}
   .top-result{font-family:'Roboto Mono',monospace;font-size:15px;font-weight:600;color:var(--accent);letter-spacing:0.3px;padding:5px 14px;background:var(--accent-glow);border:1px solid var(--accent);border-radius:999px;white-space:nowrap;}
   .viewer-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;flex-shrink:0;flex-wrap:wrap;}
-  .toolbar-btn{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:999px;color:var(--text-secondary);font-size:11px;cursor:pointer;font-family:'Roboto Mono',monospace;transition:all 0.15s;}
-  .toolbar-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .toolbar-btn{padding:9px 18px;background:var(--bg-input);border:1px solid var(--border);border-radius:999px;color:var(--text-primary);font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;font-family:'Roboto',sans-serif;transition:all 0.15s;}
+  .toolbar-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--bg-primary);}
   .toolbar-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
   .toolbar-sep{width:1px;height:20px;background:var(--border);}
   .toolbar-info{margin-left:auto;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text-muted);}
@@ -127,6 +127,8 @@
       <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Line Profile</a>
       <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">ROI Inspector</a>
       <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Correlations</a>
+      <a href="measure_angles.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Measure Angles</a>
+      <a href="particle_analyzer.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Particle Analyzer</a>
       <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Plot Data</a>
     </nav>
     <div class="header-subtitle">FWHM Measurement Tool</div>
@@ -211,6 +213,15 @@
       <div class="btn-row">
         <button class="btn" id="btnDraw">✏️ Draw</button>
         <button class="btn danger" id="btnClearCurrent">✕ Clear Line</button>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-label">Export figure</div>
+      <div style="margin-bottom:8px;font-size:11px;color:var(--text-muted);line-height:1.5">Save the image with every drawn measurement line and label overlaid — at full image resolution. SVG keeps the lines as true vectors.</div>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn" id="expPng" disabled>PNG</button>
+        <button class="btn" id="expJpg" disabled>JPG</button>
+        <button class="btn" id="expSvg" disabled>SVG</button>
       </div>
     </div>
     <div class="panel-section" id="resultsSection" style="display:none">
@@ -510,6 +521,7 @@ function setChannels(channels,w,h,bits){
   document.getElementById('resultsSection').style.display='none';
   document.getElementById('chartLegend').style.display='none';
   clearChart();
+  document.getElementById('expPng').disabled=document.getElementById('expJpg').disabled=document.getElementById('expSvg').disabled=false;
   applyChannel(0,true);
 }
 
@@ -652,6 +664,7 @@ function resetImage(){
   document.getElementById('colormapWrap').style.display='none';
   document.getElementById('channelSection').style.display='none';
   document.getElementById('fileInfo').style.display='none';
+  document.getElementById('expPng').disabled=document.getElementById('expJpg').disabled=document.getElementById('expSvg').disabled=true;
   document.getElementById('fileName').style.display='none';
   document.getElementById('loadActions').style.display='none';
   document.getElementById('pSize').textContent='–';
@@ -660,6 +673,7 @@ function resetImage(){
   document.getElementById('statusDim').textContent='—';
   document.getElementById('statusText').textContent='Ready';
   document.getElementById('cursorInfo').textContent='—';
+  iCtx.clearRect(0,0,iC.width,iC.height);
   oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
   fi.value='';
 }
@@ -954,6 +968,66 @@ document.querySelectorAll('.lut-chip[data-lut]').forEach(c=>{c.addEventListener(
 document.querySelectorAll('.color-swatch').forEach(sw=>{sw.addEventListener('click',()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');S.lineColor=sw.dataset.color;renderOverlay();});});
 document.getElementById('pixelSize').addEventListener('change',()=>{if(S.profileData)fitGaussian(S.profileData,parseFloat(document.getElementById('pixelSize').value)||20);});
 document.getElementById('lineWidth').addEventListener('change',()=>{if(S.lineStart&&S.lineEnd)extractProfile();});
+
+/* ---------- figure export (image + drawn measurement lines) ---------- */
+// Stroke / marker / font sizes scaled to the image's own resolution.
+function figSizes(){const m=Math.min(S.width,S.height);return{lw:Math.max(1.5,m/250),fontPx:Math.max(12,m/20)};}
+// Every line to draw in the figure: saved measurements (with #label) + the current unsaved line.
+function eachFigureSeg(cb){
+  S.measurements.forEach((m,i)=>{ const pts=(m.pts&&m.pts.length>2)?m.pts:[m.startPt,m.endPt]; cb(pts,m.color||'#ffffff',0.9,i+1); });
+  let cur=null;
+  if(S.lineType==='freehand'){ if(S.linePts&&S.linePts.length>=2) cur=S.linePts; }
+  else if(S.lineStart&&S.lineEnd) cur=[S.lineStart,S.lineEnd];
+  if(cur) cb(cur,S.lineColor,1,undefined);
+}
+// Draw one line/polyline in image coordinates (P maps image px -> target px), with the dark halo used on-screen.
+function drawSegFlat(ctx,P,pts,color,alpha,label,s){
+  ctx.save();ctx.globalAlpha=alpha;ctx.lineJoin='round';ctx.lineCap='round';
+  const trace=()=>{ctx.beginPath();pts.forEach((p,i)=>{const q=P(p.x,p.y);if(i===0)ctx.moveTo(q[0],q[1]);else ctx.lineTo(q[0],q[1]);});ctx.stroke();};
+  ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=s.lw*1.9;trace();
+  ctx.strokeStyle=color;ctx.lineWidth=s.lw;trace();
+  [pts[0],pts[pts.length-1]].forEach(p=>{const q=P(p.x,p.y);ctx.fillStyle=color;ctx.beginPath();ctx.arc(q[0],q[1],s.lw*1.8,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.lineWidth=s.lw*0.6;ctx.stroke();});
+  if(label!==undefined){const q=P(pts[0].x,pts[0].y);ctx.globalAlpha=Math.min(1,alpha+.3);ctx.font='bold '+s.fontPx+'px "Roboto Mono", monospace';ctx.fillStyle=color;ctx.textBaseline='alphabetic';ctx.fillText('#'+label,q[0]+s.fontPx*0.6,q[1]-s.fontPx*0.5);}
+  ctx.restore();
+}
+// Raster figure: native-resolution image with the lines baked on top.
+function renderFigureCanvas(bg){
+  const ec=document.createElement('canvas');ec.width=S.width;ec.height=S.height;
+  const ctx=ec.getContext('2d');
+  if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,ec.width,ec.height);}
+  ctx.drawImage(iC,0,0);
+  const s=figSizes();
+  eachFigureSeg((pts,color,alpha,label)=>drawSegFlat(ctx,(x,y)=>[x,y],pts,color,alpha,label,s));
+  return ec;
+}
+// Vector figure: the raster image embedded, the lines/labels as true SVG vectors.
+function buildFigureSVG(){
+  const s=figSizes();let el='';
+  const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  eachFigureSeg((pts,color,alpha,label)=>{
+    const d=pts.map(p=>p.x+','+p.y).join(' ');
+    el+='<g opacity="'+alpha+'">'
+      +'<polyline points="'+d+'" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="'+(s.lw*1.9)+'" stroke-linejoin="round" stroke-linecap="round"/>'
+      +'<polyline points="'+d+'" fill="none" stroke="'+color+'" stroke-width="'+s.lw+'" stroke-linejoin="round" stroke-linecap="round"/>';
+    [pts[0],pts[pts.length-1]].forEach(p=>{el+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(s.lw*1.8)+'" fill="'+color+'" stroke="rgba(255,255,255,0.85)" stroke-width="'+(s.lw*0.6)+'"/>';});
+    if(label!==undefined){el+='<text x="'+(pts[0].x+s.fontPx*0.6)+'" y="'+(pts[0].y-s.fontPx*0.5)+'" fill="'+color+'" font-family="Roboto Mono, monospace" font-weight="bold" font-size="'+s.fontPx+'">#'+esc(label)+'</text>';}
+    el+='</g>';
+  });
+  const img=iC.toDataURL('image/png');
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+S.width+'" height="'+S.height+'" viewBox="0 0 '+S.width+' '+S.height+'">'
+    +'<image x="0" y="0" width="'+S.width+'" height="'+S.height+'" href="'+img+'"/>'+el+'</svg>';
+}
+function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);}
+function saveFigure(kind){
+  if(!S.imageData)return;
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  if(kind==='svg'){downloadBlob(new Blob([buildFigureSVG()],{type:'image/svg+xml'}),'size_analysis_figure_'+stamp+'.svg');return;}
+  const ec=renderFigureCanvas(kind==='jpg'?'#000':null);
+  ec.toBlob(b=>downloadBlob(b,'size_analysis_figure_'+stamp+'.'+kind),kind==='jpg'?'image/jpeg':'image/png',0.95);
+}
+document.getElementById('expPng').addEventListener('click',()=>saveFigure('png'));
+document.getElementById('expJpg').addEventListener('click',()=>saveFigure('jpg'));
+document.getElementById('expSvg').addEventListener('click',()=>saveFigure('svg'));
 
 const rh=document.getElementById('resizeHandle');let isR=false,rsY,rsH;
 rh.addEventListener('mousedown',e=>{isR=true;rsY=e.clientY;rsH=document.getElementById('bottomPanel').offsetHeight;e.preventDefault();});

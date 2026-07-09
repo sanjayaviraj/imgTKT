@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. All rights reserved. Proprietary; do not copy, modify, or distribute without written permission. -->
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. Free to use for any purpose at no cost. All other rights reserved; do not copy, modify, redistribute, or sell without written permission. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -58,6 +58,9 @@
   .bmc:hover{transform:translateY(-1px);box-shadow:var(--shadow-2)}
   .bmc img{height:22px;width:auto;display:block}
   .bmc .heart{display:inline-block;animation:heartGlow 1.6s ease-in-out infinite}
+  .cite{margin:12px 0 0;font-size:13px;color:var(--text-secondary);line-height:1.5}
+  .cite a{color:var(--blue);text-decoration:none}
+  .cite a:hover{text-decoration:underline}
   @keyframes heartGlow{
     0%,100%{filter:drop-shadow(0 0 1px rgba(233,48,55,.35));transform:scale(1)}
     50%{filter:drop-shadow(0 0 8px rgba(233,48,55,.98));transform:scale(1.2)}}
@@ -84,6 +87,7 @@
       <img src="icons/bmc-logo.svg" alt="Buy Me a Coffee logo">
       <span>Buy me a coffee&nbsp;<span class="heart">❤️</span></span>
     </a>
+    <p class="cite">Cite this: Aththawala Gedara, S. V. B. D. (2026). imgTKT (version 1). <a href="https://sanjayaviraj.github.io/imgTKT" target="_blank" rel="noopener noreferrer">https://sanjayaviraj.github.io/imgTKT</a></p>
   </div>
 
   <div class="grid" id="grid">
@@ -124,6 +128,26 @@
         freehand, circular, rectangular, or whole-image region. Record results, export as CSV, and
         plot them right away.</p>
       <div class="tags"><span class="tag">Pearson</span><span class="tag">Manders</span><span class="tag">Colocalization</span></div>
+      <div class="go">Open tool →</div>
+    </a>
+
+    <a class="card" href="measure_angles.html">
+      <div class="icon"><img src="icons/measure_angles.svg" alt="Measure Angles icon"></div>
+      <h2>Measure Angles</h2>
+      <p>Load multi-channel TIFF / OME-TIFF stacks with automatic channel detection. Click three points —
+        first arm, vertex, second arm — to draw and measure an angle in degrees. Drag points to fine-tune,
+        record readings, and export as CSV.</p>
+      <div class="tags"><span class="tag">Angle</span><span class="tag">Multi-channel</span><span class="tag">OME-TIFF</span></div>
+      <div class="go">Open tool →</div>
+    </a>
+
+    <a class="card" href="particle_analyzer.html">
+      <div class="icon"><img src="icons/particle_analyzer.svg" alt="Particle Analyzer icon"></div>
+      <h2>Particle Analyzer</h2>
+      <p>Threshold a channel with Otsu's method (or set the level by hand), then detect connected
+        objects and measure each one — area, centroid, bounding box, perimeter, circularity, aspect
+        ratio and intensity. Analyze the whole image or a drawn region; export as CSV or plot directly.</p>
+      <div class="tags"><span class="tag">Otsu</span><span class="tag">Thresholding</span><span class="tag">Particles</span></div>
       <div class="go">Open tool →</div>
     </a>
 

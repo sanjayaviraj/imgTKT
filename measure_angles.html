@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
-<title>ROI_Inspector — Multi-Channel TIFF</title>
+<title>Measure_Angles — Multi-Channel TIFF</title>
 <script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.min.js"></script>
 <script>
   // Fallback to the package-root browser bundle if the pinned path fails.
@@ -95,23 +95,8 @@
     display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;
     border:1px solid var(--line);background:var(--panel-2);cursor:pointer;font-size:12px;
   }
-  .ch .sw{width:11px;height:11px;border-radius:50%}
+  .ch .sw{width:11px;height:11px;border-radius:3px}
   .ch.off{opacity:.4}
-  .color-pop{position:fixed;z-index:100000;background:var(--panel);border:1px solid var(--line);border-radius:10px;
-    box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px;display:flex;flex-direction:column;gap:7px}
-  .pop-row{display:flex;gap:6px}
-  .color-swatch{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
-  .color-swatch:hover{transform:scale(1.12);border-color:rgba(0,0,0,.35)}
-  .color-swatch.sel{outline:2px solid var(--ink);outline-offset:1px}
-  .lut-swatch{flex:1;height:20px;border-radius:6px;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
-  .lut-swatch:hover{transform:scale(1.05);border-color:rgba(0,0,0,.35)}
-  .lut-swatch.sel{outline:2px solid var(--ink);outline-offset:1px}
-  .pop-custom{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);cursor:pointer}
-  .pop-custom input{width:34px;height:22px;border:1px solid var(--line);border-radius:5px;background:none;cursor:pointer;padding:0}
-
-  .shape-toggles{display:flex;gap:8px}
-  .shape-btn{flex:1}
-  .shape-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 
   .field{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
   .field label{color:var(--muted);font-size:12.5px}
@@ -128,6 +113,10 @@
   .auto-btn:hover{color:var(--accent);border-color:var(--accent)}
 
   .measure-box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+  .angle-read{text-align:center;padding:6px 0 12px}
+  .angle-read .big{font-family:var(--mono);font-size:38px;font-weight:500;color:var(--accent);line-height:1;font-variant-numeric:tabular-nums}
+  .angle-read .big .deg{font-size:22px;color:var(--muted)}
+  .angle-read .supp{color:var(--muted);font-size:12px;margin-top:6px}
   .reading{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line)}
   .reading:last-child{border-bottom:0}
   .reading .lbl{display:flex;align-items:center;gap:8px;color:var(--muted)}
@@ -158,18 +147,18 @@
 </head>
 <body>
 <header>
-  <h1>ROI_Inspector<span class="dot">.</span></h1>
+  <h1>Measure_Angles<span class="dot">.</span></h1>
   <nav style="display:flex;gap:6px">
     <a href="index.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Home</a>
     <a href="size_analysis.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Size Analysis</a>
     <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Line Profile</a>
-    <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;background:var(--accent);color:#fff">ROI Inspector</a>
+    <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">ROI Inspector</a>
     <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Correlations</a>
-    <a href="measure_angles.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Measure Angles</a>
+    <a href="measure_angles.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;background:var(--accent);color:#fff">Measure Angles</a>
     <a href="particle_analyzer.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Particle Analyzer</a>
     <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Plot Data</a>
   </nav>
-  <span class="sub">Multi-channel TIFF / OME-TIFF · auto channel detection · circular &amp; rectangular ROI mean &amp; sum intensity · CSV export</span>
+  <span class="sub">Multi-channel TIFF / OME-TIFF · auto channel detection · three-point angle measurement · CSV export</span>
 </header>
 
 <div class="wrap">
@@ -182,7 +171,7 @@
       <span class="pill">Channels <b id="pCh">–</b></span>
       <span class="pill">Bit depth <b id="pBits">–</b></span>
       <span id="loadActions" style="display:none">
-        <button id="clearRoi">Clear ROI</button>
+        <button id="clearRoi">Clear angle</button>
         <button id="reset">Load another</button>
       </span>
     </div>
@@ -201,7 +190,7 @@
     <div id="drop" class="drop">
       <strong>Drop a TIFF / OME-TIFF here</strong>
       <span>or click to browse · convert your .czi to OME-TIFF first (Bio-Formats / Fiji / QuPath)</span>
-      <p class="drop-desc">Load multi-channel TIFF / OME-TIFF stacks with automatic channel detection. Place circular and rectangular ROIs to measure the mean and sum intensity per channel, then export the readings as CSV.</p>
+      <p class="drop-desc">Load multi-channel TIFF / OME-TIFF stacks with automatic channel detection. Click three points on the image — first arm, the vertex, then the second arm — to draw and measure an angle, then record the reading and export as CSV.</p>
       <input type="file" id="file" accept=".tif,.tiff,.ome.tif,.ome.tiff,image/tiff">
     </div>
 
@@ -212,7 +201,7 @@
         </div>
         <canvas id="cvOv" class="cv-overlay"></canvas>
       </div>
-      <p class="hint">Scroll over the image to <b>zoom</b> toward the cursor. Pick <b>Circle</b> or <b>Rectangle</b> on the right. Drag to draw the ROI — or enable <b>Fixed size</b> and click to drop a shape. Mean is computed on raw pixel values for every channel.</p>
+      <p class="hint">Scroll over the image to <b>zoom</b> toward the cursor. Click to place the <b>three points</b> — first arm end, then the <b>vertex</b>, then the second arm end. Drag any point to fine-tune. A fourth click starts a new angle.</p>
     </div>
     </div>
   </section>
@@ -226,36 +215,22 @@
     </div>
 
     <div class="group">
-      <h3>ROI shape &amp; size</h3>
-      <div class="shape-toggles">
-        <button id="shapeFree" class="shape-btn active">✎ Freehand</button>
-        <button id="shapeCircle" class="shape-btn">● Circle</button>
-        <button id="shapeRect" class="shape-btn">▭ Rectangle</button>
-      </div>
-      <div class="field" style="margin-top:12px">
+      <h3>Angle tool</h3>
+      <p class="hint" id="angleHint" style="margin-top:0">Click three points on the image: <b>first arm</b> end, then the <b>vertex</b> (middle click), then the <b>second arm</b> end. Drag any placed point to adjust.</p>
+      <div class="field" style="margin-top:10px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-          <input type="checkbox" id="fixedMode" style="accent-color:var(--accent)"> Fixed size
+          <input type="checkbox" id="reflexMode" style="accent-color:var(--accent)"> Report reflex (&gt;180°)
         </label>
-        <span class="hint" style="margin:0">(click to drop)</span>
+        <span class="hint" style="margin:0">(outer angle)</span>
       </div>
-      <div id="fixedCircle" class="field" style="display:none">
-        <label>Radius</label>
-        <input type="number" id="fixedR" min="1" step="1" value="25" class="num">
-        <span class="val">px</span>
-      </div>
-      <div id="fixedRect" style="display:none">
-        <div class="field"><label>Width</label><input type="number" id="fixedW" min="1" step="1" value="50" class="num"><span class="val">px</span></div>
-        <div class="field"><label>Height</label><input type="number" id="fixedH" min="1" step="1" value="50" class="num"><span class="val">px</span></div>
-      </div>
-      <p class="hint" id="shapeHint" style="margin-top:4px">Draw a closed outline around your region — release to close it.</p>
     </div>
 
     <div class="group">
-      <h3>Current ROI</h3>
+      <h3>Current angle</h3>
       <div class="measure-box">
-        <div id="readings"><div class="empty">No ROI drawn.</div></div>
+        <div id="readings"><div class="empty">No angle drawn.</div></div>
         <div class="status-row">
-          <input id="statusIn" placeholder="Status (e.g. positive, control, cell-1)…">
+          <input id="statusIn" placeholder="Status (e.g. spindle, cell-1, treated)…">
         </div>
         <button class="primary" id="record" style="width:100%" disabled>Record measurement →</button>
       </div>
@@ -274,17 +249,18 @@
         <button id="plotData" disabled>📊 Plot this data →</button>
         <button class="warn" id="clearAll" disabled>Clear all</button>
       </div>
-      <p class="note">Per channel, <b>mean</b> and <b>sum</b> are of the raw intensities inside the ROI (all channels measured regardless of which are displayed). Coordinates are in full-resolution image pixels.</p>
+      <p class="note">The angle is the interior angle at the vertex (the middle point), measured in degrees from the raw pixel coordinates you clicked. Coordinates are in full-resolution image pixels; display brightness and zoom do not affect the measured angle.</p>
     </div>
 
     <div class="group">
       <h3>Export figure</h3>
-      <p class="hint" style="margin-top:0">Save the displayed image with every drawn ROI and its number overlaid — at full image resolution. SVG keeps the ROIs as true vectors.</p>
+      <p class="hint" style="margin-top:0">Save the displayed image with every drawn angle, arc, and label overlaid — at full image resolution.</p>
       <div class="foot" style="margin-top:10px">
         <button id="expPng" disabled>PNG</button>
         <button id="expJpg" disabled>JPG</button>
         <button id="expSvg" disabled>SVG (vector)</button>
       </div>
+      <p class="hint" style="margin-top:8px">SVG embeds the image and keeps the angles as true vectors — crisp at any scale for figures.</p>
     </div>
   </aside>
 </div>
@@ -318,17 +294,15 @@ let state = {
   width:0, height:0, nCh:0, bits:0,
   channels:[],          // array of {data:TypedArray, min, max}
   colors:[],            // [r,g,b] per channel
-  lut:[],               // LUT name per channel (null = solid colour)
   visible:[],           // bool per channel
   bright:[],            // brightness multiplier per channel
   dispMin:[],           // display range low per channel (defaults to data min)
   dispMax:[],           // display range high per channel (defaults to data max)
-  shape:'free',         // 'free' | 'circle' | 'rect'
-  roi:null,             // {type, ...} in image px
+  angle:{points:[]},    // up to 3 points in image px; points[1] is the vertex
   records:[],
   scale:1,              // image->canvas px (always 1; native-res render)
   zoom:1,               // CSS display zoom factor
-  dragging:false, startX:0, startY:0
+  dragIdx:-1            // index of the point currently being dragged (-1 = none)
 };
 
 /* ---------- file loading ---------- */
@@ -414,10 +388,9 @@ async function loadFile(file){
     state.dims=dims; state.planeMode=planeMode; state.ambiguous=ambiguous;
     state.z=0; state.t=0; state.width=w; state.height=h; state.nCh=dims.nC; state.bits=bits;
     state.colors=Array.from({length:dims.nC},(_,i)=>channelColor(i));
-    state.lut=Array.from({length:dims.nC},()=>null);
     state.visible=Array.from({length:dims.nC},()=>true);
     state.bright=Array.from({length:dims.nC},()=>1);
-    state.roi=null;
+    state.angle={points:[]};
     state.channels=await readPlaneChannels(0,0);
     initViewer(file.name);
   }catch(err){
@@ -427,7 +400,7 @@ async function loadFile(file){
   }
 }
 
-// Navigate to a different Z-slice / time point (re-reads raw pixels for that plane; measurements follow).
+// Navigate to a different Z-slice / time point (re-reads raw pixels for that plane).
 async function gotoPlane(z,t){
   const D=state.dims;
   z=Math.max(0,Math.min(D.nZ-1,z)); t=Math.max(0,Math.min(D.nT-1,t));
@@ -441,9 +414,8 @@ async function reinterpret(mode){
   state.dims = mode==='z' ? {nC:1,nZ:N,nT:1,order:'XYCZT'}
             : mode==='t' ? {nC:1,nZ:1,nT:N,order:'XYCZT'}
             : {nC:N,nZ:1,nT:1,order:'XYCZT'};
-  state.nCh=state.dims.nC; state.z=0; state.t=0; state.roi=null;
+  state.nCh=state.dims.nC; state.z=0; state.t=0;
   state.colors=Array.from({length:state.nCh},(_,i)=>channelColor(i));
-  state.lut=Array.from({length:state.nCh},()=>null);
   state.visible=Array.from({length:state.nCh},()=>true);
   state.bright=Array.from({length:state.nCh},()=>1);
   state.channels=await readPlaneChannels(0,0);
@@ -465,10 +437,8 @@ function buildChannelUI(){
   for(let i=0;i<state.nCh;i++){
     const el=document.createElement('div');
     el.className='ch'; el.dataset.c=i;
-    el.innerHTML='<span class="sw" style="background:'+rgb(state.colors[i])+'" title="Change channel color"></span>Channel '+(i+1);
+    el.innerHTML='<span class="sw" style="background:'+rgb(state.colors[i])+'"></span>Channel '+(i+1);
     el.onclick=()=>{ state.visible[i]=!state.visible[i]; el.classList.toggle('off',!state.visible[i]); render(); };
-    const sw=el.querySelector('.sw'); sw.style.cursor='pointer';
-    sw.onclick=ev=>{ ev.stopPropagation(); openColorPicker(i, sw); };
     tg.appendChild(el);
   }
   // Display range defaults to each channel's data min/max; kept as a display setting across plane changes.
@@ -477,7 +447,7 @@ function buildChannelUI(){
   const bc=$('brightCtrls'); bc.innerHTML='';
   for(let i=0;i<state.nCh;i++){
     const row=document.createElement('div');
-    row.className='ch-ctrl'; row.dataset.c=i;
+    row.className='ch-ctrl';
     const col=rgb(state.colors[i]);
     row.innerHTML='<div class="field"><label style="color:'+col+'">C'+(i+1)+' brightness</label>'
       +'<input type="range" min="0.2" max="8" step="0.1" value="1" data-c="'+i+'">'
@@ -496,74 +466,6 @@ function buildChannelUI(){
       rmin.value=Math.round(ch.min); rmax.value=Math.round(ch.max); render(); };
     bc.appendChild(row);
   }
-}
-/* ---------- channel colour picker (solid colours + LUTs + custom) ---------- */
-// Gray + 6 colour-blind-safe additive colours (blend correctly in the composite; avoid the red/green pair).
-const PICK_COLORS=[
-  ['Gray',[176,176,176]],['Magenta',[255,0,255]],['Green',[0,255,0]],['Cyan',[0,255,255]],
-  ['Yellow',[255,255,0]],['Orange',[255,140,0]],['Blue',[64,140,255]]
-];
-// Popular microscopy LUTs (gradient control points, low→high). Sampled per pixel in the additive composite.
-const LUTS={
-  fire:   [[0,0,0],[20,0,70],[120,0,130],[200,20,20],[240,120,0],[255,200,0],[255,255,120],[255,255,255]],
-  viridis:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],
-  gfb:    [[0,0,0],[0,0,150],[0,120,180],[0,200,80],[180,240,40],[255,255,180],[255,255,255]]
-};
-const LUT_LABEL={fire:'Fire',viridis:'Viridis',gfb:'Green Fire Blue'};
-function lutRGB(name,x){ const s=LUTS[name]; if(!s) return [0,0,0];
-  const n=s.length-1, p=Math.max(0,Math.min(1,x))*n, i=Math.min(n-1,Math.floor(p)), f=p-i, a=s[i], b=s[i+1];
-  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f]; }
-function lutCss(name){ const s=LUTS[name]; return 'linear-gradient(90deg,'+s.map((c,k)=>rgb(c)+' '+Math.round(k/(s.length-1)*100)+'%').join(',')+')'; }
-function lutLabelColor(name){ return rgb(lutRGB(name,0.8).map(Math.round)); }
-const hex2rgb=h=>{ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; };
-const rgb2hex=c=>'#'+c.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
-let _pickPop=null, _pickOutside=null;
-function closeColorPicker(){
-  if(_pickOutside){ document.removeEventListener('pointerdown',_pickOutside); _pickOutside=null; }
-  if(_pickPop){ _pickPop.remove(); _pickPop=null; }
-}
-// Reflect a channel's colour/LUT on its swatch + text labels in place (no panel rebuild → display min/max kept).
-function paintChannelSwatch(i){
-  const lut=state.lut&&state.lut[i];
-  const sw=document.querySelector('#chToggles .ch[data-c="'+i+'"] .sw');
-  const lc = lut ? lutLabelColor(lut) : rgb(state.colors[i]);
-  if(sw) sw.style.background = lut ? lutCss(lut) : rgb(state.colors[i]);
-  document.querySelectorAll('#brightCtrls .ch-ctrl[data-c="'+i+'"] label').forEach(l=>l.style.color=lc);
-}
-function setChannelColor(i,col){ state.colors[i]=col.slice(); if(state.lut) state.lut[i]=null; paintChannelSwatch(i); if(state.width) render(); }
-function setChannelLUT(i,name){ if(!state.lut) state.lut=[]; state.lut[i]=name; paintChannelSwatch(i); if(state.width) render(); }
-function openColorPicker(i,anchor){
-  closeColorPicker();
-  const pop=document.createElement('div'); pop.className='color-pop';
-  const cur=state.colors[i]||[], curLut=(state.lut&&state.lut[i])||null;
-  const solids=document.createElement('div'); solids.className='pop-row';
-  PICK_COLORS.forEach(([name,c])=>{
-    const b=document.createElement('button'); b.type='button'; b.className='color-swatch'; b.title=name; b.style.background=rgb(c);
-    if(!curLut && cur[0]===c[0]&&cur[1]===c[1]&&cur[2]===c[2]) b.classList.add('sel');
-    b.onclick=ev=>{ ev.stopPropagation(); setChannelColor(i,c); closeColorPicker(); };
-    solids.appendChild(b);
-  });
-  pop.appendChild(solids);
-  const luts=document.createElement('div'); luts.className='pop-row';
-  Object.keys(LUTS).forEach(name=>{
-    const b=document.createElement('button'); b.type='button'; b.className='lut-swatch'; b.title=LUT_LABEL[name]; b.style.background=lutCss(name);
-    if(curLut===name) b.classList.add('sel');
-    b.onclick=ev=>{ ev.stopPropagation(); setChannelLUT(i,name); closeColorPicker(); };
-    luts.appendChild(b);
-  });
-  pop.appendChild(luts);
-  const custom=document.createElement('label'); custom.className='pop-custom';
-  const inp=document.createElement('input'); inp.type='color'; inp.value=rgb2hex(curLut?[255,255,255]:cur);
-  inp.oninput=ev=>{ setChannelColor(i, hex2rgb(ev.target.value)); };
-  custom.append('Custom', inp);
-  pop.appendChild(custom);
-  document.body.appendChild(pop);
-  const r=anchor.getBoundingClientRect();
-  pop.style.left=Math.max(8, Math.min(window.innerWidth-pop.offsetWidth-8, r.left))+'px';
-  pop.style.top=(r.bottom+6)+'px';
-  _pickPop=pop;
-  _pickOutside=ev=>{ if(_pickPop && !_pickPop.contains(ev.target) && ev.target!==anchor) closeColorPicker(); };
-  document.addEventListener('pointerdown',_pickOutside);
 }
 // Z-slice / time-point navigation (+ a "what are these pages?" override for metadata-less files).
 function makeSlider(label,n,getV,onSet){
@@ -634,20 +536,40 @@ function render(){
         const lo=state.dispMin[c], hi=state.dispMax[c];
         let nv=(ch.data[si]-lo)/((hi-lo)||1); // display range -> 0..1
         nv=Math.max(0, Math.min(1, nv*(state.bright[c]||1)));
-        const lut=state.lut&&state.lut[c];
-        if(lut){ const rc=lutRGB(lut,nv); R+=rc[0]; G+=rc[1]; B+=rc[2]; }
-        else { const col=state.colors[c]; R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2]; }
+        const col=state.colors[c];
+        R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2];
       }
       const di=(y*w+x)*4;
       data[di]=Math.min(255,R); data[di+1]=Math.min(255,G); data[di+2]=Math.min(255,B); data[di+3]=255;
     }
   }
   ctx.putImageData(img,0,0);
-  // ROI shapes are drawn on a separate screen-resolution overlay so they stay crisp at any zoom.
+  // Angle markup is drawn on a separate screen-resolution overlay so it stays crisp at any zoom.
   drawShapes();
 }
 
-// Draw recorded + active ROI shapes on the overlay canvas at screen resolution (display only).
+// Compute the interior angle (degrees) at the vertex (points[1]) between the two arms.
+function angleDeg(pts){
+  if(pts.length<3) return null;
+  const [a,b,c]=pts;                    // b is the vertex
+  const v1x=a.x-b.x, v1y=a.y-b.y;
+  const v2x=c.x-b.x, v2y=c.y-b.y;
+  const dot=v1x*v2x+v1y*v2y;
+  const cross=v1x*v2y-v1y*v2x;
+  let ang=Math.atan2(Math.abs(cross),dot)*180/Math.PI;   // interior angle, 0..180
+  if($('reflexMode').checked) ang=360-ang;               // report the outer/reflex angle instead
+  return ang;
+}
+// Signed arc to draw at the vertex: the interior sweep, or (for reflex) the complementary outer sweep.
+function arcSweep(pts,reflex){
+  const [a,b,c]=pts;
+  const a1=Math.atan2(a.y-b.y,a.x-b.x), a2=Math.atan2(c.y-b.y,c.x-b.x);
+  let diff=a2-a1; while(diff<=-Math.PI)diff+=2*Math.PI; while(diff>Math.PI)diff-=2*Math.PI;
+  if(reflex) diff = diff>0 ? diff-2*Math.PI : diff+2*Math.PI;   // go the long way round
+  return {a1,diff};
+}
+
+// Draw recorded + active angle markup on the overlay canvas at screen resolution (display only).
 function drawShapes(){
   const cv=$('cv'), ov=$('cvOv');
   if(!ov) return;
@@ -666,63 +588,58 @@ function drawShapes(){
   const s=cvR.width/state.width;          // display px per image px
   const P=(ix,iy)=>[ox+ix*s, oy+iy*s];
 
-  // recorded ROIs (amber)
-  octx.save();
-  octx.lineWidth=1.5; octx.font='13px "Roboto Mono", monospace';
+  octx.font='13px "Roboto Mono", monospace';
   octx.textAlign='center'; octx.textBaseline='middle';
-  state.records.forEach((rec,i)=>{
-    let lx,ly;
-    octx.strokeStyle='#f0b429'; octx.fillStyle='rgba(240,180,41,0.10)';
-    octx.beginPath();
-    if(rec.shape==='circle'){
-      const [cx,cy]=P(rec.cx,rec.cy); octx.arc(cx,cy,rec.r*s,0,Math.PI*2); lx=cx; ly=cy;
-    } else if(rec.shape==='rect'){
-      const [rx,ry]=P(rec.x,rec.y); octx.rect(rx,ry,rec.w*s,rec.h*s);
-      const m=P(rec.x+rec.w/2,rec.y+rec.h/2); lx=m[0]; ly=m[1];
-    } else {
-      rec.points.forEach((p,k)=>{ const q=P(p.x,p.y); if(k===0)octx.moveTo(q[0],q[1]); else octx.lineTo(q[0],q[1]); });
-      octx.closePath();
-      const m=P(rec.cx,rec.cy); lx=m[0]; ly=m[1];
-    }
-    octx.stroke(); octx.fill();
-    octx.lineWidth=3; octx.strokeStyle='#1a1205'; octx.strokeText(String(i+1),lx,ly);
-    octx.fillStyle='#f0b429'; octx.fillText(String(i+1),lx,ly);
-    octx.lineWidth=1.5;
-  });
-  octx.restore();
 
-  // active ROI (teal)
-  if(state.roi){
-    octx.save();
-    octx.strokeStyle='#5ad1c7'; octx.lineWidth=2; octx.fillStyle='rgba(90,209,199,0.12)';
-    let lx,ly;
-    octx.beginPath();
-    if(state.roi.type==='circle'){
-      const [cx,cy]=P(state.roi.cx,state.roi.cy); octx.arc(cx,cy,state.roi.r*s,0,Math.PI*2); lx=cx; ly=cy;
-    } else if(state.roi.type==='rect'){
-      const [rx,ry]=P(state.roi.x,state.roi.y); octx.rect(rx,ry,state.roi.w*s,state.roi.h*s);
-      const m=P(state.roi.x+state.roi.w/2,state.roi.y+state.roi.h/2); lx=m[0]; ly=m[1];
-    } else {
-      const pts=state.roi.points;
-      pts.forEach((p,k)=>{ const q=P(p.x,p.y); if(k===0)octx.moveTo(q[0],q[1]); else octx.lineTo(q[0],q[1]); });
-      if(!state.dragging) octx.closePath();
-      let sx=0,sy=0; pts.forEach(p=>{sx+=p.x;sy+=p.y;}); const m=P(sx/pts.length,sy/pts.length); lx=m[0]; ly=m[1];
-    }
-    octx.stroke(); octx.fill();
-    octx.fillStyle='#5ad1c7'; octx.beginPath(); octx.arc(lx,ly,3,0,Math.PI*2); octx.fill();
-    octx.restore();
+  // recorded angles (amber)
+  state.records.forEach((rec,i)=>{
+    drawAngleMark(octx, P, rec.points, '#f0b429', 'rgba(240,180,41,0.16)', String(i+1)+':  '+rec.angle.toFixed(1)+'°', !!rec.reflex);
+  });
+
+  // active angle (teal)
+  const pts=state.angle.points;
+  if(pts.length){
+    const done=pts.length>=3;
+    const label = done ? (angleDeg(pts).toFixed(1)+'°') : null;
+    drawAngleMark(octx, P, pts, '#22b3a6', 'rgba(52,199,183,0.18)', label, $('reflexMode').checked);
   }
 }
 
-/* ---------- ROI drawing ---------- */
-function roiValid(roi){
-  if(!roi) return false;
-  if(roi.type==='circle') return roi.r>=1;
-  if(roi.type==='rect') return roi.w>=1 && roi.h>=1;
-  if(roi.type==='free') return roi.points && roi.points.length>=3;
-  return false;
+// One angle: two arms from the vertex, an arc, points, and an optional label.
+function drawAngleMark(octx, P, pts, stroke, fill, label, reflex){
+  octx.save();
+  octx.lineWidth=2; octx.strokeStyle=stroke; octx.fillStyle=fill;
+  const scr=pts.map(p=>P(p.x,p.y));
+  // arms (vertex is index 1 once we have >=2 points; while placing the first two, just connect them)
+  if(pts.length>=2){
+    const v = pts.length>=3 ? scr[1] : scr[0];
+    const arm1 = pts.length>=3 ? scr[0] : scr[1];
+    octx.beginPath(); octx.moveTo(arm1[0],arm1[1]); octx.lineTo(v[0],v[1]);
+    if(pts.length>=3){ octx.lineTo(scr[2][0],scr[2][1]); }
+    octx.stroke();
+  }
+  // arc + label at the vertex once all three points exist
+  if(pts.length>=3){
+    const {a1,diff}=arcSweep(pts,reflex);
+    const v=scr[1], r=26;
+    octx.beginPath(); octx.arc(v[0],v[1],r,a1,a1+diff,diff<0); octx.stroke();
+    octx.beginPath(); octx.arc(v[0],v[1],r,a1,a1+diff,diff<0);
+    octx.lineTo(v[0],v[1]); octx.closePath(); octx.fill();
+    if(label){
+      const mid=a1+diff/2, lx=v[0]+Math.cos(mid)*(r+22), ly=v[1]+Math.sin(mid)*(r+22);
+      octx.fillStyle=stroke; octx.fillText(label,lx,ly);
+    }
+  }
+  // point handles
+  octx.lineWidth=2; octx.strokeStyle=stroke; octx.fillStyle='#fff';
+  scr.forEach((q,k)=>{
+    octx.beginPath(); octx.arc(q[0],q[1], k===1&&pts.length>=3?5:4, 0,Math.PI*2); octx.fill(); octx.stroke();
+  });
+  octx.restore();
 }
-function shapeName(t){ return t==='free'?'freehand':t; }
+
+/* ---------- angle drawing ---------- */
+function angleValid(a){ return a && a.points && a.points.length>=3; }
 
 function bindCanvas(){
   const cv=$('cv');
@@ -732,61 +649,33 @@ function bindCanvas(){
     const py=(ev.clientY-r.top)*(cv.height/r.height);
     return {x:px/state.scale, y:py/state.scale};
   };
+  // Find an existing point within grab range (constant ~10 screen px regardless of zoom).
+  const hitPoint=p=>{
+    const thr=10/(state.scale*state.zoom);
+    const pts=state.angle.points;
+    for(let i=0;i<pts.length;i++){
+      const dx=pts[i].x-p.x, dy=pts[i].y-p.y;
+      if(dx*dx+dy*dy<=thr*thr) return i;
+    }
+    return -1;
+  };
   cv.onpointerdown=ev=>{
     if(ev.button!==0) return;           // left button only (middle = pan, right = context menu)
     cv.setPointerCapture(ev.pointerId);
     const p=pos(ev);
-    if(state.shape==='free'){
-      state.dragging=true;
-      state.roi={type:'free', points:[p]};
-      drawShapes(); return;
-    }
-    const fixed=$('fixedMode').checked;
-    if(state.shape==='circle'){
-      if(fixed){
-        const fr=Math.max(1, parseFloat($('fixedR').value)||1);
-        state.roi={type:'circle',cx:p.x,cy:p.y,r:fr};
-        state.dragging=false; render(); refreshReadings(); return;
-      }
-      state.dragging=true; state.startX=p.x; state.startY=p.y;
-      state.roi={type:'circle',cx:p.x,cy:p.y,r:0};
-    } else {
-      if(fixed){
-        const fw=Math.max(1, parseFloat($('fixedW').value)||1);
-        const fh=Math.max(1, parseFloat($('fixedH').value)||1);
-        state.roi={type:'rect',x:p.x-fw/2,y:p.y-fh/2,w:fw,h:fh};
-        state.dragging=false; render(); refreshReadings(); return;
-      }
-      state.dragging=true; state.startX=p.x; state.startY=p.y;
-      state.roi={type:'rect',x:p.x,y:p.y,w:0,h:0};
-    }
+    const hit=hitPoint(p);
+    if(hit>=0){ state.dragIdx=hit; return; }          // grab an existing point to fine-tune
+    const pts=state.angle.points;
+    if(pts.length>=3){ state.angle={points:[p]}; }     // fourth click starts a fresh angle
+    else pts.push(p);
+    drawShapes(); refreshReadings();
   };
   cv.onpointermove=ev=>{
-    if(!state.dragging) return;
-    const p=pos(ev);
-    if(state.roi.type==='free'){
-      const pts=state.roi.points, last=pts[pts.length-1];
-      const dx=p.x-last.x, dy=p.y-last.y;
-      if(dx*dx+dy*dy>=1) pts.push(p);   // add a point once the cursor moved ~1 image px
-      drawShapes(); return;
-    }
-    if(state.roi.type==='circle'){
-      const dx=p.x-state.startX, dy=p.y-state.startY;
-      state.roi.r=Math.sqrt(dx*dx+dy*dy);
-    } else {
-      state.roi.x=Math.min(state.startX,p.x);
-      state.roi.y=Math.min(state.startY,p.y);
-      state.roi.w=Math.abs(p.x-state.startX);
-      state.roi.h=Math.abs(p.y-state.startY);
-    }
-    render();
+    if(state.dragIdx<0) return;
+    state.angle.points[state.dragIdx]=pos(ev);
+    drawShapes(); refreshReadings();
   };
-  cv.onpointerup=()=>{
-    state.dragging=false;
-    if(state.roi && !roiValid(state.roi)) state.roi=null;
-    drawShapes();          // redraw overlay (closes the freehand outline now that the drag ended)
-    refreshReadings();
-  };
+  cv.onpointerup=()=>{ state.dragIdx=-1; };
 
   // mouse-wheel zoom, anchored to the cursor
   const shell=document.querySelector('.canvas-shell');
@@ -828,168 +717,68 @@ function bindCanvas(){
   }
 }
 
-/* ---------- measurement ---------- */
-function measureROI(roi){
-  if(roi.type==='circle') return measureCircle(roi);
-  if(roi.type==='rect') return measureRect(roi);
-  return measureFree(roi);
-}
-// even-odd point-in-polygon test (pixel center inside the drawn outline)
-function pointInPoly(px,py,pts){
-  let inside=false;
-  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
-    const xi=pts[i].x, yi=pts[i].y, xj=pts[j].x, yj=pts[j].y;
-    if(((yi>py)!==(yj>py)) && (px < (xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
-  }
-  return inside;
-}
-function measureFree(roi){
-  const pts=roi.points;
-  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-  for(const p of pts){ if(p.x<minx)minx=p.x; if(p.x>maxx)maxx=p.x; if(p.y<miny)miny=p.y; if(p.y>maxy)maxy=p.y; }
-  const x0=Math.max(0,Math.floor(minx)), x1=Math.min(state.width-1,Math.ceil(maxx));
-  const y0=Math.max(0,Math.floor(miny)), y1=Math.min(state.height-1,Math.ceil(maxy));
-  const sums=new Array(state.nCh).fill(0);
-  let n=0;
-  for(let y=y0;y<=y1;y++){
-    for(let x=x0;x<=x1;x++){
-      if(pointInPoly(x+0.5,y+0.5,pts)){
-        const i=y*state.width+x;
-        for(let c=0;c<state.nCh;c++) sums[c]+=state.channels[c].data[i];
-        n++;
-      }
-    }
-  }
-  return {means:sums.map(s=> n? s/n : 0), sums:sums.slice(), pixels:n};
-}
-function measureCircle(roi){
-  const {cx,cy,r}=roi, r2=r*r;
-  const x0=Math.max(0,Math.floor(cx-r)), x1=Math.min(state.width-1,Math.ceil(cx+r));
-  const y0=Math.max(0,Math.floor(cy-r)), y1=Math.min(state.height-1,Math.ceil(cy+r));
-  const sums=new Array(state.nCh).fill(0);
-  let n=0;
-  for(let y=y0;y<=y1;y++){
-    for(let x=x0;x<=x1;x++){
-      const dx=x+0.5-cx, dy=y+0.5-cy;
-      if(dx*dx+dy*dy<=r2){
-        const i=y*state.width+x;
-        for(let c=0;c<state.nCh;c++) sums[c]+=state.channels[c].data[i];
-        n++;
-      }
-    }
-  }
-  return {means:sums.map(s=> n? s/n : 0), sums:sums.slice(), pixels:n};
-}
-function measureRect(roi){
-  const x0=Math.max(0,Math.floor(roi.x)), x1=Math.min(state.width-1,Math.ceil(roi.x+roi.w));
-  const y0=Math.max(0,Math.floor(roi.y)), y1=Math.min(state.height-1,Math.ceil(roi.y+roi.h));
-  const sums=new Array(state.nCh).fill(0);
-  let n=0;
-  for(let y=y0;y<=y1;y++){
-    for(let x=x0;x<=x1;x++){
-      const px=x+0.5, py=y+0.5;
-      if(px>=roi.x && px<roi.x+roi.w && py>=roi.y && py<roi.y+roi.h){
-        const i=y*state.width+x;
-        for(let c=0;c<state.nCh;c++) sums[c]+=state.channels[c].data[i];
-        n++;
-      }
-    }
-  }
-  return {means:sums.map(s=> n? s/n : 0), sums:sums.slice(), pixels:n};
-}
-
-// Compact display for (possibly large) intensity sums; grouped digits, integer unless it isn't.
-function fmtSum(v){return (Number.isInteger(v)?v:+v.toFixed(2)).toLocaleString('en-US');}
+/* ---------- readings ---------- */
 function refreshReadings(){
   const box=$('readings');
-  if(!roiValid(state.roi)){
-    box.innerHTML='<div class="empty">No ROI drawn.</div>';
+  const pts=state.angle.points;
+  if(!angleValid(state.angle)){
+    const placed=pts.length;
+    const need=['first arm end','the vertex','the second arm end'];
+    const msg = placed===0 ? 'No angle drawn.'
+      : 'Placed '+placed+' / 3 points — click '+need[placed]+'.';
+    box.innerHTML='<div class="empty">'+msg+'</div>';
     $('record').disabled=true; return;
   }
-  const m=measureROI(state.roi);
-  state._current=m;
-  let html='';
-  for(let c=0;c<state.nCh;c++){
-    const sw='<span class="sw" style="background:'+rgb(state.colors[c])+'"></span>';
-    html+='<div class="reading"><span class="lbl">'+sw+'mean C'+(c+1)+'</span><b>'+m.means[c].toFixed(2)+'</b></div>';
-    html+='<div class="reading"><span class="lbl">'+sw+'sum C'+(c+1)+'</span><b>'+fmtSum(m.sums[c])+'</b></div>';
-  }
-  html+='<div class="reading"><span class="lbl">ROI pixels</span><b>'+m.pixels+'</b></div>';
-  let geo;
-  if(state.roi.type==='circle'){
-    geo='center '+Math.round(state.roi.cx)+', '+Math.round(state.roi.cy)+' · r='+state.roi.r.toFixed(1);
-  } else if(state.roi.type==='rect'){
-    geo='x,y '+Math.round(state.roi.x)+', '+Math.round(state.roi.y)+' · '+Math.round(state.roi.w)+'×'+Math.round(state.roi.h);
-  } else {
-    geo=state.roi.points.length+' vertices';
-  }
-  html+='<div class="reading"><span class="lbl">'+shapeName(state.roi.type)+'</span><b>'+geo+'</b></div>';
+  const ang=angleDeg(pts);
+  state._current=ang;
+  const [a,b,c]=pts;
+  const co=p=>Math.round(p.x)+', '+Math.round(p.y);
+  let html='<div class="angle-read"><div class="big">'+ang.toFixed(1)+'<span class="deg">°</span></div>'
+    +'<div class="supp">interior 0–180°: '+(ang>180?(360-ang):ang).toFixed(1)+'°  ·  supplementary: '+(180-(ang>180?360-ang:ang)).toFixed(1)+'°</div></div>';
+  html+='<div class="reading"><span class="lbl">arm 1</span><b>'+co(a)+'</b></div>';
+  html+='<div class="reading"><span class="lbl">vertex</span><b>'+co(b)+'</b></div>';
+  html+='<div class="reading"><span class="lbl">arm 2</span><b>'+co(c)+'</b></div>';
   box.innerHTML=html;
   $('record').disabled=false;
 }
 
 /* ---------- records ---------- */
 $('record').onclick=()=>{
-  if(!roiValid(state.roi)||!state._current) return;
-  const m=state._current, roi=state.roi;
-  const rec={shape:roi.type, pixels:m.pixels, means:m.means.slice(), sums:(m.sums||[]).slice(), status:$('statusIn').value.trim()};
-  if(roi.type==='circle'){
-    rec.cx=Math.round(roi.cx); rec.cy=Math.round(roi.cy); rec.r=+roi.r.toFixed(2);
-  } else if(roi.type==='rect'){
-    rec.x=Math.round(roi.x); rec.y=Math.round(roi.y);
-    rec.w=Math.round(roi.w); rec.h=Math.round(roi.h);
-  } else {
-    rec.points=roi.points.map(p=>({x:Math.round(p.x), y:Math.round(p.y)}));
-    let sx=0,sy=0; for(const p of rec.points){ sx+=p.x; sy+=p.y; }
-    rec.cx=Math.round(sx/rec.points.length); rec.cy=Math.round(sy/rec.points.length);
-  }
+  if(!angleValid(state.angle)||state._current==null) return;
+  const pts=state.angle.points;
+  const rec={
+    angle:+state._current.toFixed(3),
+    reflex:$('reflexMode').checked,
+    points:pts.map(p=>({x:Math.round(p.x), y:Math.round(p.y)})),
+    status:$('statusIn').value.trim()
+  };
   state.records.push(rec);
   $('statusIn').value='';
-  state.roi=null;          // recorded ROI now shown persistently in amber
+  state.angle={points:[]};   // recorded angle now shown persistently in amber
   state._current=null;
   renderTable();
   render();
   refreshReadings();
 };
 
-// Column count for the table/CSV: the loaded image's channels, or (when records were restored from a
-// previous session before an image is reloaded) the channel count baked into the saved records.
-function recNCh(){return state.nCh||state._restoredNCh||state.records.reduce((m,r)=>Math.max(m,(r.means||[]).length),0);}
 function renderTableHead(){
-  let h='<tr><th class="l">#</th><th class="l">shape</th><th>cx</th><th>cy</th><th class="l">size</th><th>px</th>';
-  const nc=recNCh();
-  for(let c=0;c<nc;c++){
-    const col=rgb(state.colors[c]||channelColor(c));
-    h+='<th style="color:'+col+'">mean C'+(c+1)+'</th><th style="color:'+col+'">sum C'+(c+1)+'</th>';
-  }
-  h+='<th class="l">Status</th><th></th></tr>';
-  $('thead').innerHTML=h;
+  $('thead').innerHTML='<tr><th class="l">#</th><th>angle°</th><th class="l">type</th>'
+    +'<th class="l">Status</th><th></th></tr>';
 }
 
 function renderTable(){
   const tb=$('tbody');
-  const span=8+2*(recNCh()||1);
   if(!state.records.length){
-    tb.innerHTML='<tr><td colspan="'+span+'" class="empty">No records yet.</td></tr>';
+    tb.innerHTML='<tr><td colspan="5" class="empty">No records yet.</td></tr>';
     $('export').disabled=true; $('clearAll').disabled=true; $('plotData').disabled=true; $('recCount').textContent=''; persistRecords(); return;
   }
   $('export').disabled=false; $('clearAll').disabled=false; $('plotData').disabled=false;
   $('recCount').textContent='('+state.records.length+')';
-  const nc=recNCh();
   tb.innerHTML=state.records.map((r,i)=>{
-    const cx = r.shape==='rect'? Math.round(r.x+r.w/2) : r.cx;
-    const cy = r.shape==='rect'? Math.round(r.y+r.h/2) : r.cy;
-    const size = r.shape==='circle'? ('r='+r.r) : (r.shape==='rect'? (r.w+'×'+r.h) : (r.points.length+' pts'));
-    let chCells='';
-    for(let c=0;c<nc;c++) chCells+='<td>'+(r.means[c]!=null? r.means[c].toFixed(2):'—')+'</td>'
-      +'<td>'+(r.sums&&r.sums[c]!=null? fmtSum(r.sums[c]):'—')+'</td>';
     return '<tr>'
       +'<td class="l">'+(i+1)+'</td>'
-      +'<td class="l">'+shapeName(r.shape)+'</td>'
-      +'<td>'+cx+'</td><td>'+cy+'</td>'
-      +'<td class="l">'+size+'</td>'
-      +'<td>'+r.pixels+'</td>'
-      +chCells
+      +'<td>'+r.angle.toFixed(1)+'</td>'
+      +'<td class="l">'+(r.reflex?'outer':'inner')+'</td>'
       +'<td class="l"><input class="stat-in" data-i="'+i+'" value="'+escapeHtml(r.status)+'" placeholder="…"></td>'
       +'<td><button class="del" data-i="'+i+'">✕</button></td>'
       +'</tr>';
@@ -1006,23 +795,9 @@ function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
 
 /* ---------- CSV export ---------- */
 function buildRecordsCSV(){
-  const head=['record','shape','center_x','center_y','radius_px','width_px','height_px','roi_pixels'];
-  const nc=recNCh();
-  for(let c=0;c<nc;c++){ head.push('mean_C'+(c+1)); head.push('sum_C'+(c+1)); }
-  head.push('status');
+  const head=['record','angle_deg','angle_type','status'];
   const rows=state.records.map((r,i)=>{
-    const cx = r.shape==='rect'? Math.round(r.x+r.w/2) : r.cx;
-    const cy = r.shape==='rect'? Math.round(r.y+r.h/2) : r.cy;
-    const cells=[
-      i+1, r.shape, cx, cy,
-      r.shape==='circle'? r.r : '',
-      r.shape==='rect'? r.w : '',
-      r.shape==='rect'? r.h : '',
-      r.pixels
-    ];
-    for(let c=0;c<nc;c++){ cells.push(r.means[c]!=null? r.means[c].toFixed(4):''); cells.push(r.sums&&r.sums[c]!=null? r.sums[c].toFixed(4):''); }
-    cells.push(csvCell(r.status));
-    return cells.join(',');
+    return [i+1, r.angle.toFixed(4), r.reflex?'outer':'inner', csvCell(r.status)].join(',');
   });
   return [head.join(','),...rows].join('\n');
 }
@@ -1031,139 +806,96 @@ $('export').onclick=()=>{
   const blob=new Blob([buildRecordsCSV()],{type:'text/csv'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download='roi_inspector_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
+  a.download='measure_angles_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
   a.click(); URL.revokeObjectURL(a.href);
 };
 // Hand the records table off to the Plot Data page.
 $('plotData').onclick=()=>{
   if(!state.records.length)return;
-  try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name:'roi_inspector.csv',csv:buildRecordsCSV()}));}
+  try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name:'measure_angles.csv',csv:buildRecordsCSV()}));}
   catch(e){alert('Could not hand off data: '+e.message);return;}
   window.open('plot_data.html','_blank');
 };
 function csvCell(s){s=s==null?'':String(s); return /[",\n]/.test(s)? '"'+s.replace(/"/g,'""')+'"' : s;}
 
-/* ---------- figure export (image + drawn ROIs) ---------- */
-// Stroke / font sizes scaled to the image's own resolution.
-function figSizes(){const m=Math.min(state.width,state.height);return{lw:Math.max(1.5,m/250),fontPx:Math.max(12,m/20)};}
-// Every ROI to draw: recorded ones (amber, numbered) + the current active ROI (teal).
-function eachFigureROI(cb){
-  state.records.forEach((rec,i)=>cb(rec,'#f0b429','rgba(240,180,41,0.14)',i+1));
-  if(roiValid(state.roi)) cb(state.roi,'#5ad1c7','rgba(90,209,199,0.14)',undefined);
+/* ---------- figure export (image + drawn angles/labels) ---------- */
+// Stroke / marker / font sizes for the exported figure, scaled to the image's own resolution.
+function exportSizes(){ const m=Math.min(state.width,state.height);
+  return {lw:Math.max(1.5,m/250), arcR:Math.max(10,m/12), fontPx:Math.max(11,m/22)}; }
+// Iterate every angle that should appear in the figure: recorded ones (amber) + the current unrecorded one (teal).
+function eachFigureAngle(cb){
+  state.records.forEach((rec,i)=> cb(rec.points,'#f0b429','rgba(240,180,41,0.16)',(i+1)+':  '+rec.angle.toFixed(1)+'°', !!rec.reflex));
+  const pts=state.angle.points;
+  if(pts.length>=3) cb(pts,'#22b3a6','rgba(52,199,183,0.18)', angleDeg(pts).toFixed(1)+'°', $('reflexMode').checked);
 }
-// Draw one ROI in image coordinates (identity mapping — the export canvas is native image resolution).
-function drawRoiFlat(ctx,roi,stroke,fill,label,s){
-  ctx.save();ctx.lineWidth=s.lw;ctx.strokeStyle=stroke;ctx.fillStyle=fill;
-  ctx.font='bold '+s.fontPx+'px "Roboto Mono", monospace';ctx.textAlign='center';ctx.textBaseline='middle';
-  const type=roi.type||roi.shape;let lx,ly;
-  ctx.beginPath();
-  if(type==='circle'){ctx.arc(roi.cx,roi.cy,roi.r,0,Math.PI*2);lx=roi.cx;ly=roi.cy;}
-  else if(type==='rect'){ctx.rect(roi.x,roi.y,roi.w,roi.h);lx=roi.x+roi.w/2;ly=roi.y+roi.h/2;}
-  else{roi.points.forEach((p,k)=>{if(k===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});ctx.closePath();
-    if(roi.cx!=null){lx=roi.cx;ly=roi.cy;}else{let sx=0,sy=0;roi.points.forEach(p=>{sx+=p.x;sy+=p.y;});lx=sx/roi.points.length;ly=sy/roi.points.length;}}
-  ctx.stroke();ctx.fill();
-  if(label!==undefined){ctx.fillStyle=stroke;ctx.fillText(String(label),lx,ly);}
+// Draw one completed angle onto a 2D context via an image->target coordinate mapper.
+function drawAngleFlat(ctx,P,pts,stroke,fill,label,s,reflex){
+  const scr=pts.map(p=>P(p.x,p.y));
+  ctx.save();
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.lineWidth=s.lw; ctx.strokeStyle=stroke; ctx.fillStyle=fill;
+  ctx.beginPath(); ctx.moveTo(scr[0][0],scr[0][1]); ctx.lineTo(scr[1][0],scr[1][1]); ctx.lineTo(scr[2][0],scr[2][1]); ctx.stroke();
+  const {a1,diff}=arcSweep(pts,reflex);
+  const v=scr[1];
+  ctx.beginPath(); ctx.arc(v[0],v[1],s.arcR,a1,a1+diff,diff<0); ctx.stroke();
+  ctx.beginPath(); ctx.arc(v[0],v[1],s.arcR,a1,a1+diff,diff<0); ctx.lineTo(v[0],v[1]); ctx.closePath(); ctx.fill();
+  const mid=a1+diff/2, lx=v[0]+Math.cos(mid)*(s.arcR+s.fontPx), ly=v[1]+Math.sin(mid)*(s.arcR+s.fontPx);
+  ctx.font='500 '+s.fontPx+'px "Roboto Mono", monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=stroke; ctx.fillText(label,lx,ly);
+  ctx.lineWidth=s.lw; ctx.strokeStyle=stroke; ctx.fillStyle='#fff';
+  scr.forEach(q=>{ ctx.beginPath(); ctx.arc(q[0],q[1], s.lw*1.6,0,Math.PI*2); ctx.fill(); ctx.stroke(); });
   ctx.restore();
 }
-// Raster figure: native-resolution channel composite with the ROIs baked on top.
+// Raster figure: native-resolution channel composite with the angle overlays baked on top.
 function renderFigureCanvas(bg){
-  const ec=document.createElement('canvas');ec.width=state.width;ec.height=state.height;
+  const ec=document.createElement('canvas'); ec.width=state.width; ec.height=state.height;
   const ctx=ec.getContext('2d');
-  if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,ec.width,ec.height);}
-  ctx.drawImage($('cv'),0,0);
-  const s=figSizes();
-  eachFigureROI((roi,stroke,fill,label)=>drawRoiFlat(ctx,roi,stroke,fill,label,s));
+  if(bg){ ctx.fillStyle=bg; ctx.fillRect(0,0,ec.width,ec.height); }
+  ctx.drawImage($('cv'),0,0);                      // the displayed composite, at full resolution
+  const s=exportSizes();
+  eachFigureAngle((pts,stroke,fill,label,reflex)=>drawAngleFlat(ctx,(x,y)=>[x,y],pts,stroke,fill,label,s,reflex));
   return ec;
 }
-// Vector figure: the raster composite embedded, ROIs/labels as true SVG vectors.
+// Vector figure: the raster composite embedded, angles/labels as true SVG vectors (crisp at any scale).
 function buildFigureSVG(){
-  const s=figSizes();let el='';
-  const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-  eachFigureROI((roi,stroke,fill,label)=>{
-    const type=roi.type||roi.shape;let lx,ly;
-    if(type==='circle'){el+='<circle cx="'+roi.cx+'" cy="'+roi.cy+'" r="'+roi.r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+s.lw+'"/>';lx=roi.cx;ly=roi.cy;}
-    else if(type==='rect'){el+='<rect x="'+roi.x+'" y="'+roi.y+'" width="'+roi.w+'" height="'+roi.h+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+s.lw+'"/>';lx=roi.x+roi.w/2;ly=roi.y+roi.h/2;}
-    else{const d=roi.points.map(p=>p.x+','+p.y).join(' ');el+='<polygon points="'+d+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+s.lw+'" stroke-linejoin="round"/>';
-      if(roi.cx!=null){lx=roi.cx;ly=roi.cy;}else{let sx=0,sy=0;roi.points.forEach(p=>{sx+=p.x;sy+=p.y;});lx=sx/roi.points.length;ly=sy/roi.points.length;}}
-    if(label!==undefined){el+='<text x="'+lx+'" y="'+ly+'" fill="'+stroke+'" font-family="Roboto Mono, monospace" font-weight="bold" font-size="'+s.fontPx+'" text-anchor="middle" dominant-baseline="central">'+esc(label)+'</text>';}
-  });
+  const W=state.width,H=state.height,s=exportSizes();
   const img=$('cv').toDataURL('image/png');
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+state.width+'" height="'+state.height+'" viewBox="0 0 '+state.width+' '+state.height+'">'
-    +'<image x="0" y="0" width="'+state.width+'" height="'+state.height+'" href="'+img+'"/>'+el+'</svg>';
+  const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  let el='';
+  eachFigureAngle((pts,stroke,fill,label,reflex)=>{
+    const [a,b,c]=pts;
+    const {a1,diff}=arcSweep(pts,reflex);
+    const sx=b.x+Math.cos(a1)*s.arcR, sy=b.y+Math.sin(a1)*s.arcR;
+    const ex=b.x+Math.cos(a1+diff)*s.arcR, ey=b.y+Math.sin(a1+diff)*s.arcR;
+    const sweep=diff>0?1:0, la=Math.abs(diff)>Math.PI?1:0;
+    const mid=a1+diff/2, lx=b.x+Math.cos(mid)*(s.arcR+s.fontPx), ly=b.y+Math.sin(mid)*(s.arcR+s.fontPx);
+    el+='<path d="M '+b.x+' '+b.y+' L '+sx+' '+sy+' A '+s.arcR+' '+s.arcR+' 0 '+la+' '+sweep+' '+ex+' '+ey+' Z" fill="'+fill+'" stroke="none"/>'
+      +'<polyline points="'+a.x+','+a.y+' '+b.x+','+b.y+' '+c.x+','+c.y+'" fill="none" stroke="'+stroke+'" stroke-width="'+s.lw+'" stroke-linejoin="round" stroke-linecap="round"/>'
+      +'<path d="M '+sx+' '+sy+' A '+s.arcR+' '+s.arcR+' 0 '+la+' '+sweep+' '+ex+' '+ey+'" fill="none" stroke="'+stroke+'" stroke-width="'+s.lw+'"/>'
+      +'<text x="'+lx+'" y="'+ly+'" fill="'+stroke+'" font-family="Roboto Mono, monospace" font-weight="500" font-size="'+s.fontPx+'" text-anchor="middle" dominant-baseline="central">'+esc(label)+'</text>';
+    [a,b,c].forEach(p=>{ el+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(s.lw*1.6)+'" fill="#fff" stroke="'+stroke+'" stroke-width="'+s.lw+'"/>'; });
+  });
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'
+    +'<image x="0" y="0" width="'+W+'" height="'+H+'" href="'+img+'"/>'+el+'</svg>';
 }
-function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+function downloadBlob(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
 function saveFigure(kind){
-  if(!state.width)return;
+  if(!state.width) return;
   const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-  if(kind==='svg'){downloadBlob(new Blob([buildFigureSVG()],{type:'image/svg+xml'}),'roi_inspector_figure_'+stamp+'.svg');return;}
-  const ec=renderFigureCanvas(kind==='jpg'?'#000':null);
-  ec.toBlob(b=>downloadBlob(b,'roi_inspector_figure_'+stamp+'.'+kind),kind==='jpg'?'image/jpeg':'image/png',0.95);
+  if(kind==='svg'){
+    downloadBlob(new Blob([buildFigureSVG()],{type:'image/svg+xml'}),'measure_angles_figure_'+stamp+'.svg');
+    return;
+  }
+  const ec=renderFigureCanvas(kind==='jpg'?'#000':null);   // jpg has no alpha; the composite is opaque anyway
+  ec.toBlob(b=>downloadBlob(b,'measure_angles_figure_'+stamp+'.'+kind), kind==='jpg'?'image/jpeg':'image/png', 0.95);
 }
 $('expPng').onclick=()=>saveFigure('png');
 $('expJpg').onclick=()=>saveFigure('jpg');
 $('expSvg').onclick=()=>saveFigure('svg');
 
-/* ---------- shape + fixed-size controls ---------- */
-function setShape(s){
-  state.shape=s;
-  $('shapeFree').classList.toggle('active',s==='free');
-  $('shapeCircle').classList.toggle('active',s==='circle');
-  $('shapeRect').classList.toggle('active',s==='rect');
-  $('shapeHint').textContent = s==='free'
-    ? 'Draw a closed outline around your region — release to close it.'
-    : (s==='circle'
-      ? 'Drag out from the center to set the radius. Enable fixed size to click-drop a circle.'
-      : 'Drag from one corner to the opposite. Enable fixed size to click-drop a rectangle.');
-  state.roi=null;
-  updateFixedUI();
-  if($('cv').width){ render(); refreshReadings(); }
-}
-function updateFixedUI(){
-  const free = state.shape==='free';
-  $('fixedMode').disabled = free;
-  const on=$('fixedMode').checked && !free;
-  $('fixedCircle').style.display=(on && state.shape==='circle')?'flex':'none';
-  $('fixedRect').style.display=(on && state.shape==='rect')?'block':'none';
-  const cv=$('cv');
-  if(cv) cv.style.cursor = on ? 'pointer' : 'crosshair';
-}
-$('shapeFree').onclick=()=>setShape('free');
-$('shapeCircle').onclick=()=>setShape('circle');
-$('shapeRect').onclick=()=>setShape('rect');
-updateFixedUI();
-
-$('fixedMode').onchange=()=>{
-  updateFixedUI();
-  // snap an existing ROI to the fixed size right away
-  if($('fixedMode').checked && state.roi){
-    if(state.roi.type==='circle'){
-      state.roi.r=Math.max(1, parseFloat($('fixedR').value)||1);
-    } else {
-      const cx=state.roi.x+state.roi.w/2, cy=state.roi.y+state.roi.h/2;
-      const fw=Math.max(1, parseFloat($('fixedW').value)||1);
-      const fh=Math.max(1, parseFloat($('fixedH').value)||1);
-      state.roi.x=cx-fw/2; state.roi.y=cy-fh/2; state.roi.w=fw; state.roi.h=fh;
-    }
-    render(); refreshReadings();
-  }
-};
-function reSnap(){
-  if(!$('fixedMode').checked || !state.roi) return;
-  if(state.roi.type==='circle'){
-    state.roi.r=Math.max(1, parseFloat($('fixedR').value)||1);
-  } else {
-    const cx=state.roi.x+state.roi.w/2, cy=state.roi.y+state.roi.h/2;
-    const fw=Math.max(1, parseFloat($('fixedW').value)||1);
-    const fh=Math.max(1, parseFloat($('fixedH').value)||1);
-    state.roi.x=cx-fw/2; state.roi.y=cy-fh/2; state.roi.w=fw; state.roi.h=fh;
-  }
-  render(); refreshReadings();
-}
-$('fixedR').oninput=reSnap;
-$('fixedW').oninput=reSnap;
-$('fixedH').oninput=reSnap;
-
-$('clearRoi').onclick=()=>{ state.roi=null; render(); refreshReadings(); };
+/* ---------- angle-tool controls ---------- */
+$('reflexMode').onchange=()=>{ if(state.width){ drawShapes(); refreshReadings(); } };
+$('clearRoi').onclick=()=>{ state.angle={points:[]}; render(); refreshReadings(); };
 $('clearAll').onclick=()=>{ if(confirm('Clear all records?')){ state.records=[]; renderTable(); render(); } };
 
 /* ---------- zoom ---------- */
@@ -1199,12 +931,12 @@ $('reset').onclick=()=>{
 };
 
 /* ---------- lightweight session persistence (records only, not the image) ---------- */
-const PERSIST_KEY='imgtkt_roi_inspector_records';
-function persistRecords(){ try{ state.records.length? localStorage.setItem(PERSIST_KEY,JSON.stringify({nCh:recNCh(),records:state.records})) : localStorage.removeItem(PERSIST_KEY); }catch(e){} }
+const PERSIST_KEY='imgtkt_measure_angles_records';
+function persistRecords(){ try{ state.records.length? localStorage.setItem(PERSIST_KEY,JSON.stringify({records:state.records})) : localStorage.removeItem(PERSIST_KEY); }catch(e){} }
 function restoreRecords(){
   let n=0;
   try{ const raw=localStorage.getItem(PERSIST_KEY);
-    if(raw){ const o=JSON.parse(raw); if(o&&o.records&&o.records.length){ state.records=o.records; state._restoredNCh=o.nCh||0; n=o.records.length; } }
+    if(raw){ const o=JSON.parse(raw); if(o&&o.records&&o.records.length){ state.records=o.records; n=o.records.length; } }
   }catch(e){}
   renderTableHead(); renderTable();
   if(n) showRestoreBanner(n, ()=>{ state.records=[]; renderTable(); if(state.width) render(); });
