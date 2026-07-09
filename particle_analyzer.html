@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. Free to use for any purpose at no cost. All other rights reserved; do not copy, modify, redistribute, or sell without written permission. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<title>Particle Analyzer — Otsu Thresholding</title>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.min.js"></script>
+<script>
+  // Fallback to the package-root browser bundle if the pinned path fails.
+  if (typeof GeoTIFF === 'undefined') {
+    document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/geotiff"></scr'+'ipt>');
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+  :root{
+    --bg:#f8f9fa; --panel:#ffffff; --panel-2:#f1f3f4; --line:#dadce0;
+    --ink:#202124; --muted:#5f6368; --accent:#5FC44A; --accent-hover:#4CAF3C; --accent-2:#F763AA;
+    --accent-light:#eaf7e5; --ok:#188038; --warn:#e37400;
+    --mono:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --disp:"Roboto",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);
+    color:var(--ink);font-family:var(--disp);font-size:14px;line-height:1.5;
+    height:100vh;overflow:hidden;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;
+  }
+  header{
+    padding:22px 28px;border-bottom:1px solid var(--line);
+    display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;flex-shrink:0;
+  }
+  header h1{
+    font-family:var(--disp);font-weight:500;font-size:22px;margin:0;
+    letter-spacing:0;
+  }
+  header h1 .dot{color:var(--accent)}
+  header .sub{color:var(--muted);font-size:12.5px}
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) 440px;grid-template-rows:minmax(0,1fr);gap:0;flex:1;min-height:0}
+  @media (max-width:1000px){.wrap{grid-template-columns:1fr}}
+  .stage{padding:24px 28px;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .side{padding:24px 22px;background:linear-gradient(180deg,var(--panel),transparent 60%);overflow-y:auto;min-height:0}
+  .drop{
+    border:1.5px dashed var(--line);border-radius:8px;padding:42px 24px;
+    text-align:center;background:var(--panel);transition:.2s;cursor:pointer;
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .drop.hot{border-color:var(--accent);background:var(--accent-light)}
+  .drop strong{font-family:var(--disp);font-size:17px;display:block;margin-bottom:6px}
+  .drop span{color:var(--muted);font-size:12.5px}
+  .drop .drop-desc{max-width:460px;margin-top:18px;font-size:13px;line-height:1.6;color:var(--muted)}
+  input[type=file]{display:none}
+
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  .pill{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:999px;
+    padding:7px 14px;color:var(--muted);font-size:12px;
+  }
+  .pill b{color:var(--ink)}
+  .filename{font-family:var(--disp);font-size:13px;font-weight:500;color:var(--ink);margin:0 0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .top-result{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--accent);letter-spacing:.3px;
+    padding:5px 14px;background:var(--accent-light);border:1px solid var(--accent);border-radius:999px;white-space:nowrap}
+  button{
+    font-family:var(--disp);font-size:13px;font-weight:500;letter-spacing:.25px;cursor:pointer;border-radius:999px;
+    border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    padding:9px 18px;transition:.15s;
+  }
+  button:hover:not(:disabled){border-color:var(--accent);color:var(--accent);background:var(--panel-2)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500}
+  button.primary:hover:not(:disabled){background:var(--accent-hover);color:#fff;border-color:var(--accent-hover)}
+  button.warn{border-color:var(--accent-2);color:var(--accent-2)}
+
+  .canvas-shell{
+    position:relative;border:1px solid var(--line);border-radius:8px;
+    background:var(--bg);overflow:auto;max-width:100%;flex:1;min-height:0;display:flex;
+  }
+  #viewer{flex:1;flex-direction:column;min-height:0}
+  canvas{display:block;touch-action:none;cursor:crosshair}
+  .canvas-shell canvas{margin:auto}
+  .shell-wrap{position:relative;flex:1;min-height:0;display:flex}
+  .cv-overlay{position:absolute;inset:0;pointer-events:none;z-index:3}
+  .hint{color:var(--muted);font-size:12px;margin-top:10px}
+
+  .stage-view{flex:1;display:flex;flex-direction:column;min-height:0;overflow:auto}
+
+  .group{margin-bottom:22px}
+  .group h3{
+    font-family:var(--disp);font-size:14px;font-weight:600;margin:0 0 10px;
+    color:var(--ink);text-transform:none;letter-spacing:.3px;
+    border-bottom:1px solid var(--line);padding-bottom:7px;
+  }
+  .ch-toggles{display:flex;gap:8px;flex-wrap:wrap}
+  .ch{
+    display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;
+    border:1px solid var(--line);background:var(--panel-2);cursor:pointer;font-size:12px;
+  }
+  .ch .sw{width:11px;height:11px;border-radius:50%}
+  .ch.off{opacity:.4}
+  .color-pop{position:fixed;z-index:100000;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px;display:flex;flex-direction:column;gap:7px}
+  .pop-row{display:flex;gap:6px}
+  .color-swatch{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
+  .color-swatch:hover{transform:scale(1.12);border-color:rgba(0,0,0,.35)}
+  .color-swatch.sel{outline:2px solid var(--ink);outline-offset:1px}
+  .lut-swatch{flex:1;height:20px;border-radius:6px;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
+  .lut-swatch:hover{transform:scale(1.05);border-color:rgba(0,0,0,.35)}
+  .lut-swatch.sel{outline:2px solid var(--ink);outline-offset:1px}
+  .pop-custom{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);cursor:pointer}
+  .pop-custom input{width:34px;height:22px;border:1px solid var(--line);border-radius:5px;background:none;cursor:pointer;padding:0}
+
+  .shape-toggles{display:flex;gap:8px}
+  .shape-btn{flex:1}
+  .shape-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+
+  .field{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+  .field label{color:var(--muted);font-size:12.5px}
+  .field input[type=range]{flex:1;accent-color:var(--accent)}
+  .field .val{min-width:30px;text-align:right;color:var(--accent)}
+  .num{width:84px;background:var(--bg);border:1px solid var(--line);border-radius:4px;
+    color:var(--ink);padding:8px 10px;font-family:var(--mono);font-size:13px}
+  .ch-ctrl{border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+  .ch-ctrl:first-child{border-top:0;padding-top:0;margin-top:0}
+  .rng{display:flex;align-items:center;gap:6px}
+  .rng .num{width:64px;padding:6px 8px;font-size:12px}
+  .auto-btn{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:4px;
+    padding:5px 8px;font-family:var(--mono);font-size:11px;cursor:pointer}
+  .auto-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+  .measure-box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+  .reading{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line)}
+  .reading:last-child{border-bottom:0}
+  .reading .lbl{display:flex;align-items:center;gap:8px;color:var(--muted)}
+  .reading b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+  .status-row{display:flex;gap:8px;margin:12px 0 4px}
+  .status-row input{
+    flex:1;background:var(--bg);border:1px solid var(--line);border-radius:4px;
+    color:var(--ink);padding:9px 11px;font-family:var(--mono);font-size:13px;
+  }
+  .status-row input:focus{outline:none;border-color:var(--accent)}
+
+  .check{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--muted);font-size:12.5px;margin-top:8px}
+  .check input{accent-color:var(--accent)}
+
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+  th:first-child,td:first-child,th.l,td.l{text-align:left}
+  th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel)}
+  .tbl-scroll{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  td .stat-in{width:100%;min-width:70px;background:transparent;border:1px solid transparent;color:var(--ink);
+    font-family:var(--mono);font-size:12px;border-radius:5px;padding:3px 5px}
+  td .stat-in:hover{border-color:var(--line)} td .stat-in:focus{outline:none;border-color:var(--accent);background:var(--bg)}
+  .del{color:var(--muted);cursor:pointer;border:none;background:none;padding:2px 6px;font-size:14px}
+  .del:hover{color:#ff4d4d}
+  .empty{color:var(--muted);text-align:center;padding:18px;font-size:12.5px}
+  .foot{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap}
+  .note{color:var(--warn);font-size:11.5px;margin-top:8px;line-height:1.4}
+</style>
+</head>
+<body>
+<header>
+  <h1>Particle Analyzer<span class="dot">.</span></h1>
+  <nav style="display:flex;gap:6px;flex-wrap:wrap">
+    <a href="index.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Home</a>
+    <a href="size_analysis.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Size Analysis</a>
+    <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Line Profile</a>
+    <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">ROI Inspector</a>
+    <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Correlations</a>
+    <a href="measure_angles.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Measure Angles</a>
+    <a href="particle_analyzer.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;background:var(--accent);color:#fff">Particle Analyzer</a>
+    <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line)">Plot Data</a>
+  </nav>
+  <span class="sub">Otsu auto-threshold · connected-component object detection · per-object area, shape &amp; intensity</span>
+</header>
+
+<div class="wrap">
+  <!-- LEFT: image stage -->
+  <section class="stage">
+    <div class="stage-view">
+    <div class="filename" id="fileName" style="display:none"></div>
+    <div class="toolbar">
+      <span class="pill">Size <b id="pSize">–</b></span>
+      <span class="pill">Channels <b id="pCh">–</b></span>
+      <span class="pill">Bit depth <b id="pBits">–</b></span>
+      <span id="loadActions" style="display:none">
+        <button id="clearRoi">Clear ROI</button>
+        <button id="reset">Load another</button>
+      </span>
+      <span class="top-result" id="topResult" style="display:none;margin-left:auto"></span>
+    </div>
+    <div class="toolbar" style="margin-bottom:10px">
+      <span class="pill" style="display:flex;align-items:center;gap:8px">
+        Zoom
+        <input type="range" id="zoom" min="0.25" max="8" step="0.05" value="1" style="width:130px;accent-color:var(--accent)">
+        <b id="zoomV" style="min-width:42px;text-align:right">100%</b>
+      </span>
+      <button id="zoomOut">−</button>
+      <button id="zoom100">100%</button>
+      <button id="zoomFit">Fit</button>
+      <button id="zoomIn">+</button>
+    </div>
+    <div class="toolbar" id="ztBar" style="display:none;margin-bottom:10px"></div>
+    <div id="drop" class="drop">
+      <strong>Drop a TIFF / OME-TIFF here</strong>
+      <span>or click to browse · convert your .czi to OME-TIFF first (Bio-Formats / Fiji / QuPath)</span>
+      <p class="drop-desc">Load a multi-channel TIFF / OME-TIFF, pick a channel and a region, auto-threshold it with Otsu's method (or set the level by hand), then detect connected objects and measure each one's area, shape and intensity — exportable as CSV.</p>
+      <input type="file" id="file" accept=".tif,.tiff,.ome.tif,.ome.tiff,image/tiff">
+    </div>
+
+    <div id="viewer" style="display:none">
+      <div class="shell-wrap">
+        <div class="canvas-shell">
+          <canvas id="cv"></canvas>
+        </div>
+        <canvas id="cvOv" class="cv-overlay"></canvas>
+      </div>
+      <p class="hint">Scroll over the image to <b>zoom</b> toward the cursor. Choose the <b>analyze channel</b> and a <b>region</b>, set a <b>threshold</b> (or hit Otsu), then <b>Detect objects</b>. Measurements use raw pixel values.</p>
+    </div>
+    </div>
+  </section>
+
+  <!-- RIGHT: controls + measurements -->
+  <aside class="side">
+    <div class="group">
+      <h3>Display channels</h3>
+      <div class="ch-toggles" id="chToggles"><span class="empty">Load an image first.</span></div>
+      <div id="brightCtrls"></div>
+    </div>
+
+    <div class="group">
+      <h3>Analysis region</h3>
+      <div class="shape-toggles">
+        <button id="shapeWhole" class="shape-btn active">▢ Whole</button>
+        <button id="shapeFree" class="shape-btn">✎ Freehand</button>
+        <button id="shapeCircle" class="shape-btn">● Circle</button>
+        <button id="shapeRect" class="shape-btn">▭ Rectangle</button>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="fixedMode" style="accent-color:var(--accent)"> Fixed size
+        </label>
+        <span class="hint" style="margin:0">(click to drop)</span>
+      </div>
+      <div id="fixedCircle" class="field" style="display:none">
+        <label>Radius</label>
+        <input type="number" id="fixedR" min="1" step="1" value="25" class="num">
+        <span class="val">px</span>
+      </div>
+      <div id="fixedRect" style="display:none">
+        <div class="field"><label>Width</label><input type="number" id="fixedW" min="1" step="1" value="50" class="num"><span class="val">px</span></div>
+        <div class="field"><label>Height</label><input type="number" id="fixedH" min="1" step="1" value="50" class="num"><span class="val">px</span></div>
+      </div>
+      <p class="hint" id="shapeHint" style="margin-top:4px">The whole image is analyzed — no drawing needed.</p>
+    </div>
+
+    <div class="group">
+      <h3>Threshold</h3>
+      <div class="field"><label>Analyze channel</label><select id="analyzeCh" class="num" style="flex:1;min-width:0"></select></div>
+      <div class="shape-toggles" style="margin-top:6px">
+        <button id="polBright" class="shape-btn active">☀ Bright objects</button>
+        <button id="polDark" class="shape-btn">☾ Dark objects</button>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>Level</label>
+        <input type="range" id="thrRange" min="0" max="255" step="1" value="128" disabled>
+        <input type="number" id="thrNum" class="num" style="width:76px" value="128" disabled>
+      </div>
+      <button class="primary" id="btnOtsu" style="width:100%;margin-top:4px" disabled>Auto threshold (Otsu)</button>
+      <label class="check"><input type="checkbox" id="threshPreview"> Preview threshold on image (kept pixels → white)</label>
+    </div>
+
+    <div class="group">
+      <h3>Object filters</h3>
+      <div class="field"><label>Min area</label><input type="number" id="minArea" min="1" step="1" value="10" class="num"><span class="val">px</span></div>
+      <div class="field"><label>Max area</label><input type="number" id="maxArea" min="1" step="1" placeholder="none" class="num"><span class="val">px</span></div>
+      <div class="shape-toggles" style="margin-top:4px">
+        <button id="conn4" class="shape-btn active">4-connectivity</button>
+        <button id="conn8" class="shape-btn">8-connectivity</button>
+      </div>
+      <label class="check"><input type="checkbox" id="excludeBorder" checked> Exclude objects touching the region border</label>
+      <label class="check"><input type="checkbox" id="showLabels" checked> Number objects on the image</label>
+    </div>
+
+    <div class="group">
+      <h3>Calibration</h3>
+      <div class="field"><label>Pixel size</label><input type="number" id="pxSize" min="0" step="any" value="1" class="num"><input type="text" id="pxUnit" class="num" style="width:64px" value="µm" title="unit name"><span class="val">/px</span></div>
+      <p class="hint" style="margin-top:4px">Enter the physical pixel size — e.g. <b>0.065</b> and <b>µm</b>. Every length (diameter, axes, perimeter, centroid) is then reported in that unit and areas in unit². Leave <b>1 / px</b> for pixels. Intensities and the min/max-area filters stay in pixels.</p>
+    </div>
+
+    <div class="group">
+      <h3>Detect</h3>
+      <div class="status-row" style="margin-top:0">
+        <input id="detLabel" placeholder="Label this field of view (e.g. ctrl-1)…">
+      </div>
+      <button class="primary" id="detect" style="width:100%" disabled>Detect objects →</button>
+      <button class="warn" id="clearObjects" style="width:100%;margin-top:8px" disabled>Clear objects</button>
+      <div class="measure-box" style="margin-top:12px">
+        <div id="summary"><div class="empty">Set a threshold and click Detect objects.</div></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Measurements <span id="measCount" style="color:var(--muted);font-weight:400"></span></h3>
+      <button class="primary" id="record" style="width:100%" disabled>Record measurement →</button>
+      <div class="tbl-scroll" style="margin-top:10px">
+        <table id="measTbl">
+          <thead id="measHead"><tr><th class="l">#</th></tr></thead>
+          <tbody id="measBody"><tr><td class="empty">No measurements yet.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="foot">
+        <button class="primary" id="measExport" disabled>Export CSV</button>
+        <button id="measPlot" disabled>📊 Plot this data →</button>
+        <button class="warn" id="measClear" disabled>Clear all</button>
+      </div>
+      <p class="note">Each record is one detection event (field of view): its label plus summary stats (object count, total &amp; mean area, mean circularity &amp; intensity). Record after each image to build a table you can compare and plot across conditions. Edit a label in the table to rename it.</p>
+    </div>
+
+    <div class="group">
+      <h3>Objects <span id="objCount" style="color:var(--muted);font-weight:400"></span></h3>
+      <div class="tbl-scroll">
+        <table id="tbl">
+          <thead id="thead"><tr><th class="l">#</th></tr></thead>
+          <tbody id="objBody"><tr><td class="empty">No objects yet.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="foot">
+        <button class="primary" id="export" disabled>Export CSV</button>
+        <button id="plotData" disabled>📊 Plot this data →</button>
+        <button class="warn" id="clearAll" disabled>Clear all</button>
+      </div>
+      <p class="note">Objects are connected regions of pixels that pass the threshold within the region. Area, centroid, bounding box, perimeter, circularity, aspect ratio and intensities are all computed from the <b>raw</b> pixel data — display brightness, contrast, LUTs and zoom never affect them.</p>
+    </div>
+
+    <div class="group">
+      <h3>Export figure</h3>
+      <p class="hint" style="margin-top:0">Save the displayed image with every detected object box (and the region outline) overlaid — at full image resolution. SVG keeps them as true vectors.</p>
+      <div class="foot" style="margin-top:10px">
+        <button id="expPng" disabled>PNG</button>
+        <button id="expJpg" disabled>JPG</button>
+        <button id="expSvg" disabled>SVG (vector)</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+/* ---------- channel colors (any number of channels) ---------- */
+// Shared channel palette — kept identical across tools: magenta, green, cyan, yellow, red, blue, orange, purple, mint, pink
+const BASE_COLORS=[
+  [236,64,209],[95,196,74],[64,208,224],[255,206,84],
+  [237,85,101],[93,156,236],[246,146,30],[172,127,244],
+  [120,255,160],[236,120,170]
+];
+function hslToRgb(h,s,l){
+  h/=360;
+  const f=n=>{
+    const k=(n+h*12)%12;
+    const a=s*Math.min(l,1-l);
+    return l-a*Math.max(-1,Math.min(k-3,9-k,1));
+  };
+  return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
+}
+function channelColor(i){
+  if(i<BASE_COLORS.length) return BASE_COLORS[i].slice();
+  return hslToRgb((i*137.508)%360,0.65,0.6); // golden-angle hues, all distinct
+}
+const rgb = c => 'rgb('+c[0]+','+c[1]+','+c[2]+')';
+
+let state = {
+  width:0, height:0, nCh:0, bits:0,
+  channels:[],          // array of {data:TypedArray, min, max}
+  colors:[],            // [r,g,b] per channel
+  lut:[],               // LUT name per channel (null = solid colour)
+  visible:[],           // bool per channel
+  bright:[],            // brightness multiplier per channel
+  dispMin:[],           // display range low per channel (defaults to data min)
+  dispMax:[],           // display range high per channel (defaults to data max)
+  shape:'whole',        // 'whole' | 'free' | 'circle' | 'rect'
+  roi:null,             // {type, ...} in image px
+  analyzeChannel:0,     // channel index the threshold operates on
+  threshold:0,          // threshold value in raw intensity units
+  polarity:'bright',    // 'bright' (v>thr) | 'dark' (v<thr)
+  conn:4,               // 4 | 8 connectivity
+  objects:[],           // detected objects (current detection event)
+  measurements:[],      // recorded per-detection summaries (accumulate across images)
+  _detMeta:null,        // metadata of the last detection (channel, threshold, units…)
+  _regMask:null,        // cached Uint8 region membership mask (image px)
+  scale:1,              // image->canvas px (always 1; native-res render)
+  zoom:1,               // CSS display zoom factor
+  dragging:false, startX:0, startY:0,
+  threshPreview:false   // when true, the display highlights the thresholded (kept) pixels
+};
+
+/* ---------- file loading ---------- */
+const drop=$('drop'), fileInput=$('file');
+drop.addEventListener('click',()=>fileInput.click());
+['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('hot');}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('hot');}));
+drop.addEventListener('drop',ev=>{const f=ev.dataTransfer.files[0]; if(f) loadFile(f);});
+fileInput.addEventListener('change',e=>{const f=e.target.files[0]; if(f) loadFile(f);});
+
+/* ---------- dimension metadata (separate channels from Z-slices / time points) ---------- */
+// A TIFF's pages can be channels, Z-slices, or time points; the raw page list is ambiguous.
+// Read the real layout from OME-XML or ImageJ metadata so a z-stack isn't shown as N "channels".
+function parseDims(desc){
+  if(!desc) return null;
+  const pm=desc.match(/<Pixels\b[^>]*>/i);                       // OME-TIFF
+  if(pm){
+    const gi=k=>{const r=pm[0].match(new RegExp(k+'\\s*=\\s*"(\\d+)"'));return r?+r[1]:null;};
+    const nC=gi('SizeC');
+    if(nC){const od=pm[0].match(/DimensionOrder\s*=\s*"([A-Za-z]+)"/);
+      return {nC:nC,nZ:gi('SizeZ')||1,nT:gi('SizeT')||1,order:od?od[1].toUpperCase():'XYCZT',source:'OME'};}
+  }
+  if(/ImageJ\s*=/.test(desc)){                                   // ImageJ / Fiji
+    const gi=k=>{const r=desc.match(new RegExp('(?:^|[\\n\\r])'+k+'\\s*=\\s*(\\d+)'));return r?+r[1]:null;};
+    const nC=gi('channels'),nZ=gi('slices'),nT=gi('frames');
+    if(nC||nZ||nT) return {nC:nC||1,nZ:nZ||1,nT:nT||1,order:'XYCZT',source:'ImageJ'};
+  }
+  return null;
+}
+// Linear page index of channel c at slice z / time t, honouring the DimensionOrder (fastest-first).
+function planeIndex(c,z,t,D){
+  const val={C:c,Z:z,T:t},num={C:D.nC,Z:D.nZ,T:D.nT};
+  const seq=(D.order||'XYCZT').replace(/[^CZT]/g,'').split('');
+  let idx=0,stride=1;
+  for(const ch of seq){ idx+=val[ch]*stride; stride*=num[ch]; }
+  return idx;
+}
+async function readPlaneChannels(z,t){
+  const D=state.dims,out=[];
+  if(state.planeMode==='samples'){
+    const r=await state.first.readRasters();                    // channels are bands of a single page
+    for(let c=0;c<D.nC;c++) out.push(toChannel(r[c]));
+  }else{
+    for(let c=0;c<D.nC;c++){
+      const img=await state.tiff.getImage(planeIndex(c,z,t,D));  // each channel/plane is its own page
+      const r=await img.readRasters();
+      out.push(toChannel(r[0]));
+    }
+  }
+  return out;
+}
+
+async function loadFile(file){
+  if (typeof GeoTIFF === 'undefined') {
+    drop.querySelector('strong').textContent='TIFF library failed to load';
+    drop.querySelector('span').textContent='The GeoTIFF library could not be fetched (check your network / ad-blocker), then reload the page.';
+    return;
+  }
+  drop.querySelector('strong').textContent='Reading '+file.name+' …';
+  try{
+    const buf = await file.arrayBuffer();
+    const tiff = await GeoTIFF.fromArrayBuffer(buf);
+    const count = await tiff.getImageCount();
+    const first = await tiff.getImage(0);
+    const w=first.getWidth(), h=first.getHeight();
+    const spp=first.getSamplesPerPixel();
+    const bits=(first.getBitsPerSample&&first.getBitsPerSample()[0])||16;
+    const desc = first.fileDirectory ? first.fileDirectory.ImageDescription : '';
+
+    let dims, planeMode='pages', ambiguous=false;
+    const meta=parseDims(desc);
+    if(meta && spp===1 && meta.nC*meta.nZ*meta.nT===count){
+      dims=meta;                                                 // trustworthy stack metadata
+    } else if(spp>=2){
+      dims={nC:spp,nZ:1,nT:1,order:'XYCZT'}; planeMode='samples';// channels interleaved in one page
+    } else if(count>=2){
+      dims={nC:count,nZ:1,nT:1,order:'XYCZT'}; ambiguous=true;   // no metadata: guess channels, allow override
+    } else {
+      dims={nC:1,nZ:1,nT:1,order:'XYCZT'}; planeMode='samples';  // plain single-channel image
+    }
+
+    state.tiff=tiff; state.first=first; state.pageCount=count;
+    state.dims=dims; state.planeMode=planeMode; state.ambiguous=ambiguous;
+    state.z=0; state.t=0; state.width=w; state.height=h; state.nCh=dims.nC; state.bits=bits;
+    state.colors=Array.from({length:dims.nC},(_,i)=>channelColor(i));
+    state.lut=Array.from({length:dims.nC},()=>null);
+    state.visible=Array.from({length:dims.nC},()=>true);
+    state.bright=Array.from({length:dims.nC},()=>1);
+    state.roi=null; state._regMask=null; state.analyzeChannel=0; state.objects=[]; state._detMeta=null;
+    state.channels=await readPlaneChannels(0,0);
+    initViewer(file.name);
+  }catch(err){
+    console.error(err);
+    drop.querySelector('strong').textContent='Could not read that file';
+    drop.querySelector('span').textContent='Make sure it is an uncompressed/LZW/Deflate TIFF or OME-TIFF. JPEG-XR is not supported in-browser. ('+err.message+')';
+  }
+}
+
+// Navigate to a different Z-slice / time point (re-reads raw pixels; stale detection is cleared).
+async function gotoPlane(z,t){
+  const D=state.dims;
+  z=Math.max(0,Math.min(D.nZ-1,z)); t=Math.max(0,Math.min(D.nT-1,t));
+  state.z=z; state.t=t;
+  state.channels=await readPlaneChannels(z,t);
+  updateThreshRange(); render(); invalidateDetection();
+}
+// For metadata-less multi-page files: let the user say what the pages actually are.
+async function reinterpret(mode){
+  const N=state.pageCount;
+  state.dims = mode==='z' ? {nC:1,nZ:N,nT:1,order:'XYCZT'}
+            : mode==='t' ? {nC:1,nZ:1,nT:N,order:'XYCZT'}
+            : {nC:N,nZ:1,nT:1,order:'XYCZT'};
+  state.nCh=state.dims.nC; state.z=0; state.t=0; state.roi=null; state._regMask=null; state.analyzeChannel=0;
+  state.colors=Array.from({length:state.nCh},(_,i)=>channelColor(i));
+  state.lut=Array.from({length:state.nCh},()=>null);
+  state.visible=Array.from({length:state.nCh},()=>true);
+  state.bright=Array.from({length:state.nCh},()=>1);
+  state.channels=await readPlaneChannels(0,0);
+  $('pCh').textContent=state.nCh;
+  buildChannelUI(); populateAnalyzeSelect(); buildZT(); updateThreshRange(); render(); invalidateDetection();
+}
+
+function toChannel(arr){
+  let min=Infinity,max=-Infinity;
+  for(let i=0;i<arr.length;i++){const v=arr[i]; if(v<min)min=v; if(v>max)max=v;}
+  if(max===min) max=min+1;
+  return {data:arr,min,max};
+}
+
+/* ---------- viewer init ---------- */
+// Channel toggles + brightness sliders (rebuilt whenever the channel count changes).
+function buildChannelUI(){
+  const tg=$('chToggles'); tg.innerHTML='';
+  for(let i=0;i<state.nCh;i++){
+    const el=document.createElement('div');
+    el.className='ch'; el.dataset.c=i;
+    el.innerHTML='<span class="sw" style="background:'+rgb(state.colors[i])+'" title="Change channel color"></span>Channel '+(i+1);
+    el.onclick=()=>{ state.visible[i]=!state.visible[i]; el.classList.toggle('off',!state.visible[i]); render(); };
+    // clicking the colour swatch opens a palette instead of toggling visibility
+    const sw=el.querySelector('.sw'); sw.style.cursor='pointer';
+    sw.onclick=ev=>{ ev.stopPropagation(); openColorPicker(i, sw); };
+    tg.appendChild(el);
+  }
+  // Display range defaults to each channel's data min/max; kept as a display setting across plane changes.
+  state.dispMin = state.channels.map(c=>c.min);
+  state.dispMax = state.channels.map(c=>c.max);
+  const bc=$('brightCtrls'); bc.innerHTML='';
+  for(let i=0;i<state.nCh;i++){
+    const row=document.createElement('div');
+    row.className='ch-ctrl'; row.dataset.c=i;
+    const col=rgb(state.colors[i]);
+    row.innerHTML='<div class="field"><label style="color:'+col+'">C'+(i+1)+' brightness</label>'
+      +'<input type="range" min="0.2" max="8" step="0.1" value="1" data-c="'+i+'">'
+      +'<span class="val" style="min-width:42px">1.0×</span></div>'
+      +'<div class="field"><label style="color:'+col+'">Display min / max</label>'
+      +'<span class="rng"><input type="number" class="num rmin" step="1" value="'+Math.round(state.dispMin[i])+'">'
+      +'<input type="number" class="num rmax" step="1" value="'+Math.round(state.dispMax[i])+'">'
+      +'<button type="button" class="auto-btn" title="Reset to data range">auto</button></span></div>';
+    const slider=row.querySelector('input[type=range]'), valEl=row.querySelector('.val');
+    slider.oninput=e=>{ const v=parseFloat(e.target.value); state.bright[i]=v; valEl.textContent=v.toFixed(1)+'×'; render(); };
+    const rmin=row.querySelector('.rmin'), rmax=row.querySelector('.rmax');
+    rmin.oninput=()=>{ state.dispMin[i]=parseFloat(rmin.value); render(); };
+    rmax.oninput=()=>{ state.dispMax[i]=parseFloat(rmax.value); render(); };
+    row.querySelector('.auto-btn').onclick=()=>{ const ch=state.channels[i];
+      state.dispMin[i]=ch.min; state.dispMax[i]=ch.max;
+      rmin.value=Math.round(ch.min); rmax.value=Math.round(ch.max); render(); };
+    bc.appendChild(row);
+  }
+}
+/* ---------- channel colour picker ---------- */
+// Gray + 6 colour-blind-safe additive colours (these blend correctly in the composite and avoid the red/green pair).
+const PICK_COLORS=[
+  ['Gray',[176,176,176]],
+  ['Magenta',[255,0,255]],
+  ['Green',[0,255,0]],
+  ['Cyan',[0,255,255]],
+  ['Yellow',[255,255,0]],
+  ['Orange',[255,140,0]],
+  ['Blue',[64,140,255]]
+];
+// Popular microscopy LUTs (gradient control points, low→high). Sampled per pixel in the additive composite.
+const LUTS={
+  fire:   [[0,0,0],[20,0,70],[120,0,130],[200,20,20],[240,120,0],[255,200,0],[255,255,120],[255,255,255]],
+  viridis:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],
+  gfb:    [[0,0,0],[0,0,150],[0,120,180],[0,200,80],[180,240,40],[255,255,180],[255,255,255]]
+};
+const LUT_LABEL={fire:'Fire',viridis:'Viridis',gfb:'Green Fire Blue'};
+// Interpolate a LUT at x∈[0,1] → [r,g,b].
+function lutRGB(name,x){
+  const s=LUTS[name]; if(!s) return [0,0,0];
+  const n=s.length-1, p=Math.max(0,Math.min(1,x))*n, i=Math.min(n-1,Math.floor(p)), f=p-i, a=s[i], b=s[i+1];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f];
+}
+// CSS gradient string for a LUT (swatch preview).
+function lutCss(name){ const s=LUTS[name]; return 'linear-gradient(90deg,'+s.map((c,k)=>rgb(c)+' '+Math.round(k/(s.length-1)*100)+'%').join(',')+')'; }
+// Representative solid colour for a LUT (used to tint the channel's text labels).
+function lutLabelColor(name){ return rgb(lutRGB(name,0.8).map(Math.round)); }
+const hex2rgb=h=>{ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; };
+const rgb2hex=c=>'#'+c.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+let _pickPop=null, _pickOutside=null;
+function closeColorPicker(){
+  if(_pickOutside){ document.removeEventListener('pointerdown',_pickOutside); _pickOutside=null; }
+  if(_pickPop){ _pickPop.remove(); _pickPop=null; }
+}
+// Reflect a channel's colour/LUT on its swatch + text labels in place (no panel rebuild → display min/max kept).
+function paintChannelSwatch(i){
+  const lut=state.lut&&state.lut[i];
+  const sw=document.querySelector('#chToggles .ch[data-c="'+i+'"] .sw');
+  const lc = lut ? lutLabelColor(lut) : rgb(state.colors[i]);
+  if(sw) sw.style.background = lut ? lutCss(lut) : rgb(state.colors[i]);
+  document.querySelectorAll('#brightCtrls .ch-ctrl[data-c="'+i+'"] label').forEach(l=>l.style.color=lc);
+}
+// Set a solid colour (clears any LUT). Objects overlay stays green; CSV stays raw.
+function setChannelColor(i,col){
+  state.colors[i]=col.slice(); if(state.lut) state.lut[i]=null;
+  paintChannelSwatch(i); if(state.width) render();
+}
+// Set a LUT for a channel (gradient display; the underlying solid colour is kept for fallback).
+function setChannelLUT(i,name){
+  if(!state.lut) state.lut=[]; state.lut[i]=name;
+  paintChannelSwatch(i); if(state.width) render();
+}
+function openColorPicker(i,anchor){
+  closeColorPicker();
+  const pop=document.createElement('div'); pop.className='color-pop';
+  const cur=state.colors[i]||[], curLut=(state.lut&&state.lut[i])||null;
+  // solid colours
+  const solids=document.createElement('div'); solids.className='pop-row';
+  PICK_COLORS.forEach(([name,c])=>{
+    const b=document.createElement('button'); b.type='button'; b.className='color-swatch'; b.title=name;
+    b.style.background=rgb(c);
+    if(!curLut && cur[0]===c[0]&&cur[1]===c[1]&&cur[2]===c[2]) b.classList.add('sel');
+    b.onclick=ev=>{ ev.stopPropagation(); setChannelColor(i,c); closeColorPicker(); };
+    solids.appendChild(b);
+  });
+  pop.appendChild(solids);
+  // LUTs
+  const luts=document.createElement('div'); luts.className='pop-row';
+  Object.keys(LUTS).forEach(name=>{
+    const b=document.createElement('button'); b.type='button'; b.className='lut-swatch'; b.title=LUT_LABEL[name];
+    b.style.background=lutCss(name);
+    if(curLut===name) b.classList.add('sel');
+    b.onclick=ev=>{ ev.stopPropagation(); setChannelLUT(i,name); closeColorPicker(); };
+    luts.appendChild(b);
+  });
+  pop.appendChild(luts);
+  // custom colour
+  const custom=document.createElement('label'); custom.className='pop-custom';
+  const inp=document.createElement('input'); inp.type='color'; inp.value=rgb2hex(curLut?[255,255,255]:cur);
+  inp.oninput=ev=>{ setChannelColor(i, hex2rgb(ev.target.value)); };
+  custom.append('Custom', inp);
+  pop.appendChild(custom);
+  document.body.appendChild(pop);
+  const r=anchor.getBoundingClientRect();
+  pop.style.left=Math.max(8, Math.min(window.innerWidth-pop.offsetWidth-8, r.left))+'px';
+  pop.style.top=(r.bottom+6)+'px';
+  _pickPop=pop;
+  _pickOutside=ev=>{ if(_pickPop && !_pickPop.contains(ev.target) && ev.target!==anchor) closeColorPicker(); };
+  document.addEventListener('pointerdown',_pickOutside);
+}
+// Z-slice / time-point navigation (+ a "what are these pages?" override for metadata-less files).
+function makeSlider(label,n,getV,onSet){
+  const pill=document.createElement('span'); pill.className='pill'; pill.style.cssText='display:flex;align-items:center;gap:8px';
+  const sl=document.createElement('input'); sl.type='range'; sl.min=0; sl.max=n-1; sl.step=1; sl.value=getV();
+  sl.style.cssText='width:120px;accent-color:var(--accent)';
+  const lab=document.createElement('b'); lab.style.cssText='min-width:52px;text-align:right'; lab.textContent=(getV()+1)+' / '+n;
+  sl.oninput=()=>{ lab.textContent=(+sl.value+1)+' / '+n; onSet(+sl.value); };
+  pill.append(label, sl, lab);
+  return pill;
+}
+function buildZT(){
+  const bar=$('ztBar'); bar.innerHTML=''; const D=state.dims;
+  if(state.ambiguous){
+    const wrap=document.createElement('span'); wrap.className='pill'; wrap.style.cssText='display:flex;align-items:center;gap:8px';
+    const sel=document.createElement('select'); sel.className='num'; sel.style.cssText='width:auto;padding:4px 8px';
+    sel.innerHTML='<option value="channels">'+state.pageCount+' channels</option><option value="z">'+state.pageCount+' Z-slices</option><option value="t">'+state.pageCount+' time points</option>';
+    sel.value = D.nZ>1?'z':(D.nT>1?'t':'channels');
+    sel.onchange=()=>reinterpret(sel.value);
+    wrap.append(state.pageCount+' pages =', sel);
+    bar.appendChild(wrap);
+  }
+  if(D.nZ>1) bar.appendChild(makeSlider('Z slice',D.nZ,()=>state.z,v=>gotoPlane(v,state.t)));
+  if(D.nT>1) bar.appendChild(makeSlider('Time',D.nT,()=>state.t,v=>gotoPlane(state.z,v)));
+  bar.style.display=(state.ambiguous||D.nZ>1||D.nT>1)?'flex':'none';
+}
+function initViewer(name){
+  drop.style.display='none';
+  $('viewer').style.display='flex';
+  $('fileName').textContent=name; $('fileName').title=name; $('fileName').style.display='block';
+  $('loadActions').style.display='contents';
+  $('pSize').textContent=state.width+' × '+state.height;
+  $('pCh').textContent=state.nCh;
+  $('pBits').textContent=state.bits+'-bit';
+  buildChannelUI();
+  buildZT();
+  // render the canvas at native image resolution (crisp at any zoom); zoom only changes CSS display size.
+  state.scale = 1;
+  const cv=$('cv');
+  cv.width=state.width;
+  cv.height=state.height;
+  applyFitZoom();
+  bindCanvas();
+  populateAnalyzeSelect();
+  $('btnOtsu').disabled=false; $('detect').disabled=false;
+  $('thrRange').disabled=false; $('thrNum').disabled=false;
+  $('expPng').disabled=false; $('expJpg').disabled=false; $('expSvg').disabled=false;
+  renderObjTableHead();
+  updateThreshRange();
+  autoThreshold();           // start on the Otsu level
+  render();
+  renderObjects();
+}
+function populateAnalyzeSelect(){
+  const opts=Array.from({length:state.nCh},(_,i)=>'<option value="'+i+'">Channel '+(i+1)+'</option>').join('');
+  $('analyzeCh').innerHTML=opts; $('analyzeCh').value=String(state.analyzeChannel);
+}
+
+/* ---------- rendering ---------- */
+// Map a raw pixel value to 0..1 using the channel's display range, then its brightness.
+function chNorm(c,v){
+  const lo=state.dispMin[c], hi=state.dispMax[c];
+  return Math.max(0, Math.min(1, ((v-lo)/((hi-lo)||1))*(state.bright[c]||1)));
+}
+function render(){
+  const cv=$('cv'), ctx=cv.getContext('2d');
+  const w=cv.width, h=cv.height;
+  const img=ctx.createImageData(w,h);
+  const data=img.data;
+  const sc=state.scale;
+  // Threshold preview: keep the normal composite, then tint the kept (foreground) pixels green,
+  // and dim the rest, so you can see exactly what the threshold selects. Display-only.
+  const preview=state.threshPreview && state.nCh>0;
+  const reg = preview ? getRegMask() : null;
+  const ci=state.analyzeChannel, thr=state.threshold, bright=state.polarity==='bright';
+  const aData = state.nCh>0 ? state.channels[ci].data : null;
+
+  for(let y=0;y<h;y++){
+    const sy=Math.min(state.height-1, Math.floor(y/sc));
+    for(let x=0;x<w;x++){
+      const sx=Math.min(state.width-1, Math.floor(x/sc));
+      const si=sy*state.width+sx;
+      let R=0,G=0,B=0;
+      for(let c=0;c<state.nCh;c++){
+        if(!state.visible[c]) continue;
+        const nv=chNorm(c, state.channels[c].data[si]);
+        const lut=state.lut&&state.lut[c];
+        if(lut){ const rc=lutRGB(lut,nv); R+=rc[0]; G+=rc[1]; B+=rc[2]; }
+        else { const col=state.colors[c]; R+=nv*col[0]; G+=nv*col[1]; B+=nv*col[2]; }
+      }
+      R=Math.min(255,R); G=Math.min(255,G); B=Math.min(255,B);
+      if(preview){
+        const v=aData[si];
+        const fg = reg[si] && (bright ? v>thr : v<thr);
+        if(fg){ R=255; G=255; B=255; }   // kept pixels shown pure white
+        else  { R*=0.38; G*=0.38; B*=0.38; }
+      }
+      const di=(y*w+x)*4;
+      data[di]=R; data[di+1]=G; data[di+2]=B; data[di+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+  // ROI + detected objects are drawn on a separate screen-resolution overlay so they stay crisp at any zoom.
+  drawShapes();
+}
+
+// Draw the active region + every detected object on the overlay canvas at screen resolution (display only).
+function drawShapes(){
+  const cv=$('cv'), ov=$('cvOv');
+  if(!ov) return;
+  const octx=ov.getContext('2d');
+  const wrap=ov.parentElement;
+  const cw=wrap.clientWidth, ch=wrap.clientHeight, dpr=window.devicePixelRatio||1;
+  if(ov.width!==Math.round(cw*dpr) || ov.height!==Math.round(ch*dpr)){
+    ov.width=Math.round(cw*dpr); ov.height=Math.round(ch*dpr);
+    ov.style.width=cw+'px'; ov.style.height=ch+'px';
+  }
+  octx.setTransform(dpr,0,0,dpr,0,0);
+  octx.clearRect(0,0,cw,ch);
+  if(!state.width) return;
+  const cvR=cv.getBoundingClientRect(), oR=ov.getBoundingClientRect();
+  const ox=cvR.left-oR.left, oy=cvR.top-oR.top;
+  const s=cvR.width/state.width;          // display px per image px
+  const P=(ix,iy)=>[ox+ix*s, oy+iy*s];
+
+  // detected objects (green boxes + centroid + optional number)
+  const showLbl=$('showLabels').checked;
+  octx.font='bold 11px "Roboto Mono", monospace'; octx.textAlign='left'; octx.textBaseline='bottom';
+  state.objects.forEach((o,i)=>{
+    const [x0,y0]=P(o.bx,o.by);
+    octx.strokeStyle='#5FC44A'; octx.lineWidth=1.5;
+    octx.strokeRect(x0,y0,o.bw*s,o.bh*s);
+    const [cx,cy]=P(o.cx,o.cy);
+    octx.fillStyle='#5FC44A'; octx.beginPath(); octx.arc(cx,cy,2.2,0,Math.PI*2); octx.fill();
+    if(showLbl){ octx.fillText(String(i+1), x0+1, y0-1); }
+  });
+
+  // active region outline (teal) — only when it isn't the whole image
+  if(state.shape!=='whole' && state.roi){
+    octx.save();
+    octx.strokeStyle='#5ad1c7'; octx.lineWidth=2; octx.fillStyle='rgba(90,209,199,0.12)';
+    octx.beginPath();
+    if(state.roi.type==='circle'){
+      const [cx,cy]=P(state.roi.cx,state.roi.cy); octx.arc(cx,cy,state.roi.r*s,0,Math.PI*2);
+    } else if(state.roi.type==='rect'){
+      const [rx,ry]=P(state.roi.x,state.roi.y); octx.rect(rx,ry,state.roi.w*s,state.roi.h*s);
+    } else {
+      const pts=state.roi.points;
+      pts.forEach((p,k)=>{ const q=P(p.x,p.y); if(k===0)octx.moveTo(q[0],q[1]); else octx.lineTo(q[0],q[1]); });
+      if(!state.dragging) octx.closePath();
+    }
+    octx.stroke(); octx.fill();
+    octx.restore();
+  }
+}
+
+/* ---------- ROI drawing ---------- */
+function roiValid(roi){
+  if(!roi) return false;
+  if(roi.type==='circle') return roi.r>=1;
+  if(roi.type==='rect') return roi.w>=1 && roi.h>=1;
+  if(roi.type==='free') return roi.points && roi.points.length>=3;
+  return false;
+}
+function shapeName(t){ return t==='free'?'freehand':t; }
+
+function bindCanvas(){
+  const cv=$('cv');
+  const pos=ev=>{
+    const r=cv.getBoundingClientRect();
+    const px=(ev.clientX-r.left)*(cv.width/r.width);
+    const py=(ev.clientY-r.top)*(cv.height/r.height);
+    return {x:px/state.scale, y:py/state.scale};
+  };
+  cv.onpointerdown=ev=>{
+    if(ev.button!==0) return;           // left button only (middle = pan, right = context menu)
+    if(state.shape==='whole') return;   // whole-image region: nothing to draw
+    cv.setPointerCapture(ev.pointerId);
+    const p=pos(ev);
+    if(state.shape==='free'){
+      state.dragging=true;
+      state.roi={type:'free', points:[p]};
+      drawShapes(); return;
+    }
+    const fixed=$('fixedMode').checked;
+    if(state.shape==='circle'){
+      if(fixed){
+        const fr=Math.max(1, parseFloat($('fixedR').value)||1);
+        state.roi={type:'circle',cx:p.x,cy:p.y,r:fr};
+        state.dragging=false; onRoiChanged(); return;
+      }
+      state.dragging=true; state.startX=p.x; state.startY=p.y;
+      state.roi={type:'circle',cx:p.x,cy:p.y,r:0};
+    } else {
+      if(fixed){
+        const fw=Math.max(1, parseFloat($('fixedW').value)||1);
+        const fh=Math.max(1, parseFloat($('fixedH').value)||1);
+        state.roi={type:'rect',x:p.x-fw/2,y:p.y-fh/2,w:fw,h:fh};
+        state.dragging=false; onRoiChanged(); return;
+      }
+      state.dragging=true; state.startX=p.x; state.startY=p.y;
+      state.roi={type:'rect',x:p.x,y:p.y,w:0,h:0};
+    }
+  };
+  cv.onpointermove=ev=>{
+    if(!state.dragging) return;
+    const p=pos(ev);
+    if(state.roi.type==='free'){
+      const pts=state.roi.points, last=pts[pts.length-1];
+      const dx=p.x-last.x, dy=p.y-last.y;
+      if(dx*dx+dy*dy>=1) pts.push(p);   // add a point once the cursor moved ~1 image px
+      drawShapes(); return;
+    }
+    if(state.roi.type==='circle'){
+      const dx=p.x-state.startX, dy=p.y-state.startY;
+      state.roi.r=Math.sqrt(dx*dx+dy*dy);
+    } else {
+      state.roi.x=Math.min(state.startX,p.x);
+      state.roi.y=Math.min(state.startY,p.y);
+      state.roi.w=Math.abs(p.x-state.startX);
+      state.roi.h=Math.abs(p.y-state.startY);
+    }
+    drawShapes();
+  };
+  cv.onpointerup=()=>{
+    if(!state.dragging) return;
+    state.dragging=false;
+    if(state.roi && !roiValid(state.roi)) state.roi=null;
+    onRoiChanged();
+  };
+
+  // mouse-wheel zoom, anchored to the cursor
+  const shell=document.querySelector('.canvas-shell');
+  cv.addEventListener('wheel', ev=>{
+    ev.preventDefault();
+    const r=cv.getBoundingClientRect();
+    const ix=(ev.clientX-r.left)*(cv.width/r.width)/state.scale;
+    const iy=(ev.clientY-r.top)*(cv.height/r.height)/state.scale;
+    const vx=ev.clientX-shell.getBoundingClientRect().left;
+    const vy=ev.clientY-shell.getBoundingClientRect().top;
+    const factor = ev.deltaY<0 ? 1.15 : 1/1.15;
+    setZoom(state.zoom*factor);
+    shell.scrollLeft = ix*state.scale*state.zoom - vx;
+    shell.scrollTop  = iy*state.scale*state.zoom - vy;
+    drawShapes();
+  }, {passive:false});
+  shell.addEventListener('scroll', drawShapes);
+
+  // middle-mouse-button drag to pan the image (matches Size Analysis / Line Profile)
+  if(!cv._midPanBound){
+    cv._midPanBound=true;
+    let midPan=false, psx=0, psy=0, pl=0, pt=0, pcur='';
+    cv.addEventListener('mousedown', ev=>{
+      if(ev.button!==1) return;
+      ev.preventDefault();
+      midPan=true; psx=ev.clientX; psy=ev.clientY; pl=shell.scrollLeft; pt=shell.scrollTop;
+      pcur=cv.style.cursor; cv.style.cursor='grabbing';
+    });
+    window.addEventListener('mousemove', ev=>{
+      if(!midPan) return;
+      shell.scrollLeft = pl-(ev.clientX-psx);
+      shell.scrollTop  = pt-(ev.clientY-psy);
+      drawShapes();
+    });
+    window.addEventListener('mouseup', ev=>{
+      if(midPan && ev.button===1){ midPan=false; cv.style.cursor=pcur; }
+    });
+    cv.addEventListener('auxclick', ev=>{ if(ev.button===1) ev.preventDefault(); }); // suppress autoscroll
+  }
+}
+// A new / changed region invalidates the region mask, any stale detection, and the Otsu level.
+function onRoiChanged(){
+  state._regMask=null;
+  invalidateDetection();
+  if(state.threshPreview) render(); else drawShapes();
+}
+
+/* ---------- region iteration ---------- */
+// even-odd point-in-polygon test (pixel center inside the drawn outline)
+function pointInPoly(px,py,pts){
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const xi=pts[i].x, yi=pts[i].y, xj=pts[j].x, yj=pts[j].y;
+    if(((yi>py)!==(yj>py)) && (px < (xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+// Call cb(pixelIndex) for every pixel in the active region (whole image or drawn ROI).
+function forEachRegionPixel(cb){
+  const W=state.width, H=state.height;
+  if(state.shape==='whole'){ const N=W*H; for(let i=0;i<N;i++) cb(i); return; }
+  const roi=state.roi;
+  if(!roiValid(roi)) return;
+  if(roi.type==='circle'){
+    const {cx,cy,r}=roi, r2=r*r;
+    const x0=Math.max(0,Math.floor(cx-r)), x1=Math.min(W-1,Math.ceil(cx+r));
+    const y0=Math.max(0,Math.floor(cy-r)), y1=Math.min(H-1,Math.ceil(cy+r));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ const dx=x+0.5-cx, dy=y+0.5-cy; if(dx*dx+dy*dy<=r2) cb(y*W+x); }
+  } else if(roi.type==='rect'){
+    const x0=Math.max(0,Math.floor(roi.x)), x1=Math.min(W-1,Math.ceil(roi.x+roi.w));
+    const y0=Math.max(0,Math.floor(roi.y)), y1=Math.min(H-1,Math.ceil(roi.y+roi.h));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ const px=x+0.5, py=y+0.5; if(px>=roi.x&&px<roi.x+roi.w&&py>=roi.y&&py<roi.y+roi.h) cb(y*W+x); }
+  } else {
+    const pts=roi.points;
+    let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+    for(const p of pts){ if(p.x<minx)minx=p.x; if(p.x>maxx)maxx=p.x; if(p.y<miny)miny=p.y; if(p.y>maxy)maxy=p.y; }
+    const x0=Math.max(0,Math.floor(minx)), x1=Math.min(W-1,Math.ceil(maxx));
+    const y0=Math.max(0,Math.floor(miny)), y1=Math.min(H-1,Math.ceil(maxy));
+    for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){ if(pointInPoly(x+0.5,y+0.5,pts)) cb(y*W+x); }
+  }
+}
+function regionReady(){ return state.nCh>0 && (state.shape==='whole' || roiValid(state.roi)); }
+function regionName(){ return state.shape==='whole' ? 'whole image' : (state.roi ? shapeName(state.roi.type) : '—'); }
+// Cached Uint8 mask of which image pixels belong to the analysis region (1) or not (0).
+function getRegMask(){
+  if(state._regMask) return state._regMask;
+  const N=state.width*state.height;
+  const m=new Uint8Array(N);
+  if(regionReady()) forEachRegionPixel(i=>{ m[i]=1; });
+  state._regMask=m;
+  return m;
+}
+
+/* ---------- Otsu threshold ---------- */
+// Otsu's method over the analysis region's histogram of the analyze channel (256 bins across the region's range).
+function otsuThreshold(){
+  const ch=state.channels[state.analyzeChannel], data=ch.data;
+  const whole = !(state.shape!=='whole' && !roiValid(state.roi)); // fall back to whole image if no ROI drawn yet
+  const each = (state.shape!=='whole' && roiValid(state.roi)) ? forEachRegionPixel : cb=>{ const N=state.width*state.height; for(let i=0;i<N;i++) cb(i); };
+  let mn=Infinity,mx=-Infinity,count=0;
+  each(i=>{ const v=data[i]; if(v<mn)mn=v; if(v>mx)mx=v; count++; });
+  if(count===0) return ch.min;
+  if(mx<=mn) return mn;
+  const BINS=256, scale=(BINS-1)/(mx-mn);
+  const hist=new Float64Array(BINS);
+  each(i=>{ hist[Math.round((data[i]-mn)*scale)]++; });
+  let sum=0; for(let b=0;b<BINS;b++) sum+=b*hist[b];
+  let sumB=0, wB=0, maxVar=-1, thrLo=0, thrHi=0;
+  for(let b=0;b<BINS;b++){
+    wB+=hist[b]; if(wB===0) continue;
+    const wF=count-wB; if(wF===0) break;
+    sumB+=b*hist[b];
+    const mB=sumB/wB, mF=(sum-sumB)/wF;
+    const between=wB*wF*(mB-mF)*(mB-mF);
+    if(between>maxVar){ maxVar=between; thrLo=thrHi=b; }
+    else if(between===maxVar){ thrHi=b; }   // plateau (e.g. perfectly bimodal): take its midpoint
+  }
+  return mn + ((thrLo+thrHi)/2)/scale;
+}
+// Slider/number range follows the analyze channel's data range.
+function updateThreshRange(){
+  if(!(state.nCh>0)) return;
+  const ch=state.channels[state.analyzeChannel];
+  const mn=Math.floor(ch.min), mx=Math.ceil(ch.max);
+  const sl=$('thrRange');
+  sl.min=mn; sl.max=mx;
+  sl.step = (mx-mn)>=256 ? 1 : Math.max(1e-6,(mx-mn)/1000);
+  let t=state.threshold; if(t<mn||t>mx) t=(mn+mx)/2;
+  setThreshold(t,false);
+}
+function fmtThr(v){ return Number.isInteger(v)? String(v) : (+v).toFixed(2); }
+// Set the working threshold and sync both inputs. reset=true clears any stale detection.
+function setThreshold(v,invalidate){
+  const sl=$('thrRange');
+  const mn=+sl.min, mx=+sl.max;
+  v=Math.max(mn,Math.min(mx,v));
+  state.threshold=v;
+  sl.value=v; $('thrNum').value=fmtThr(v);
+  if(invalidate!==false) invalidateDetection();
+  if(state.threshPreview && state.width) render();
+}
+function autoThreshold(){ setThreshold(otsuThreshold()); }
+
+/* ---------- object detection (connected components) ---------- */
+function invalidateDetection(){
+  state.objects=[]; state._detMeta=null;
+  renderObjects();
+  if(state.width) drawShapes();
+}
+// Moore-neighbour boundary trace → chain-code perimeter (orthogonal step 1, diagonal step √2).
+// Far closer to the true perimeter than counting boundary edges (which overestimates round objects by ~4/π).
+const TR_NB=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]]; // 8-neighbours clockwise from East
+function chainPerimeter(labels,lbl,bx0,by0,bx1,by1,W,H){
+  let s=-1;
+  for(let y=by0;y<=by1&&s<0;y++) for(let x=bx0;x<=bx1;x++){ if(labels[y*W+x]===lbl){ s=y*W+x; break; } }
+  if(s<0) return 0;
+  const startx=s%W, starty=(s/W)|0;
+  let cx=startx, cy=starty, bdir=4;   // start searching from the West side
+  let ortho=0, diag=0, guard=0;
+  const maxg=8*((bx1-bx0+1)*(by1-by0+1))+16;
+  do{
+    let found=-1;
+    for(let k=0;k<8;k++){
+      const d=(bdir+1+k)%8;
+      const nx=cx+TR_NB[d][0], ny=cy+TR_NB[d][1];
+      if(nx<0||ny<0||nx>=W||ny>=H) continue;
+      if(labels[ny*W+nx]===lbl){ found=d; break; }
+    }
+    if(found<0) break;                 // isolated single pixel
+    if(found%2===0) ortho++; else diag++;
+    cx+=TR_NB[found][0]; cy+=TR_NB[found][1];
+    bdir=(found+5)%8;                  // resume search just past where we came from
+    guard++;
+    if(cx===startx && cy===starty) break;
+  }while(guard<maxg);
+  return ortho + diag*Math.SQRT2;
+}
+function runDetect(){
+  if(!(state.nCh>0)) return;
+  if(state.shape!=='whole' && !roiValid(state.roi)){ alert('Draw a region first, or switch the region to “Whole”.'); return; }
+  const W=state.width, H=state.height, N=W*H;
+  const ci=state.analyzeChannel, data=state.channels[ci].data;
+  const t=state.threshold, bright=state.polarity==='bright', conn8=state.conn===8;
+  const minA=Math.max(1, parseInt($('minArea').value)||1);
+  const maxRaw=$('maxArea').value.trim();
+  const maxA = maxRaw==='' ? Infinity : (parseInt(maxRaw)||Infinity);
+  const excludeBorder=$('excludeBorder').checked;
+  const ps=parseFloat($('pxSize').value)||1;
+  const unit=($('pxUnit').value.trim())||'px';
+
+  const reg=getRegMask();
+  const fg=new Uint8Array(N);
+  for(let i=0;i<N;i++){ if(reg[i] && (bright? data[i]>t : data[i]<t)) fg[i]=1; }
+
+  const seen=new Uint8Array(N);
+  const labels=new Int32Array(N);       // component id per pixel (for boundary tracing)
+  const stack=new Int32Array(N);
+  const objects=[];
+  let labelCounter=0;
+  for(let s=0;s<N;s++){
+    if(!fg[s]||seen[s]) continue;
+    const lbl=++labelCounter;
+    let sp=0; stack[sp++]=s; seen[s]=1;
+    let area=0,sx=0,sy=0,sxx=0,syy=0,sxy=0,sumI=0,minI=Infinity,maxI=-Infinity;
+    let bx0=W,by0=H,bx1=-1,by1=-1,perim=0,touch=false;
+    while(sp>0){
+      const p=stack[--sp];
+      const py=(p/W)|0, px=p-py*W;
+      labels[p]=lbl;
+      area++;
+      const fx=px+0.5, fy=py+0.5;
+      sx+=fx; sy+=fy; sxx+=fx*fx; syy+=fy*fy; sxy+=fx*fy;
+      const v=data[p]; sumI+=v; if(v<minI)minI=v; if(v>maxI)maxI=v;
+      if(px<bx0)bx0=px; if(px>bx1)bx1=px; if(py<by0)by0=py; if(py>by1)by1=py;
+      // 4-neighbour edges → perimeter (edge to background / image outside); region-out or image-edge → border touch
+      if(px>0){ const q=p-1; if(!fg[q])perim++; if(!reg[q])touch=true; } else { perim++; touch=true; }
+      if(px<W-1){ const q=p+1; if(!fg[q])perim++; if(!reg[q])touch=true; } else { perim++; touch=true; }
+      if(py>0){ const q=p-W; if(!fg[q])perim++; if(!reg[q])touch=true; } else { perim++; touch=true; }
+      if(py<H-1){ const q=p+W; if(!fg[q])perim++; if(!reg[q])touch=true; } else { perim++; touch=true; }
+      // grow the component
+      if(px>0 && fg[p-1] && !seen[p-1]){ seen[p-1]=1; stack[sp++]=p-1; }
+      if(px<W-1 && fg[p+1] && !seen[p+1]){ seen[p+1]=1; stack[sp++]=p+1; }
+      if(py>0 && fg[p-W] && !seen[p-W]){ seen[p-W]=1; stack[sp++]=p-W; }
+      if(py<H-1 && fg[p+W] && !seen[p+W]){ seen[p+W]=1; stack[sp++]=p+W; }
+      if(conn8){
+        if(px>0&&py>0 && fg[p-W-1] && !seen[p-W-1]){ seen[p-W-1]=1; stack[sp++]=p-W-1; }
+        if(px<W-1&&py>0 && fg[p-W+1] && !seen[p-W+1]){ seen[p-W+1]=1; stack[sp++]=p-W+1; }
+        if(px>0&&py<H-1 && fg[p+W-1] && !seen[p+W-1]){ seen[p+W-1]=1; stack[sp++]=p+W-1; }
+        if(px<W-1&&py<H-1 && fg[p+W+1] && !seen[p+W+1]){ seen[p+W+1]=1; stack[sp++]=p+W+1; }
+      }
+    }
+    if(area<minA || area>maxA) continue;
+    if(excludeBorder && touch) continue;
+    const cx=sx/area, cy=sy/area;
+    const mu20=sxx/area-cx*cx, mu02=syy/area-cy*cy, mu11=sxy/area-cx*cy;
+    const common=Math.sqrt(Math.max(0,(mu20-mu02)*(mu20-mu02)+4*mu11*mu11));
+    const l1=(mu20+mu02+common)/2, l2=(mu20+mu02-common)/2;
+    const major=4*Math.sqrt(Math.max(0,l1)), minor=4*Math.sqrt(Math.max(0,l2));
+    const ar = minor>1e-9 ? major/minor : (major>0?Infinity:1);
+    const effd = (major+minor)/2;   // effective diameter = mean of major (max) & minor (min) axis lengths
+    // chain-code boundary perimeter; fall back to the 4-edge count for a lone pixel
+    let perimeter=chainPerimeter(labels,lbl,bx0,by0,bx1,by1,W,H);
+    if(!(perimeter>0)) perimeter=perim;
+    const circ = perimeter>0 ? Math.min(1, 4*Math.PI*area/(perimeter*perimeter)) : 0;
+    const eqd = 2*Math.sqrt(area/Math.PI);
+    objects.push({area, cx, cy, bx:bx0, by:by0, bw:bx1-bx0+1, bh:by1-by0+1,
+      perim:perimeter, circ, ar, major, minor, effd, eqd, mean:sumI/area, sum:sumI, min:minI, max:maxI});
+  }
+  state.objects=objects;
+  state._detMeta={ channel:ci+1, threshold:t, polarity:state.polarity, conn:state.conn,
+    ps, unit, region:regionName(), label:$('detLabel').value.trim() };
+  renderObjects();
+  if(state.width) drawShapes();
+}
+
+/* ---------- results ---------- */
+function fmtNum(v){ if(!isFinite(v)) return '∞'; return Number.isInteger(v)? String(v) : (+v).toPrecision(5).replace(/\.?0+$/,''); }
+// Calibration for a detection: s = units per pixel, u = unit name; cal=true once a real unit is set.
+// Lengths are multiplied by s, areas by s². Objects always store RAW pixel values (accuracy) — the
+// calibration is a physical unit conversion applied only at display / export time.
+function calFrom(meta){ meta=meta||state._detMeta||{}; const s=meta.ps||1, u=meta.unit||'px'; return {s,u,cal:(s!==1||u!=='px')}; }
+function renderObjects(){
+  const objs=state.objects, meta=state._detMeta||{};
+  const ps=meta.ps||1, unit=meta.unit||'px';
+  if(!objs.length){
+    $('summary').innerHTML='<div class="empty">Set a threshold and click Detect objects.</div>';
+    const tr=$('topResult'); if(tr) tr.style.display='none';
+  } else {
+    let tot=0,mc=0,mi=0,md=0; objs.forEach(o=>{tot+=o.area;mc+=o.circ;mi+=o.mean;md+=o.effd;});
+    const n=objs.length, cal=(ps!==1||unit!=='px');
+    const areaTxt = cal ? (tot*ps*ps).toPrecision(4)+' '+unit+'²' : tot+' px²';
+    const meanTxt = cal ? ((tot/n)*ps*ps).toPrecision(4)+' '+unit+'²' : Math.round(tot/n)+' px²';
+    const effdTxt = cal ? ((md/n)*ps).toPrecision(4)+' '+unit : (md/n).toFixed(1)+' px';
+    let html='';
+    html+='<div class="reading"><span class="lbl">Objects</span><b>'+n+'</b></div>';
+    html+='<div class="reading"><span class="lbl">Total area</span><b>'+areaTxt+'</b></div>';
+    html+='<div class="reading"><span class="lbl">Mean area</span><b>'+meanTxt+'</b></div>';
+    html+='<div class="reading"><span class="lbl">Mean eff. diameter</span><b>'+effdTxt+'</b></div>';
+    html+='<div class="reading"><span class="lbl">Mean circularity</span><b>'+(mc/n).toFixed(3)+'</b></div>';
+    html+='<div class="reading"><span class="lbl">Mean intensity</span><b>'+fmtNum(mi/n)+'</b></div>';
+    html+='<div class="reading"><span class="lbl">Channel · threshold</span><b>C'+meta.channel+' · '+fmtThr(meta.threshold)+'</b></div>';
+    $('summary').innerHTML=html;
+    const tr=$('topResult'); tr.textContent=n+' object'+(n>1?'s':'')+' · thr '+fmtThr(meta.threshold); tr.style.display='';
+  }
+  renderObjTable();
+}
+function escHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function renderObjTableHead(){
+  const {u,cal}=calFrom();
+  const uL=cal?u:'px', uA=cal?u+'²':'px';
+  $('thead').innerHTML='<tr><th class="l">#</th><th>area ('+uA+')</th><th>cx ('+uL+')</th><th>cy ('+uL+')</th><th>circ</th><th>AR</th><th>eff.d ('+uL+')</th><th>mean</th><th class="l">label</th><th></th></tr>';
+}
+function renderObjTable(){
+  renderObjTableHead();                       // header carries the current unit
+  const tb=$('objBody');
+  if(!state.objects.length){
+    tb.innerHTML='<tr><td colspan="10" class="empty">No objects yet.</td></tr>';
+    $('export').disabled=true; $('clearAll').disabled=true; $('clearObjects').disabled=true; $('plotData').disabled=true; $('record').disabled=true; $('objCount').textContent=''; return;
+  }
+  $('export').disabled=false; $('clearAll').disabled=false; $('clearObjects').disabled=false; $('plotData').disabled=false; $('record').disabled=false;
+  $('objCount').textContent='('+state.objects.length+')';
+  const label=(state._detMeta&&state._detMeta.label)||'';   // one shared field-of-view label for all objects
+  const {s,cal}=calFrom();
+  const fA=v=>cal?(v*s*s).toPrecision(4):String(v);         // area (px² count or unit²)
+  const fL=v=>cal?(v*s).toPrecision(4):(+v).toFixed(1);     // length (px or unit)
+  tb.innerHTML=state.objects.map((o,i)=>
+    '<tr>'
+    +'<td class="l">'+(i+1)+'</td>'
+    +'<td>'+fA(o.area)+'</td>'
+    +'<td>'+fL(o.cx)+'</td>'
+    +'<td>'+fL(o.cy)+'</td>'
+    +'<td>'+o.circ.toFixed(3)+'</td>'
+    +'<td>'+(isFinite(o.ar)?o.ar.toFixed(2):'∞')+'</td>'
+    +'<td>'+fL(o.effd)+'</td>'
+    +'<td>'+fmtNum(o.mean)+'</td>'
+    +'<td class="l">'+escHtml(label)+'</td>'
+    +'<td><button class="del" data-i="'+i+'">✕</button></td>'
+    +'</tr>'
+  ).join('');
+  tb.querySelectorAll('.del').forEach(btn=>{
+    btn.onclick=e=>{ state.objects.splice(+e.target.dataset.i,1); renderObjects(); if(state.width) drawShapes(); };
+  });
+}
+
+/* ---------- CSV export ---------- */
+function buildObjectsCSV(){
+  const meta=state._detMeta||{}, {s,u,cal}=calFrom(meta);
+  const uL=cal?u:'px', uA=cal?u+'2':'px';
+  const ca=v=>cal?(v*s*s).toFixed(6):String(v);            // area
+  const cl=v=>cal?(v*s).toFixed(6):(+v).toFixed(3);        // length
+  const cli=v=>cal?(v*s).toFixed(6):String(v);             // integer-px length (bbox)
+  const head=['object','area_'+uA,'centroid_x_'+uL,'centroid_y_'+uL,'bbox_x_'+uL,'bbox_y_'+uL,'bbox_w_'+uL,'bbox_h_'+uL,
+    'perimeter_'+uL,'circularity','aspect_ratio','major_axis_'+uL,'minor_axis_'+uL,'eff_diameter_'+uL,'equiv_diameter_'+uL,
+    'mean_intensity','integrated_intensity','min_intensity','max_intensity','pixel_size','unit',
+    'channel','threshold','polarity','region','label'];
+  const rows=state.objects.map((o,i)=>[
+    i+1, ca(o.area), cl(o.cx), cl(o.cy), cli(o.bx), cli(o.by), cli(o.bw), cli(o.bh),
+    cl(o.perim), o.circ.toFixed(5), (isFinite(o.ar)?o.ar.toFixed(5):''),
+    cl(o.major), cl(o.minor), cl(o.effd), cl(o.eqd),
+    o.mean.toFixed(5), o.sum, o.min, o.max, s, csvCell(u),
+    meta.channel, fmtThr(meta.threshold), meta.polarity, csvCell(meta.region), csvCell(meta.label)
+  ].join(','));
+  return [head.join(','),...rows].join('\n');
+}
+$('export').onclick=()=>{
+  if(!state.objects.length)return;
+  const blob=new Blob([buildObjectsCSV()],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='particle_analyzer_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+};
+// Hand the objects table off to the Plot Data page.
+$('plotData').onclick=()=>{
+  if(!state.objects.length)return;
+  try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name:'particle_analyzer.csv',csv:buildObjectsCSV()}));}
+  catch(e){alert('Could not hand off data: '+e.message);return;}
+  window.open('plot_data.html','_blank');
+};
+function csvCell(s){s=s==null?'':String(s); return /[",\n]/.test(s)? '"'+s.replace(/"/g,'""')+'"' : s;}
+
+/* ---------- measurements (per-detection summary records) ---------- */
+// The field-of-view label applies to the whole detection; typing updates the current objects' label live.
+$('detLabel').oninput=()=>{ if(state._detMeta){ state._detMeta.label=$('detLabel').value.trim(); renderObjTable(); } };
+function currentSummary(){
+  const objs=state.objects, meta=state._detMeta||{};
+  if(!objs.length) return null;
+  let tot=0,mc=0,mi=0,md=0; objs.forEach(o=>{tot+=o.area;mc+=o.circ;mi+=o.mean;md+=o.effd;});
+  const n=objs.length;
+  return { label:meta.label||'', n, totalArea:tot, meanArea:tot/n, meanEffD:md/n, meanCirc:mc/n, meanInt:mi/n,
+    channel:meta.channel, threshold:meta.threshold, polarity:meta.polarity, region:meta.region, ps:meta.ps||1, unit:meta.unit||'px' };
+}
+$('record').onclick=()=>{ const s=currentSummary(); if(!s) return; state.measurements.push(s); renderMeasurements(); };
+function renderMeasHead(){
+  $('measHead').innerHTML='<tr><th class="l">#</th><th class="l">label</th><th>n</th><th>total area</th><th>mean area</th><th>eff.d</th><th>circ</th><th>mean int</th><th></th></tr>';
+}
+function renderMeasurements(){
+  const tb=$('measBody');
+  if(!state.measurements.length){
+    tb.innerHTML='<tr><td colspan="9" class="empty">No measurements yet.</td></tr>';
+    $('measExport').disabled=true; $('measPlot').disabled=true; $('measClear').disabled=true; $('measCount').textContent=''; persistMeasurements(); return;
+  }
+  $('measExport').disabled=false; $('measPlot').disabled=false; $('measClear').disabled=false;
+  $('measCount').textContent='('+state.measurements.length+')';
+  tb.innerHTML=state.measurements.map((m,i)=>{
+    const cal=m.ps&&(m.ps!==1||m.unit!=='px');
+    const ta=cal?(m.totalArea*m.ps*m.ps).toPrecision(4):m.totalArea;
+    const ma=cal?(m.meanArea*m.ps*m.ps).toPrecision(4):Math.round(m.meanArea);
+    const ed=(m.meanEffD!=null)?(cal?(m.meanEffD*m.ps).toPrecision(4):m.meanEffD.toFixed(1)):'–';
+    return '<tr>'
+      +'<td class="l">'+(i+1)+'</td>'
+      +'<td class="l"><input class="stat-in" data-i="'+i+'" value="'+escHtml(m.label)+'" placeholder="…"></td>'
+      +'<td>'+m.n+'</td>'
+      +'<td>'+ta+'</td>'
+      +'<td>'+ma+'</td>'
+      +'<td>'+ed+'</td>'
+      +'<td>'+m.meanCirc.toFixed(3)+'</td>'
+      +'<td>'+fmtNum(m.meanInt)+'</td>'
+      +'<td><button class="del" data-i="'+i+'">✕</button></td>'
+      +'</tr>';
+  }).join('');
+  tb.querySelectorAll('.stat-in').forEach(inp=>{ inp.oninput=e=>{ state.measurements[+e.target.dataset.i].label=e.target.value; persistMeasurements(); }; });
+  tb.querySelectorAll('.del').forEach(btn=>{ btn.onclick=e=>{ state.measurements.splice(+e.target.dataset.i,1); renderMeasurements(); }; });
+  persistMeasurements();
+}
+function buildMeasurementsCSV(){
+  const calRow=state.measurements.find(m=>m.ps&&(m.ps!==1||m.unit!=='px'));
+  const anyCal=!!calRow, unit=calRow?calRow.unit:'unit';
+  const head=['record','label','objects','total_area_px','mean_area_px','mean_eff_diameter_px','mean_circularity','mean_intensity'];
+  if(anyCal) head.push('total_area_'+unit+'2','mean_area_'+unit+'2','mean_eff_diameter_'+unit);
+  head.push('channel','threshold','polarity','region');
+  const rows=state.measurements.map((m,i)=>{
+    const cells=[i+1, csvCell(m.label), m.n, m.totalArea, m.meanArea.toFixed(3),
+      (m.meanEffD!=null?m.meanEffD.toFixed(4):''), m.meanCirc.toFixed(5), m.meanInt.toFixed(5)];
+    if(anyCal){ const cal=m.ps&&(m.ps!==1||m.unit!=='px'); cells.push(cal?(m.totalArea*m.ps*m.ps).toFixed(5):'', cal?(m.meanArea*m.ps*m.ps).toFixed(5):'', (cal&&m.meanEffD!=null)?(m.meanEffD*m.ps).toFixed(5):''); }
+    cells.push(m.channel, fmtThr(m.threshold), m.polarity, csvCell(m.region));
+    return cells.join(',');
+  });
+  return [head.join(','),...rows].join('\n');
+}
+$('measExport').onclick=()=>{
+  if(!state.measurements.length)return;
+  const blob=new Blob([buildMeasurementsCSV()],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='particle_measurements_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$('measPlot').onclick=()=>{
+  if(!state.measurements.length)return;
+  try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name:'particle_measurements.csv',csv:buildMeasurementsCSV()}));}
+  catch(e){alert('Could not hand off data: '+e.message);return;}
+  window.open('plot_data.html','_blank');
+};
+$('measClear').onclick=()=>{ if(confirm('Clear all recorded measurements?')){ state.measurements=[]; renderMeasurements(); } };
+
+/* ---------- figure export (image + object boxes → PNG / JPG / SVG) ---------- */
+function figSizes(){const m=Math.min(state.width,state.height);return{lw:Math.max(1.5,m/250),fontPx:Math.max(12,m/20)};}
+// Everything drawn on the figure: detected object boxes (green, numbered) + the active region (teal).
+function eachFigureShape(cb){
+  const showLbl=$('showLabels').checked;
+  state.objects.forEach((o,i)=>cb({type:'rect',x:o.bx,y:o.by,w:o.bw,h:o.bh},'#5FC44A','rgba(95,196,74,0.10)', showLbl?(i+1):undefined));
+  if(state.shape!=='whole' && roiValid(state.roi)) cb(state.roi,'#5ad1c7','rgba(90,209,199,0.12)',undefined);
+}
+// Draw one shape in image coordinates (identity mapping — the export canvas is native image resolution).
+function drawShapeFlat(ctx,roi,stroke,fill,label,s){
+  ctx.save();ctx.lineWidth=s.lw;ctx.strokeStyle=stroke;ctx.fillStyle=fill;
+  ctx.font='bold '+s.fontPx+'px "Roboto Mono", monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  let lx,ly;
+  ctx.beginPath();
+  if(roi.type==='circle'){ctx.arc(roi.cx,roi.cy,roi.r,0,Math.PI*2);lx=roi.cx;ly=roi.cy;}
+  else if(roi.type==='rect'){ctx.rect(roi.x,roi.y,roi.w,roi.h);lx=roi.x+roi.w/2;ly=roi.y+roi.h/2;}
+  else{roi.points.forEach((p,k)=>{if(k===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);});ctx.closePath();
+    let sx=0,sy=0;roi.points.forEach(p=>{sx+=p.x;sy+=p.y;});lx=sx/roi.points.length;ly=sy/roi.points.length;}
+  ctx.stroke();ctx.fill();
+  if(label!==undefined){ctx.fillStyle=stroke;ctx.fillText(String(label),lx,ly);}
+  ctx.restore();
+}
+function renderFigureCanvas(bg){
+  const ec=document.createElement('canvas');ec.width=state.width;ec.height=state.height;
+  const ctx=ec.getContext('2d');
+  if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,ec.width,ec.height);}
+  ctx.drawImage($('cv'),0,0);
+  const s=figSizes();
+  eachFigureShape((roi,stroke,fill,label)=>drawShapeFlat(ctx,roi,stroke,fill,label,s));
+  return ec;
+}
+function buildFigureSVG(){
+  const s=figSizes();let el='';
+  const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  eachFigureShape((roi,stroke,fill,label)=>{
+    let lx,ly;
+    if(roi.type==='circle'){el+='<circle cx="'+roi.cx+'" cy="'+roi.cy+'" r="'+roi.r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+s.lw+'"/>';lx=roi.cx;ly=roi.cy;}
+    else if(roi.type==='rect'){el+='<rect x="'+roi.x+'" y="'+roi.y+'" width="'+roi.w+'" height="'+roi.h+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+s.lw+'"/>';lx=roi.x+roi.w/2;ly=roi.y+roi.h/2;}
+    else{const d=roi.points.map(p=>p.x+','+p.y).join(' ');el+='<polygon points="'+d+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+s.lw+'" stroke-linejoin="round"/>';
+      let sx=0,sy=0;roi.points.forEach(p=>{sx+=p.x;sy+=p.y;});lx=sx/roi.points.length;ly=sy/roi.points.length;}
+    if(label!==undefined){el+='<text x="'+lx+'" y="'+ly+'" fill="'+stroke+'" font-family="Roboto Mono, monospace" font-weight="bold" font-size="'+s.fontPx+'" text-anchor="middle" dominant-baseline="central">'+esc(label)+'</text>';}
+  });
+  const img=$('cv').toDataURL('image/png');
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+state.width+'" height="'+state.height+'" viewBox="0 0 '+state.width+' '+state.height+'">'
+    +'<image x="0" y="0" width="'+state.width+'" height="'+state.height+'" href="'+img+'"/>'+el+'</svg>';
+}
+function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);}
+function saveFigure(kind){
+  if(!state.width)return;
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  if(kind==='svg'){downloadBlob(new Blob([buildFigureSVG()],{type:'image/svg+xml'}),'particle_analyzer_figure_'+stamp+'.svg');return;}
+  const ec=renderFigureCanvas(kind==='jpg'?'#000':null);
+  ec.toBlob(b=>downloadBlob(b,'particle_analyzer_figure_'+stamp+'.'+kind),kind==='jpg'?'image/jpeg':'image/png',0.95);
+}
+$('expPng').onclick=()=>saveFigure('png');
+$('expJpg').onclick=()=>saveFigure('jpg');
+$('expSvg').onclick=()=>saveFigure('svg');
+
+/* ---------- controls wiring ---------- */
+$('analyzeCh').onchange=()=>{ state.analyzeChannel=+$('analyzeCh').value; updateThreshRange(); autoThreshold(); if(state.threshPreview&&state.width) render(); };
+$('thrRange').oninput=e=>setThreshold(parseFloat(e.target.value));
+$('thrNum').oninput=e=>{ const v=parseFloat(e.target.value); if(!isNaN(v)) setThreshold(v); };
+$('btnOtsu').onclick=autoThreshold;
+$('threshPreview').onchange=e=>{ state.threshPreview=e.target.checked; if(state.width) render(); };
+function setPolarity(p){ state.polarity=p; $('polBright').classList.toggle('active',p==='bright'); $('polDark').classList.toggle('active',p==='dark'); invalidateDetection(); if(state.threshPreview&&state.width) render(); }
+$('polBright').onclick=()=>setPolarity('bright');
+$('polDark').onclick=()=>setPolarity('dark');
+function setConn(n){ state.conn=n; $('conn4').classList.toggle('active',n===4); $('conn8').classList.toggle('active',n===8); invalidateDetection(); }
+$('conn4').onclick=()=>setConn(4);
+$('conn8').onclick=()=>setConn(8);
+['minArea','maxArea'].forEach(id=>$(id).oninput=()=>invalidateDetection());
+// Calibration only rescales reported lengths (objects are raw px), so update live without re-detecting.
+['pxSize','pxUnit'].forEach(id=>$(id).oninput=()=>{
+  if(state._detMeta){ state._detMeta.ps=parseFloat($('pxSize').value)||1; state._detMeta.unit=($('pxUnit').value.trim())||'px'; renderObjects(); }
+});
+$('excludeBorder').onchange=()=>invalidateDetection();
+$('showLabels').onchange=()=>{ if(state.width) drawShapes(); };
+$('detect').onclick=runDetect;
+
+/* ---------- shape + fixed-size controls ---------- */
+function setShape(s){
+  state.shape=s;
+  $('shapeWhole').classList.toggle('active',s==='whole');
+  $('shapeFree').classList.toggle('active',s==='free');
+  $('shapeCircle').classList.toggle('active',s==='circle');
+  $('shapeRect').classList.toggle('active',s==='rect');
+  $('shapeHint').textContent =
+      s==='whole' ? 'The whole image is analyzed — no drawing needed.'
+    : s==='free'  ? 'Draw a closed outline around the area to analyze — release to close it.'
+    : s==='circle'? 'Drag out from the center to set the radius. Enable fixed size to click-drop a circle.'
+    :               'Drag from one corner to the opposite. Enable fixed size to click-drop a rectangle.';
+  state.roi=null; state._regMask=null;
+  updateFixedUI();
+  invalidateDetection();
+  if(state.threshPreview && state.width) render(); else if(state.width) drawShapes();
+}
+function updateFixedUI(){
+  const drawShape = (state.shape==='circle' || state.shape==='rect');
+  $('fixedMode').disabled = !drawShape;
+  const on=$('fixedMode').checked && drawShape;
+  $('fixedCircle').style.display=(on && state.shape==='circle')?'flex':'none';
+  $('fixedRect').style.display=(on && state.shape==='rect')?'block':'none';
+  const cv=$('cv');
+  if(cv) cv.style.cursor = state.shape==='whole' ? 'default' : (on ? 'pointer' : 'crosshair');
+}
+$('shapeWhole').onclick=()=>setShape('whole');
+$('shapeFree').onclick=()=>setShape('free');
+$('shapeCircle').onclick=()=>setShape('circle');
+$('shapeRect').onclick=()=>setShape('rect');
+updateFixedUI();
+
+$('fixedMode').onchange=()=>{ updateFixedUI();
+  if($('fixedMode').checked && state.roi){ reSnap(); }
+};
+function reSnap(){
+  if(!$('fixedMode').checked || !state.roi) return;
+  if(state.roi.type==='circle'){
+    state.roi.r=Math.max(1, parseFloat($('fixedR').value)||1);
+  } else if(state.roi.type==='rect'){
+    const cx=state.roi.x+state.roi.w/2, cy=state.roi.y+state.roi.h/2;
+    const fw=Math.max(1, parseFloat($('fixedW').value)||1);
+    const fh=Math.max(1, parseFloat($('fixedH').value)||1);
+    state.roi.x=cx-fw/2; state.roi.y=cy-fh/2; state.roi.w=fw; state.roi.h=fh;
+  }
+  onRoiChanged();
+}
+$('fixedR').oninput=reSnap;
+$('fixedW').oninput=reSnap;
+$('fixedH').oninput=reSnap;
+
+$('clearRoi').onclick=()=>{ state.roi=null; state._regMask=null; invalidateDetection(); if(state.threshPreview&&state.width) render(); else if(state.width) drawShapes(); };
+function clearDetectedObjects(){ state.objects=[]; state._detMeta=null; renderObjects(); if(state.width) drawShapes(); }
+$('clearObjects').onclick=clearDetectedObjects;
+$('clearAll').onclick=()=>{ if(confirm('Clear all detected objects?')) clearDetectedObjects(); };
+
+/* ---------- zoom ---------- */
+function setZoom(z){
+  z=Math.max(0.25, Math.min(8, z));
+  state.zoom=z;
+  const cv=$('cv');
+  cv.style.width=(state.width*z)+'px';
+  cv.style.height=(state.height*z)+'px';
+  $('zoom').value=z;
+  $('zoomV').textContent=Math.round(z*100)+'%';
+  drawShapes();
+}
+function applyFitZoom(){
+  const shell=document.querySelector('.canvas-shell');
+  const aw=(shell.clientWidth||800)-8, ah=(shell.clientHeight||600)-8;
+  const z=state.width? Math.min(aw/state.width, ah/state.height) : 1;
+  setZoom(z);
+}
+$('zoom').oninput=e=>setZoom(parseFloat(e.target.value));
+$('zoomIn').onclick=()=>setZoom(state.zoom*1.25);
+$('zoomOut').onclick=()=>setZoom(state.zoom/1.25);
+$('zoom100').onclick=()=>setZoom(1);
+$('zoomFit').onclick=()=>applyFitZoom();
+
+$('reset').onclick=()=>{
+  $('viewer').style.display='none'; drop.style.display='flex';
+  $('fileName').style.display='none'; $('loadActions').style.display='none';
+  $('btnOtsu').disabled=true; $('detect').disabled=true; $('thrRange').disabled=true; $('thrNum').disabled=true;
+  $('expPng').disabled=true; $('expJpg').disabled=true; $('expSvg').disabled=true;
+  drop.querySelector('strong').textContent='Drop a TIFF / OME-TIFF here';
+  drop.querySelector('span').textContent='or click to browse · convert your .czi to OME-TIFF first (Bio-Formats / Fiji / QuPath)';
+  fileInput.value='';
+};
+
+/* ---------- lightweight session persistence (recorded measurements survive navigation, not the image) ---------- */
+// Per-object results belong to the current image (re-detected on load) so they aren't persisted; the
+// recorded measurements log (one row per detection event) is what carries across sessions.
+const PERSIST_KEY='imgtkt_particle_measurements';
+function persistMeasurements(){
+  try{
+    if(state.measurements.length) localStorage.setItem(PERSIST_KEY,JSON.stringify(state.measurements));
+    else localStorage.removeItem(PERSIST_KEY);
+  }catch(e){}
+}
+function restoreMeasurements(){
+  let n=0;
+  try{ const raw=localStorage.getItem(PERSIST_KEY); if(raw){ const a=JSON.parse(raw);
+    if(Array.isArray(a)&&a.length){ state.measurements=a; n=a.length; } } }catch(e){}
+  renderMeasHead(); renderMeasurements();
+  if(n) showRestoreBanner(n, ()=>{ state.measurements=[]; renderMeasurements(); }, 'measurement');
+}
+// On-load prompt when a previous session's objects were restored: keep them or clear them.
+function showRestoreBanner(n, onClear, noun){
+  noun=noun||'object';
+  const back=document.createElement('div');
+  back.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(32,33,36,.28);display:flex;align-items:center;justify-content:center;font-family:Roboto,sans-serif';
+  const bar=document.createElement('div');
+  bar.style.cssText='background:#fff;border:1px solid #dadce0;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:9px 12px 9px 18px;display:flex;align-items:center;gap:12px;font-size:13px;color:#202124';
+  bar.innerHTML='<span>↩ Restored <b>'+n+'</b> '+noun+(n>1?'s':'')+' from your previous session.</span>';
+  const mk=(txt,fill)=>{const b=document.createElement('button');b.textContent=txt;
+    b.style.cssText='font-family:Roboto,sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;border-radius:999px;padding:6px 14px;'+(fill?'border:1px solid #5FC44A;background:#5FC44A;color:#fff':'border:1px solid #F763AA;background:#fff;color:#F763AA');return b;};
+  const keep=mk('Keep',true), clr=mk('Clear',false);
+  keep.onclick=()=>back.remove();
+  clr.onclick=()=>{ onClear(); back.remove(); };
+  bar.appendChild(keep); bar.appendChild(clr);
+  back.appendChild(bar); document.body.appendChild(back);
+}
+renderObjTableHead(); renderObjects();   // objects table starts empty (it belongs to the current image)
+restoreMeasurements();                    // recorded measurements persist across sessions
+window.addEventListener('resize', ()=>{ if(state.width) drawShapes(); });
+</script>
+</body>
+</html>
