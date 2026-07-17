@@ -178,6 +178,7 @@
     <div class="panel-section">
       <div class="section-label">Export figure</div>
       <div class="hint" style="margin-bottom:8px">Save the image with the drawn line overlaid — at full image resolution. SVG keeps the line as a true vector.</div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:8px;cursor:pointer"><input type="checkbox" id="expView" style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer">Current view only (crop to what's on screen)</label>
       <div class="btn-row" style="margin-top:0">
         <button class="btn" id="expPng" disabled>PNG</button>
         <button class="btn" id="expJpg" disabled>JPG</button>
@@ -805,27 +806,40 @@ function drawLineFlat(ctx,P,s){
   [pts[0],pts[pts.length-1]].forEach(p=>{const q=P(p.x,p.y);ctx.fillStyle=S.lineColor;ctx.beginPath();ctx.arc(q[0],q[1],s.lw*1.8,0,Math.PI*2);ctx.fill();ctx.lineWidth=s.lw*0.6;ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.stroke();});
   ctx.restore();
 }
-// Raster figure: native-resolution image with the line baked on top.
+// Region of the image to export (image px): whole image, or just what's visible in the viewport when "current view only" is on.
+function figRect(){
+  const ev=$('expView');
+  if(!ev||!ev.checked) return {x:0,y:0,w:S.width,h:S.height};
+  const ww=wrap.clientWidth,wh=wrap.clientHeight,C=(v,m)=>Math.max(0,Math.min(m,v));
+  const x0=C((0-S.panX)/S.zoom,S.width), y0=C((0-S.panY)/S.zoom,S.height);
+  const x1=C((ww-S.panX)/S.zoom,S.width), y1=C((wh-S.panY)/S.zoom,S.height);
+  return {x:x0,y:y0,w:Math.max(1,x1-x0),h:Math.max(1,y1-y0)};
+}
+// Raster figure: native-resolution image (or visible crop) with the line baked on top.
 function renderFigureCanvas(bg){
-  const ec=document.createElement('canvas');ec.width=S.width;ec.height=S.height;
+  const r=figRect();
+  const ec=document.createElement('canvas');ec.width=Math.round(r.w);ec.height=Math.round(r.h);
   const ctx=ec.getContext('2d');
   if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,ec.width,ec.height);}
-  ctx.drawImage(iC,0,0);
-  drawLineFlat(ctx,(x,y)=>[x,y],figSizes());
+  ctx.drawImage(iC,r.x,r.y,r.w,r.h,0,0,ec.width,ec.height);
+  drawLineFlat(ctx,(x,y)=>[x-r.x,y-r.y],figSizes());
   return ec;
 }
-// Vector figure: the raster image embedded, the line as a true SVG vector.
+// Vector figure: the raster image (or visible crop) embedded, the line as a true SVG vector.
 function buildFigureSVG(){
-  const s=figSizes(),pts=currentLinePts();let el='';
+  const r=figRect(),s=figSizes(),pts=currentLinePts();let el='';
   if(pts){
-    const d=pts.map(p=>p.x+','+p.y).join(' ');
+    const d=pts.map(p=>(p.x-r.x)+','+(p.y-r.y)).join(' ');
     el+='<polyline points="'+d+'" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="'+(s.lw*2)+'" stroke-linejoin="round" stroke-linecap="round"/>'
       +'<polyline points="'+d+'" fill="none" stroke="'+S.lineColor+'" stroke-width="'+s.lw+'" stroke-linejoin="round" stroke-linecap="round"/>';
-    [pts[0],pts[pts.length-1]].forEach(p=>{el+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(s.lw*1.8)+'" fill="'+S.lineColor+'" stroke="rgba(0,0,0,0.5)" stroke-width="'+(s.lw*0.6)+'"/>';});
+    [pts[0],pts[pts.length-1]].forEach(p=>{el+='<circle cx="'+(p.x-r.x)+'" cy="'+(p.y-r.y)+'" r="'+(s.lw*1.8)+'" fill="'+S.lineColor+'" stroke="rgba(0,0,0,0.5)" stroke-width="'+(s.lw*0.6)+'"/>';});
   }
-  const img=iC.toDataURL('image/png');
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+S.width+'" height="'+S.height+'" viewBox="0 0 '+S.width+' '+S.height+'">'
-    +'<image x="0" y="0" width="'+S.width+'" height="'+S.height+'" href="'+img+'"/>'+el+'</svg>';
+  const w=Math.round(r.w),h=Math.round(r.h);
+  let src=iC;
+  if(r.x||r.y||w!==S.width||h!==S.height){const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(iC,r.x,r.y,r.w,r.h,0,0,w,h);src=c;}
+  const img=src.toDataURL('image/png');
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'
+    +'<image x="0" y="0" width="'+w+'" height="'+h+'" href="'+img+'"/>'+el+'</svg>';
 }
 function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);}
 function saveFigure(kind){
@@ -841,9 +855,9 @@ $('expSvg').addEventListener('click',()=>saveFigure('svg'));
 
 const rh=$('resizeHandle');let isR=false,rsY,rsH;
 rh.addEventListener('mousedown',e=>{isR=true;rsY=e.clientY;rsH=$('bottomPanel').offsetHeight;e.preventDefault();});
-window.addEventListener('mousemove',e=>{if(!isR)return;const h2=rsH-(e.clientY-rsY);$('bottomPanel').style.height=Math.max(120,Math.min(500,h2))+'px';if(S.nCh)fitToView();});
+window.addEventListener('mousemove',e=>{if(!isR)return;const h2=rsH-(e.clientY-rsY);$('bottomPanel').style.height=Math.max(120,Math.min(500,h2))+'px';if(S.nCh)applyTransform();});
 window.addEventListener('mouseup',()=>{isR=false;});
-window.addEventListener('resize',()=>{if(S.nCh)fitToView();});
+window.addEventListener('resize',()=>{if(S.nCh)applyTransform();});
 
 $('statusText').textContent=(typeof GeoTIFF!=='undefined'||typeof UTIF!=='undefined')?'Ready — multi-channel TIFF support loaded':'Ready (TIFF unavailable — use PNG/JPG)';
 </script>

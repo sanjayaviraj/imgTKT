@@ -144,8 +144,12 @@
     </div>
     <div class="panel-section" id="channelSection" style="display:none">
       <div class="section-label">Channels</div>
+      <div class="btn-row" style="margin-top:0;margin-bottom:8px">
+        <button class="btn active" id="btnDispActive">◐ Active channel</button>
+        <button class="btn" id="btnDispComposite">◉ Composite</button>
+      </div>
       <div class="lut-row" id="channelChips"></div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-muted)">Select the channel to display &amp; measure.</div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-muted)" id="channelHint">Select the channel to display &amp; measure.</div>
     </div>
     <div class="panel-section">
       <div class="section-label">Calibration</div>
@@ -195,6 +199,13 @@
         </div>
       </div>
       <div class="form-group">
+        <label>Fit Target</label>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn active" id="btnFitPeak">▲ Peak (bright)</button>
+          <button class="btn" id="btnFitDip">▼ Dip (dark)</button>
+        </div>
+      </div>
+      <div class="form-group">
         <label>Line Width (px)</label>
         <input type="number" id="lineWidth" value="1" min="1" max="20" step="1">
       </div>
@@ -218,6 +229,7 @@
     <div class="panel-section">
       <div class="section-label">Export figure</div>
       <div style="margin-bottom:8px;font-size:11px;color:var(--text-muted);line-height:1.5">Save the image with every drawn measurement line and label overlaid — at full image resolution. SVG keeps the lines as true vectors.</div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:8px;cursor:pointer"><input type="checkbox" id="expView" style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer">Current view only (crop to what's on screen)</label>
       <div class="btn-row" style="margin-top:0">
         <button class="btn" id="expPng" disabled>PNG</button>
         <button class="btn" id="expJpg" disabled>JPG</button>
@@ -227,11 +239,11 @@
     <div class="panel-section" id="resultsSection" style="display:none">
       <div class="section-label">Current Fit</div>
       <div class="results-box">
-        <div class="result-row"><span class="label">FWHM</span><span class="value highlight" id="resFwhm">—</span></div>
-        <div class="result-row"><span class="label">Amplitude</span><span class="value" id="resAmp">—</span></div>
-        <div class="result-row"><span class="label">Center</span><span class="value" id="resCenter">—</span></div>
+        <div class="result-row"><span class="label" id="lblFwhm">FWHM</span><span class="value highlight" id="resFwhm">—</span></div>
+        <div class="result-row"><span class="label" id="lblAmp">Amplitude</span><span class="value" id="resAmp">—</span></div>
+        <div class="result-row"><span class="label" id="lblCenter">Center</span><span class="value" id="resCenter">—</span></div>
         <div class="result-row"><span class="label">Sigma (σ)</span><span class="value" id="resSigma">—</span></div>
-        <div class="result-row"><span class="label">Offset</span><span class="value" id="resOffset">—</span></div>
+        <div class="result-row"><span class="label" id="lblOffset">Offset</span><span class="value" id="resOffset">—</span></div>
         <div class="result-row"><span class="label">R²</span><span class="value" id="resR2">—</span></div>
       </div>
       <div class="btn-row" style="margin-top:8px">
@@ -321,7 +333,7 @@
   <span id="statusDim">—</span>
 </div>
 <script>
-const S={imageData:null,channels:[],nCh:0,activeCh:0,rawMin:0,rawMax:255,dispMin:0,dispMax:255,width:0,height:0,zoom:1,panX:0,panY:0,drawing:false,drawMode:true,lineType:'straight',linePts:null,lineStart:null,lineEnd:null,lineColor:'#ffffff',lut:'gray',profileData:null,fitResult:null,measurements:[]};
+const S={imageData:null,channels:[],nCh:0,activeCh:0,composite:false,rawMin:0,rawMax:255,dispMin:0,dispMax:255,width:0,height:0,zoom:1,panX:0,panY:0,drawing:false,drawMode:true,lineType:'straight',fitMode:'peak',linePts:null,lineStart:null,lineEnd:null,lineColor:'#ffffff',lut:'gray',profileData:null,fitResult:null,measurements:[]};
 const iC=document.getElementById('imageCanvas'),oC=document.getElementById('overlayCanvas');
 const iCtx=iC.getContext('2d'),oCtx=oC.getContext('2d');
 const wrap=document.getElementById('canvasWrap');
@@ -336,6 +348,8 @@ const LUTs={
   ice:t=>[Math.min(1,t*2)*120,Math.min(1,Math.max(0,t-.25)*2)*200,t*255],
   rainbow:t=>{const h=t*300,c=1,x=c*(1-Math.abs((h/60)%2-1));let r,g,b;if(h<60){r=c;g=x;b=0}else if(h<120){r=x;g=c;b=0}else if(h<180){r=0;g=c;b=x}else if(h<240){r=0;g=x;b=c}else{r=x;g=0;b=c}return[r*255,g*255,b*255];}
 };
+// Composite display: a distinct tint per channel, blended additively (each channel keeps its own contrast).
+const CH_COLORS=[[95,196,74],[247,99,170],[0,229,255],[255,212,0],[255,82,82],[120,144,255],[255,255,255],[255,140,0]];
 
 const fi=document.getElementById('fileInput');
 document.getElementById('btnBrowse').addEventListener('click',()=>fi.click());
@@ -509,6 +523,11 @@ function setChannels(channels,w,h,bits){
   if(!S.dims){ S.dims={nC:channels.length,nZ:1,nT:1,order:'XYCZT'}; S.ambiguous=false; S.planeMode='samples'; S.pageCount=channels.length; S.z=0; S.t=0; }
   S.bits=bits;
   S.channels=channels;S.nCh=channels.length;S.width=w;S.height=h;
+  // Each channel keeps its own display range + composite tint.
+  channels.forEach((ch,i)=>{if(ch.dispMin===undefined)ch.dispMin=ch.min;if(ch.dispMax===undefined)ch.dispMax=ch.max;ch.color=CH_COLORS[i%CH_COLORS.length];});
+  S.composite=false;
+  const bA=document.getElementById('btnDispActive'),bC=document.getElementById('btnDispComposite');
+  if(bA)bA.classList.add('active'); if(bC)bC.classList.remove('active');
   S.lineStart=null;S.lineEnd=null;S.profileData=null;S.fitResult=null;
   document.getElementById('pSize').textContent=w+' × '+h;
   document.getElementById('pCh').textContent=channels.length;
@@ -531,9 +550,12 @@ function buildChannelChips(){
   if(S.nCh<=1){sec.style.display='none';return;}
   sec.style.display='block';
   for(let i=0;i<S.nCh;i++){
+    const col=S.channels[i].color||[128,128,128];
     const chip=document.createElement('div');
-    chip.className='lut-chip'+(i===0?' active':'');
-    chip.dataset.ch=i;chip.textContent='Ch '+(i+1);
+    chip.className='lut-chip'+(i===S.activeCh?' active':'');
+    chip.dataset.ch=i;
+    chip.innerHTML='<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:5px;background:rgb('+col[0]+','+col[1]+','+col[2]+')"></span>Ch '+(i+1);
+    chip.title='Measure & fit on Ch '+(i+1);
     chip.addEventListener('click',()=>applyChannel(i));
     box.appendChild(chip);
   }
@@ -542,7 +564,8 @@ function buildChannelChips(){
 // Switch the active channel: point imageData at it, reset display range, redraw, re-fit any current line.
 function applyChannel(i,firstLoad){
   S.activeCh=i;const ch=S.channels[i];
-  S.imageData=ch.data;S.rawMin=ch.min;S.rawMax=ch.max;S.dispMin=ch.min;S.dispMax=ch.max;
+  S.imageData=ch.data;S.rawMin=ch.min;S.rawMax=ch.max;
+  S.dispMin=(ch.dispMin!==undefined?ch.dispMin:ch.min);S.dispMax=(ch.dispMax!==undefined?ch.dispMax:ch.max);
   updateMinMaxSliders();
   document.querySelectorAll('#channelChips .lut-chip').forEach(c=>c.classList.toggle('active',+c.dataset.ch===i));
   document.getElementById('statusDim').textContent=`${S.width} × ${S.height} px | Ch ${i+1}/${S.nCh} | range ${ch.min.toFixed(0)}–${ch.max.toFixed(0)}`;
@@ -559,26 +582,41 @@ function updateMinMaxSliders(){
   document.getElementById('minVal').value=Math.round(S.dispMin);document.getElementById('maxVal').value=Math.round(S.dispMax);
 }
 
-function onMinChange(v){S.dispMin=parseFloat(v);document.getElementById('minSlider').value=S.dispMin;document.getElementById('minVal').value=Math.round(S.dispMin);renderImage();renderColorbar();}
-function onMaxChange(v){S.dispMax=parseFloat(v);document.getElementById('maxSlider').value=S.dispMax;document.getElementById('maxVal').value=Math.round(S.dispMax);renderImage();renderColorbar();}
+// Keep the active channel's stored display range in sync so composite contrast persists per channel.
+function syncActiveDisp(){const ch=S.channels[S.activeCh];if(ch){ch.dispMin=S.dispMin;ch.dispMax=S.dispMax;}}
+function onMinChange(v){S.dispMin=parseFloat(v);document.getElementById('minSlider').value=S.dispMin;document.getElementById('minVal').value=Math.round(S.dispMin);syncActiveDisp();renderImage();renderColorbar();}
+function onMaxChange(v){S.dispMax=parseFloat(v);document.getElementById('maxSlider').value=S.dispMax;document.getElementById('maxVal').value=Math.round(S.dispMax);syncActiveDisp();renderImage();renderColorbar();}
 
 document.getElementById('minSlider').addEventListener('input',e=>onMinChange(e.target.value));
 document.getElementById('minVal').addEventListener('change',e=>onMinChange(e.target.value));
 document.getElementById('maxSlider').addEventListener('input',e=>onMaxChange(e.target.value));
 document.getElementById('maxVal').addEventListener('change',e=>onMaxChange(e.target.value));
-document.getElementById('btnAutoRange').addEventListener('click',()=>{S.dispMin=S.rawMin;S.dispMax=S.rawMax;updateMinMaxSliders();renderImage();renderColorbar();});
-document.getElementById('btnAutoMin').addEventListener('click',()=>{S.dispMin=S.rawMin;updateMinMaxSliders();renderImage();renderColorbar();});
-document.getElementById('btnAutoMax').addEventListener('click',()=>{S.dispMax=S.rawMax;updateMinMaxSliders();renderImage();renderColorbar();});
+document.getElementById('btnAutoRange').addEventListener('click',()=>{S.dispMin=S.rawMin;S.dispMax=S.rawMax;syncActiveDisp();updateMinMaxSliders();renderImage();renderColorbar();});
+document.getElementById('btnAutoMin').addEventListener('click',()=>{S.dispMin=S.rawMin;syncActiveDisp();updateMinMaxSliders();renderImage();renderColorbar();});
+document.getElementById('btnAutoMax').addEventListener('click',()=>{S.dispMax=S.rawMax;syncActiveDisp();updateMinMaxSliders();renderImage();renderColorbar();});
 
 function renderImage(){
   if(!S.imageData)return;
-  const w=S.width,h=S.height;iC.width=w;iC.height=h;
-  const dMin=S.dispMin,range=(S.dispMax-S.dispMin)||1;
-  const imgD=iCtx.createImageData(w,h);const lutFn=LUTs[S.lut]||LUTs.gray;
-  for(let i=0;i<w*h;i++){
-    let t=Math.max(0,Math.min(1,(S.imageData[i]-dMin)/range));
-    const[r,g,b]=lutFn(t);
-    imgD.data[i*4]=r|0;imgD.data[i*4+1]=g|0;imgD.data[i*4+2]=b|0;imgD.data[i*4+3]=255;
+  const w=S.width,h=S.height,N=w*h;iC.width=w;iC.height=h;
+  const imgD=iCtx.createImageData(w,h);
+  if(S.composite&&S.nCh>1){
+    // All channels blended additively; each channel uses its own tint + display range.
+    for(let p=0;p<N;p++){
+      let R=0,G=0,B=0;
+      for(let c=0;c<S.nCh;c++){
+        const ch=S.channels[c],rng=(ch.dispMax-ch.dispMin)||1;
+        const t=Math.max(0,Math.min(1,(ch.data[p]-ch.dispMin)/rng)),col=ch.color;
+        R+=t*col[0];G+=t*col[1];B+=t*col[2];
+      }
+      imgD.data[p*4]=R>255?255:R;imgD.data[p*4+1]=G>255?255:G;imgD.data[p*4+2]=B>255?255:B;imgD.data[p*4+3]=255;
+    }
+  }else{
+    const dMin=S.dispMin,range=(S.dispMax-S.dispMin)||1,lutFn=LUTs[S.lut]||LUTs.gray;
+    for(let i=0;i<N;i++){
+      let t=Math.max(0,Math.min(1,(S.imageData[i]-dMin)/range));
+      const[r,g,b]=lutFn(t);
+      imgD.data[i*4]=r|0;imgD.data[i*4+1]=g|0;imgD.data[i*4+2]=b|0;imgD.data[i*4+3]=255;
+    }
   }
   iCtx.putImageData(imgD,0,0);applyTransform();
 }
@@ -654,6 +692,29 @@ document.getElementById('btnClearCurrent').addEventListener('click',clearCurrent
 function setLineType(t){S.lineType=t;document.getElementById('btnLineStraight').classList.toggle('active',t==='straight');document.getElementById('btnLineFree').classList.toggle('active',t==='freehand');clearCurrentLine();}
 document.getElementById('btnLineStraight').addEventListener('click',()=>setLineType('straight'));
 document.getElementById('btnLineFree').addEventListener('click',()=>setLineType('freehand'));
+// Display mode: show only the active channel, or blend every channel (measurement still uses the selected chip).
+function setComposite(on){
+  if(S.nCh<=1)on=false;
+  S.composite=on;
+  document.getElementById('btnDispActive').classList.toggle('active',!on);
+  document.getElementById('btnDispComposite').classList.toggle('active',on);
+  document.getElementById('channelHint').textContent=on
+    ?'All channels shown merged. Highlighted chip = channel measured & fitted.'
+    :'Select the channel to display & measure.';
+  document.getElementById('colormapWrap').style.display=(on||!S.imageData)?'none':'block';
+  if(S.imageData){renderImage();renderColorbar();}
+}
+document.getElementById('btnDispActive').addEventListener('click',()=>setComposite(false));
+document.getElementById('btnDispComposite').addEventListener('click',()=>setComposite(true));
+// Fit target: bright peak (max) or dark dip (min → full width at half minimum). Re-fits the current line.
+function setFitMode(m){
+  S.fitMode=m;
+  document.getElementById('btnFitPeak').classList.toggle('active',m==='peak');
+  document.getElementById('btnFitDip').classList.toggle('active',m==='dip');
+  if(S.profileData)fitGaussian(S.profileData,parseFloat(document.getElementById('pixelSize').value)||20);
+}
+document.getElementById('btnFitPeak').addEventListener('click',()=>setFitMode('peak'));
+document.getElementById('btnFitDip').addEventListener('click',()=>setFitMode('dip'));
 // Top toolbar: Clear line + Load another
 document.getElementById('btnClearTop').addEventListener('click',clearCurrentLine);
 document.getElementById('btnReset').addEventListener('click',resetImage);
@@ -791,7 +852,11 @@ function extractProfile(){
 }
 
 function fitGaussian(profile,pxSz){
-  const n=profile.length,xD=profile.map((_,i)=>i*pxSz),yD=[...profile];
+  const mode=S.fitMode||'peak';
+  const n=profile.length,xD=profile.map((_,i)=>i*pxSz);
+  const yRaw=[...profile];
+  // Dip mode: fit the negated profile so the same peak-finding logic applies (a valley becomes a peak).
+  const yD=mode==='dip'?yRaw.map(v=>-v):[...yRaw];
   const sorted=[...yD].sort((a,b)=>a-b);
   const baseN=Math.max(2,Math.floor(n*.2));
   let offset=0;for(let i=0;i<baseN;i++)offset+=sorted[i];offset/=baseN;
@@ -846,15 +911,24 @@ function fitGaussian(profile,pxSz){
   for(const as of altSigmas)for(const ac of altCenters){const trial=runLM([amp,ac,as,offset],300);const tc=cost(trial);if(tc<bestCost&&trial[2]>0){bestP=trial;bestCost=tc;}}
   bestP[2]=Math.abs(bestP[2]);
   const fwhm=2*Math.sqrt(2*Math.log(2))*bestP[2];
-  const yMean=yD.reduce((a,b)=>a+b,0)/n;const ssTot=yD.reduce((s,y)=>s+(y-yMean)**2,0);const ssRes=cost(bestP);const r2=1-ssRes/(ssTot||1);
-  const fitCurve=xD.map(x=>G(x,bestP));
-  S.fitResult={amplitude:bestP[0],center:bestP[1],sigma:bestP[2],offset:bestP[3],fwhm,r2,xData:xD,fitCurve};
-  updateResults();plotProfile(xD,yD,fitCurve);renderOverlay();
+  const fitWork=xD.map(x=>G(x,bestP));
+  // Map fit + parameters back to real intensity space. amplitude is the peak height / dip depth (positive);
+  // offset is the baseline. For a dip, the fit sits below the baseline (full width at half minimum).
+  const fitCurve=mode==='dip'?fitWork.map(v=>-v):fitWork;
+  const amplitude=bestP[0],baseline=mode==='dip'?-bestP[3]:bestP[3];
+  const yMean=yRaw.reduce((a,b)=>a+b,0)/n;const ssTot=yRaw.reduce((s,y)=>s+(y-yMean)**2,0);
+  const ssRes=yRaw.reduce((s,y,i)=>s+(y-fitCurve[i])**2,0);const r2=1-ssRes/(ssTot||1);
+  S.fitResult={mode,amplitude,center:bestP[1],sigma:bestP[2],offset:baseline,fwhm,r2,xData:xD,fitCurve};
+  updateResults();plotProfile(xD,yRaw,fitCurve);renderOverlay();
 }
 
 function updateResults(){
-  const f=S.fitResult;
+  const f=S.fitResult,dip=f.mode==='dip';
   document.getElementById('resultsSection').style.display='block';
+  document.getElementById('lblFwhm').textContent=dip?'FWHM (½ min)':'FWHM';
+  document.getElementById('lblAmp').textContent=dip?'Depth':'Amplitude';
+  document.getElementById('lblCenter').textContent=dip?'Min position':'Center';
+  document.getElementById('lblOffset').textContent=dip?'Baseline':'Offset';
   document.getElementById('resFwhm').textContent=f.fwhm.toFixed(1)+' nm';
   document.getElementById('resAmp').textContent=f.amplitude.toFixed(1);
   document.getElementById('resCenter').textContent=f.center.toFixed(1)+' nm';
@@ -862,7 +936,7 @@ function updateResults(){
   document.getElementById('resOffset').textContent=f.offset.toFixed(1);
   document.getElementById('resR2').textContent=f.r2.toFixed(4);
   const tr=document.getElementById('topResult');
-  tr.textContent='FWHM = '+f.fwhm.toFixed(1)+' nm';
+  tr.textContent='FWHM = '+f.fwhm.toFixed(1)+' nm'+(dip?' (dip)':'');
   tr.style.display='';
 }
 
@@ -870,7 +944,7 @@ let chart=null;
 function plotProfile(xD,yD,fC){
   document.getElementById('chartEmpty').style.display='none';
   document.getElementById('chartLegend').style.display='flex';
-  const f=S.fitResult,hm=f.offset+f.amplitude/2,fl=f.center-f.fwhm/2,fr=f.center+f.fwhm/2;
+  const f=S.fitResult,hm=(f.mode==='dip'?f.offset-f.amplitude/2:f.offset+f.amplitude/2),fl=f.center-f.fwhm/2,fr=f.center+f.fwhm/2;
   if(chart)chart.destroy();
   chart=new Chart(document.getElementById('profileChart').getContext('2d'),{
     type:'line',
@@ -894,7 +968,7 @@ function clearChart(){if(chart){chart.destroy();chart=null;}document.getElementB
 document.getElementById('btnSaveMeas').addEventListener('click',()=>{
   if(!S.fitResult||!S.lineStart||!S.lineEnd)return;
   const f=S.fitResult,pxSz=parseFloat(document.getElementById('pixelSize').value)||20;
-  S.measurements.push({id:Date.now(),channel:S.activeCh+1,fwhm:f.fwhm,r2:f.r2,amplitude:f.amplitude,center:f.center,sigma:f.sigma,offset:f.offset,lineLength:S.profileData.length*pxSz,startPt:{...S.lineStart},endPt:{...S.lineEnd},pts:(S.lineType==='freehand'&&S.linePts)?S.linePts.map(p=>({...p})):null,color:S.lineColor,pixelSize:pxSz,profileData:[...S.profileData],fitCurve:[...f.fitCurve],xData:[...f.xData]});
+  S.measurements.push({id:Date.now(),channel:S.activeCh+1,mode:f.mode||'peak',fwhm:f.fwhm,r2:f.r2,amplitude:f.amplitude,center:f.center,sigma:f.sigma,offset:f.offset,lineLength:S.profileData.length*pxSz,startPt:{...S.lineStart},endPt:{...S.lineEnd},pts:(S.lineType==='freehand'&&S.linePts)?S.linePts.map(p=>({...p})):null,color:S.lineColor,pixelSize:pxSz,profileData:[...S.profileData],fitCurve:[...f.fitCurve],xData:[...f.xData]});
   S.lineStart=null;S.lineEnd=null;S.linePts=null;S.profileData=null;S.fitResult=null;
   document.getElementById('resultsSection').style.display='none';document.getElementById('chartLegend').style.display='none';
   document.getElementById('topResult').style.display='none';
@@ -939,7 +1013,7 @@ window.selectMeas=function(idx){
   const m=S.measurements[idx];if(!m)return;
   document.querySelectorAll('.meas-table tr').forEach(r=>r.classList.remove('active-row'));
   const row=document.querySelector(`.meas-table tr[data-idx="${idx}"]`);if(row)row.classList.add('active-row');
-  S.fitResult={amplitude:m.amplitude,center:m.center,sigma:m.sigma,offset:m.offset,fwhm:m.fwhm,r2:m.r2,xData:m.xData,fitCurve:m.fitCurve};
+  S.fitResult={mode:m.mode||'peak',amplitude:m.amplitude,center:m.center,sigma:m.sigma,offset:m.offset,fwhm:m.fwhm,r2:m.r2,xData:m.xData,fitCurve:m.fitCurve};
   S.profileData=m.profileData;updateResults();plotProfile(m.xData,m.profileData,m.fitCurve);document.getElementById('resultsSection').style.display='block';
 };
 window.delMeas=function(idx){S.measurements.splice(idx,1);refreshMeasTable();renderOverlay();};
@@ -947,8 +1021,8 @@ document.getElementById('btnClearAll').addEventListener('click',()=>{S.measureme
 
 document.getElementById('btnDownloadCSV').addEventListener('click',()=>{
   const L=S.measurements;if(!L.length)return;
-  let csv='Measurement,Channel,FWHM_nm,Amplitude,Center_nm,Sigma_nm,Offset,R2,LineLength_nm,PixelSize_nm\n';
-  L.forEach((m,i)=>{csv+=`${i+1},${m.channel||1},${m.fwhm.toFixed(2)},${m.amplitude.toFixed(2)},${m.center.toFixed(2)},${m.sigma.toFixed(2)},${m.offset.toFixed(2)},${m.r2.toFixed(4)},${m.lineLength.toFixed(2)},${m.pixelSize}\n`;});
+  let csv='Measurement,Channel,FitMode,FWHM_nm,Amplitude,Center_nm,Sigma_nm,Offset,R2,LineLength_nm,PixelSize_nm\n';
+  L.forEach((m,i)=>{csv+=`${i+1},${m.channel||1},${m.mode||'peak'},${m.fwhm.toFixed(2)},${m.amplitude.toFixed(2)},${m.center.toFixed(2)},${m.sigma.toFixed(2)},${m.offset.toFixed(2)},${m.r2.toFixed(4)},${m.lineLength.toFixed(2)},${m.pixelSize}\n`;});
   const fs=L.map(m=>m.fwhm),mean=fs.reduce((a,b)=>a+b,0)/fs.length;const std=fs.length>1?Math.sqrt(fs.reduce((s,v)=>s+(v-mean)**2,0)/(fs.length-1)):0;
   csv+=`\nStatistics\nMean_FWHM_nm,${mean.toFixed(2)}\nStd_FWHM_nm,${std.toFixed(2)}\nN,${L.length}\n`;
   L.forEach((m,i)=>{csv+=`\nProfile_${i+1}\nDistance_nm,Raw_Intensity,Gaussian_Fit\n`;for(let j=0;j<m.xData.length;j++)csv+=`${m.xData[j].toFixed(2)},${m.profileData[j].toFixed(2)},${m.fitCurve[j].toFixed(2)}\n`;});
@@ -959,8 +1033,8 @@ document.getElementById('btnDownloadCSV').addEventListener('click',()=>{
 function openInPlotter(name,csv){try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name,csv}));}catch(e){alert('Could not hand off data: '+e.message);return;}window.open('plot_data.html','_blank');}
 document.getElementById('btnPlotData').addEventListener('click',()=>{
   const L=S.measurements;if(!L.length)return;
-  let csv='Measurement,Channel,FWHM_nm,Amplitude,Center_nm,Sigma_nm,Offset,R2,LineLength_nm,PixelSize_nm\n';
-  L.forEach((m,i)=>{csv+=`${i+1},${m.channel||1},${m.fwhm.toFixed(2)},${m.amplitude.toFixed(2)},${m.center.toFixed(2)},${m.sigma.toFixed(2)},${m.offset.toFixed(2)},${m.r2.toFixed(4)},${m.lineLength.toFixed(2)},${m.pixelSize}\n`;});
+  let csv='Measurement,Channel,FitMode,FWHM_nm,Amplitude,Center_nm,Sigma_nm,Offset,R2,LineLength_nm,PixelSize_nm\n';
+  L.forEach((m,i)=>{csv+=`${i+1},${m.channel||1},${m.mode||'peak'},${m.fwhm.toFixed(2)},${m.amplitude.toFixed(2)},${m.center.toFixed(2)},${m.sigma.toFixed(2)},${m.offset.toFixed(2)},${m.r2.toFixed(4)},${m.lineLength.toFixed(2)},${m.pixelSize}\n`;});
   openInPlotter('size_analysis.csv',csv);
 });
 
@@ -990,32 +1064,45 @@ function drawSegFlat(ctx,P,pts,color,alpha,label,s){
   if(label!==undefined){const q=P(pts[0].x,pts[0].y);ctx.globalAlpha=Math.min(1,alpha+.3);ctx.font='bold '+s.fontPx+'px "Roboto Mono", monospace';ctx.fillStyle=color;ctx.textBaseline='alphabetic';ctx.fillText('#'+label,q[0]+s.fontPx*0.6,q[1]-s.fontPx*0.5);}
   ctx.restore();
 }
-// Raster figure: native-resolution image with the lines baked on top.
+// Region of the image to export (image px): whole image, or just what's visible in the viewport when "current view only" is on.
+function figRect(){
+  const ev=document.getElementById('expView');
+  if(!ev||!ev.checked) return {x:0,y:0,w:S.width,h:S.height};
+  const ww=wrap.clientWidth,wh=wrap.clientHeight,C=(v,m)=>Math.max(0,Math.min(m,v));
+  const x0=C((0-S.panX)/S.zoom,S.width), y0=C((0-S.panY)/S.zoom,S.height);
+  const x1=C((ww-S.panX)/S.zoom,S.width), y1=C((wh-S.panY)/S.zoom,S.height);
+  return {x:x0,y:y0,w:Math.max(1,x1-x0),h:Math.max(1,y1-y0)};
+}
+// Raster figure: native-resolution image (or visible crop) with the lines baked on top.
 function renderFigureCanvas(bg){
-  const ec=document.createElement('canvas');ec.width=S.width;ec.height=S.height;
+  const r=figRect();
+  const ec=document.createElement('canvas');ec.width=Math.round(r.w);ec.height=Math.round(r.h);
   const ctx=ec.getContext('2d');
   if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,ec.width,ec.height);}
-  ctx.drawImage(iC,0,0);
+  ctx.drawImage(iC,r.x,r.y,r.w,r.h,0,0,ec.width,ec.height);
   const s=figSizes();
-  eachFigureSeg((pts,color,alpha,label)=>drawSegFlat(ctx,(x,y)=>[x,y],pts,color,alpha,label,s));
+  eachFigureSeg((pts,color,alpha,label)=>drawSegFlat(ctx,(x,y)=>[x-r.x,y-r.y],pts,color,alpha,label,s));
   return ec;
 }
-// Vector figure: the raster image embedded, the lines/labels as true SVG vectors.
+// Vector figure: the raster image (or visible crop) embedded, the lines/labels as true SVG vectors.
 function buildFigureSVG(){
-  const s=figSizes();let el='';
+  const r=figRect(),s=figSizes();let el='';
   const esc=t=>String(t).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
   eachFigureSeg((pts,color,alpha,label)=>{
-    const d=pts.map(p=>p.x+','+p.y).join(' ');
+    const d=pts.map(p=>(p.x-r.x)+','+(p.y-r.y)).join(' ');
     el+='<g opacity="'+alpha+'">'
       +'<polyline points="'+d+'" fill="none" stroke="rgba(0,0,0,0.4)" stroke-width="'+(s.lw*1.9)+'" stroke-linejoin="round" stroke-linecap="round"/>'
       +'<polyline points="'+d+'" fill="none" stroke="'+color+'" stroke-width="'+s.lw+'" stroke-linejoin="round" stroke-linecap="round"/>';
-    [pts[0],pts[pts.length-1]].forEach(p=>{el+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(s.lw*1.8)+'" fill="'+color+'" stroke="rgba(255,255,255,0.85)" stroke-width="'+(s.lw*0.6)+'"/>';});
-    if(label!==undefined){el+='<text x="'+(pts[0].x+s.fontPx*0.6)+'" y="'+(pts[0].y-s.fontPx*0.5)+'" fill="'+color+'" font-family="Roboto Mono, monospace" font-weight="bold" font-size="'+s.fontPx+'">#'+esc(label)+'</text>';}
+    [pts[0],pts[pts.length-1]].forEach(p=>{el+='<circle cx="'+(p.x-r.x)+'" cy="'+(p.y-r.y)+'" r="'+(s.lw*1.8)+'" fill="'+color+'" stroke="rgba(255,255,255,0.85)" stroke-width="'+(s.lw*0.6)+'"/>';});
+    if(label!==undefined){el+='<text x="'+(pts[0].x-r.x+s.fontPx*0.6)+'" y="'+(pts[0].y-r.y-s.fontPx*0.5)+'" fill="'+color+'" font-family="Roboto Mono, monospace" font-weight="bold" font-size="'+s.fontPx+'">#'+esc(label)+'</text>';}
     el+='</g>';
   });
-  const img=iC.toDataURL('image/png');
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+S.width+'" height="'+S.height+'" viewBox="0 0 '+S.width+' '+S.height+'">'
-    +'<image x="0" y="0" width="'+S.width+'" height="'+S.height+'" href="'+img+'"/>'+el+'</svg>';
+  const w=Math.round(r.w),h=Math.round(r.h);
+  let src=iC;
+  if(r.x||r.y||w!==S.width||h!==S.height){const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(iC,r.x,r.y,r.w,r.h,0,0,w,h);src=c;}
+  const img=src.toDataURL('image/png');
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'
+    +'<image x="0" y="0" width="'+w+'" height="'+h+'" href="'+img+'"/>'+el+'</svg>';
 }
 function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);}
 function saveFigure(kind){
@@ -1031,9 +1118,9 @@ document.getElementById('expSvg').addEventListener('click',()=>saveFigure('svg')
 
 const rh=document.getElementById('resizeHandle');let isR=false,rsY,rsH;
 rh.addEventListener('mousedown',e=>{isR=true;rsY=e.clientY;rsH=document.getElementById('bottomPanel').offsetHeight;e.preventDefault();});
-window.addEventListener('mousemove',e=>{if(!isR)return;const h2=rsH-(e.clientY-rsY);document.getElementById('bottomPanel').style.height=Math.max(120,Math.min(500,h2))+'px';if(S.imageData)fitToView();});
+window.addEventListener('mousemove',e=>{if(!isR)return;const h2=rsH-(e.clientY-rsY);document.getElementById('bottomPanel').style.height=Math.max(120,Math.min(500,h2))+'px';if(S.imageData)applyTransform();});
 window.addEventListener('mouseup',()=>{isR=false;});
-window.addEventListener('resize',()=>{if(S.imageData)fitToView();});
+window.addEventListener('resize',()=>{if(S.imageData)applyTransform();});
 
 document.getElementById('statusText').textContent=(typeof GeoTIFF!=='undefined'||typeof UTIF!=='undefined')?'Ready — multi-channel TIFF support loaded':'Ready (TIFF unavailable — use PNG/JPG)';
 restoreMeas();
