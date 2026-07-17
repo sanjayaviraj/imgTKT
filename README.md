@@ -6,7 +6,7 @@
 
 **OR** run it locally in 2 easy steps:
 
-1. **Download** all files from this Google Drive link: **[download here](ADD_GOOGLE_DRIVE_LINK_HERE)**
+1. **Download** all files from this Google Drive link: **[download here](https://drive.google.com/drive/folders/1nxh--PK5WioE95h8afhIdl0FxrYfXSi_?usp=sharing)**
 2. **Open** `index.html` in your browser — no install, no server, nothing to set up.
 
 ---
