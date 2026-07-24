@@ -719,6 +719,9 @@ document.getElementById('btnFitDip').addEventListener('click',()=>setFitMode('di
 document.getElementById('btnClearTop').addEventListener('click',clearCurrentLine);
 document.getElementById('btnReset').addEventListener('click',resetImage);
 function resetImage(){
+  // Keep saved measurements (table/CSV/stats) but stop drawing their lines — the
+  // coordinates belong to the previous image, so they'd be stale over a new one.
+  S.measurements.forEach(m=>m.stale=true);
   S.channels=[];S.nCh=0;S.imageData=null;S.width=0;S.height=0;
   clearCurrentLine();
   document.getElementById('emptyState').style.display='';
@@ -763,7 +766,7 @@ oC.addEventListener('mouseup',e=>{
 
 function renderOverlay(){
   oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
-  S.measurements.forEach((m,i)=>{ if(m.pts&&m.pts.length>2)drawPolyline(oCtx,m.pts,m.color,.35,i+1); else drawLine(oCtx,m.startPt,m.endPt,m.color,.35,i+1); });
+  S.measurements.forEach((m,i)=>{ if(m.stale)return; if(m.pts&&m.pts.length>2)drawPolyline(oCtx,m.pts,m.color,.35,i+1); else drawLine(oCtx,m.startPt,m.endPt,m.color,.35,i+1); });
   if(S.lineType==='freehand'){
     if(S.linePts&&S.linePts.length>=2)drawPolyline(oCtx,S.linePts,S.lineColor,1);
   } else if(S.lineStart&&S.lineEnd){
@@ -989,7 +992,7 @@ const PERSIST_KEY='imgtkt_size_analysis_measurements';
 function persistMeas(){ try{ S.measurements.length? localStorage.setItem(PERSIST_KEY,JSON.stringify(S.measurements)) : localStorage.removeItem(PERSIST_KEY); }catch(e){} }
 function restoreMeas(){
   let n=0;
-  try{ const raw=localStorage.getItem(PERSIST_KEY); if(raw){ const a=JSON.parse(raw); if(Array.isArray(a)&&a.length){ S.measurements=a; n=a.length; } } }catch(e){}
+  try{ const raw=localStorage.getItem(PERSIST_KEY); if(raw){ const a=JSON.parse(raw); if(Array.isArray(a)&&a.length){ a.forEach(m=>m.stale=true); S.measurements=a; n=a.length; } } }catch(e){}
   refreshMeasTable();
   if(n) showRestoreBanner(n, ()=>{ S.measurements=[]; refreshMeasTable(); if(S.imageData) renderOverlay(); });
 }
@@ -1048,7 +1051,7 @@ document.getElementById('lineWidth').addEventListener('change',()=>{if(S.lineSta
 function figSizes(){const m=Math.min(S.width,S.height);return{lw:Math.max(1.5,m/250),fontPx:Math.max(12,m/20)};}
 // Every line to draw in the figure: saved measurements (with #label) + the current unsaved line.
 function eachFigureSeg(cb){
-  S.measurements.forEach((m,i)=>{ const pts=(m.pts&&m.pts.length>2)?m.pts:[m.startPt,m.endPt]; cb(pts,m.color||'#ffffff',0.9,i+1); });
+  S.measurements.forEach((m,i)=>{ if(m.stale)return; const pts=(m.pts&&m.pts.length>2)?m.pts:[m.startPt,m.endPt]; cb(pts,m.color||'#ffffff',0.9,i+1); });
   let cur=null;
   if(S.lineType==='freehand'){ if(S.linePts&&S.linePts.length>=2) cur=S.linePts; }
   else if(S.lineStart&&S.lineEnd) cur=[S.lineStart,S.lineEnd];
