@@ -7,6 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
 <title>Plot Data</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.4.4/build/index.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/gliffy/canvas2svg@master/canvas2svg.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
@@ -117,7 +118,7 @@
     </div>
     <div class="plot-body" id="plotBody">
       <div class="plot-empty" id="plotEmpty">
-        <p class="plot-desc">A dedicated plotting page for the data you export from the other tools. Load a CSV/TSV, pick the columns in the middle, and choose a chart type on the right — scatter, line, bar, histogram, or pie. Everything runs locally; nothing is uploaded. Export the figure as PNG or the plotted values as CSV.</p>
+        <p class="plot-desc">A dedicated plotting page for the data you export from the other tools. Load a CSV/TSV, pick the columns in the middle, and choose a chart type on the right — scatter, line, bar (grouped / stacked / horizontal), bubble, histogram, box plot, or pie. Pick a colour palette (colour-blind-safe sets and microscopy LUTs) under Appearance. Everything runs locally; nothing is uploaded. Export the figure as PNG or SVG, or the plotted values as CSV.</p>
         Load data to start plotting
       </div>
       <canvas id="chart"></canvas>
@@ -165,7 +166,9 @@
         <button class="btn active" data-type="scatter">◦ Scatter</button>
         <button class="btn" data-type="line">╱ Line</button>
         <button class="btn" data-type="bar">▮ Bar</button>
+        <button class="btn" data-type="bubble">⬤ Bubble</button>
         <button class="btn" data-type="histogram">▤ Histogram</button>
+        <button class="btn" data-type="box">⊟ Box plot</button>
         <button class="btn" data-type="pie">◕ Pie</button>
         <button class="btn" data-type="doughnut">◯ Doughnut</button>
       </div>
@@ -174,15 +177,37 @@
     <div class="panel-section">
       <div class="section-label">Data Mapping</div>
 
-      <!-- scatter / line / bar -->
+      <!-- scatter / line / bar / box -->
       <div id="mapXY">
-        <div class="form-group">
+        <div class="form-group" id="grpX">
           <label>X axis</label>
           <select id="selX"></select>
         </div>
+        <div class="form-group" id="grpBoxGroup" style="display:none">
+          <label>Group by (category)</label>
+          <select id="selBoxGroup"></select>
+          <div class="hint" style="margin-top:5px">One box per category level, using the first checked column as values. Leave “(none)” for one box per checked column.</div>
+        </div>
         <div class="form-group">
-          <label>Y series</label>
+          <label id="yLabel">Y series</label>
           <div class="ylist" id="yList"></div>
+        </div>
+      </div>
+
+      <!-- bubble -->
+      <div id="mapBubble" style="display:none">
+        <div class="form-group">
+          <label>X axis</label>
+          <select id="selBubX"></select>
+        </div>
+        <div class="form-group">
+          <label>Y axis</label>
+          <select id="selBubY"></select>
+        </div>
+        <div class="form-group">
+          <label>Bubble size</label>
+          <select id="selBubSize"></select>
+          <div class="hint" style="margin-top:5px">Values are scaled to a 4–24 px radius for display. Export keeps the raw size values.</div>
         </div>
       </div>
 
@@ -215,6 +240,25 @@
     <div class="panel-section">
       <div class="section-label">Appearance</div>
       <div class="form-group">
+        <label>Colour palette</label>
+        <select id="optPalette">
+          <optgroup label="Categorical">
+            <option value="default">imgTKT default</option>
+            <option value="okabeito">Okabe–Ito (CB-safe)</option>
+            <option value="tableau10">Tableau 10</option>
+            <option value="set2">ColorBrewer Set2</option>
+            <option value="microscopy">Microscopy channels</option>
+            <option value="grayscale">Grayscale</option>
+          </optgroup>
+          <optgroup label="Sequential (LUT)">
+            <option value="viridis">Viridis</option>
+            <option value="fire">Fire</option>
+            <option value="greenfireblue">Green Fire Blue</option>
+          </optgroup>
+        </select>
+        <div class="hint" style="margin-top:5px">Sequential LUTs grade one series/slice/bin to the next; categorical sets give each a distinct colour.</div>
+      </div>
+      <div class="form-group">
         <label>Chart title</label>
         <input type="text" id="optTitle" placeholder="(auto)">
       </div>
@@ -232,6 +276,8 @@
       </div>
       <label class="toggle" id="grpSmooth"><span>Smooth line</span><input type="checkbox" id="optSmooth"></label>
       <label class="toggle" id="grpFill"><span>Fill area</span><input type="checkbox" id="optFill"></label>
+      <label class="toggle" id="grpStacked"><span>Stacked</span><input type="checkbox" id="optStacked"></label>
+      <label class="toggle" id="grpHorizontal"><span>Horizontal bars</span><input type="checkbox" id="optHorizontal"></label>
       <label class="toggle"><span>Show legend</span><input type="checkbox" id="optLegend" checked></label>
       <label class="toggle" id="grpGrid"><span>Show grid</span><input type="checkbox" id="optGrid"></label>
     </div>
@@ -261,15 +307,45 @@ const BASE_COLORS=[
   [120,255,160],[236,120,170]
 ];
 function hslToRgb(h,s,l){h/=360;const f=n=>{const k=(n+h*12)%12;const a=s*Math.min(l,1-l);return l-a*Math.max(-1,Math.min(k-3,9-k,1));};return[Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];}
-function seriesColor(i){return i<BASE_COLORS.length?BASE_COLORS[i].slice():hslToRgb((i*137.508)%360,0.65,0.6);}
 const rgb=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
 const rgba=(c,a)=>'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')';
+
+// ---- colour palettes ----
+// Categorical sets cycle a fixed list (colour-blind-safe options included); sequential LUTs interpolate
+// anchor stops so a run of series/slices/bins grades smoothly. Colour is purely cosmetic here (this is a
+// plotting tool, not a measurement tool) — the exported CSV is always the raw plotted values.
+const PALETTES={
+  default:{kind:'cat',colors:BASE_COLORS},
+  okabeito:{kind:'cat',colors:[[230,159,0],[86,180,233],[0,158,115],[240,228,66],[0,114,178],[213,94,0],[204,121,167],[100,100,100]]},
+  tableau10:{kind:'cat',colors:[[78,121,167],[242,142,43],[225,87,89],[118,183,178],[89,161,79],[237,201,72],[176,122,161],[255,157,167],[156,117,95],[186,176,172]]},
+  set2:{kind:'cat',colors:[[102,194,165],[252,141,98],[141,160,203],[231,138,195],[166,216,84],[255,217,47],[229,196,148],[179,179,179]]},
+  microscopy:{kind:'cat',colors:[[160,160,160],[236,64,209],[95,196,74],[64,208,224],[255,206,84],[246,146,30],[93,156,236]]},
+  grayscale:{kind:'cat',colors:[[45,45,45],[80,80,80],[110,110,110],[140,140,140],[168,168,168],[195,195,195],[215,215,215],[232,232,232]]},
+  viridis:{kind:'seq',stops:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]]},
+  fire:{kind:'seq',stops:[[0,0,0],[120,0,80],[200,40,20],[240,110,0],[255,200,40],[255,255,255]]},
+  greenfireblue:{kind:'seq',stops:[[0,0,0],[0,60,140],[0,150,150],[90,210,90],[230,255,140],[255,255,255]]}
+};
+function sampleLUT(stops,t){
+  t=Math.max(0,Math.min(1,t));const x=t*(stops.length-1),i=Math.floor(x),f=x-i;
+  const a=stops[i],b=stops[Math.min(stops.length-1,i+1)];
+  return[Math.round(a[0]+(b[0]-a[0])*f),Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f)];
+}
+// pc(i,total): colour for item i out of total, honouring the active palette.
+function pc(i,total){
+  const p=PALETTES[D.palette]||PALETTES.default;
+  if(p.kind==='seq'){const t=total>1?i/(total-1):0;return sampleLUT(p.stops,0.12+0.82*t);}
+  const cols=p.colors;
+  return i<cols.length?cols[i].slice():hslToRgb((i*137.508)%360,0.62,0.6);
+}
+const isSeq=()=>(PALETTES[D.palette]||PALETTES.default).kind==='seq';
+// the box-plot controller comes from the @sgratzl/chartjs-chart-boxplot plugin (auto-registers with Chart.js)
+function boxAvailable(){try{return !!Chart.registry.getController('boxplot');}catch(e){return false;}}
 
 const PIE_KEYS='pie doughnut';
 const COUNT='__count__';
 
 // ---- state ----
-const D={name:'',headers:[],rows:[],numeric:[],type:'scatter',x:0,y:[],histCol:0,pieLabel:0,pieVal:COUNT};
+const D={name:'',headers:[],rows:[],numeric:[],type:'scatter',x:0,y:[],histCol:0,pieLabel:0,pieVal:COUNT,bubbleY:1,bubbleSize:2,boxGroup:-1,palette:'default'};
 let chart=null;
 
 // ---------- CSV / TSV parsing ----------
@@ -322,6 +398,9 @@ function ingest(text,name){
   D.y=numCols.length>1?[numCols[1]]:(numCols.length?[numCols[0]]:[]);
   D.histCol=numCols.length?numCols[0]:0;
   D.pieLabel=0;D.pieVal=COUNT;
+  D.bubbleY=numCols[1]??numCols[0]??0;
+  D.bubbleSize=numCols[2]??numCols[1]??numCols[0]??0;
+  D.boxGroup=-1;
 
   renderTable();
   $('dataEmpty').style.display='none';
@@ -370,6 +449,17 @@ function onHeaderClick(i){
     if(D.numeric[i])D.pieVal=String(i);else D.pieLabel=i;
   }else if(D.type==='histogram'){
     if(D.numeric[i])D.histCol=i;else{setStatus('Histogram needs a numeric column');return;}
+  }else if(D.type==='bubble'){
+    // cycle a numeric column through X → Y → size; text columns aren't usable here
+    if(!D.numeric[i]){setStatus('Bubble needs numeric columns');return;}
+    if(D.x===i||D.bubbleY===i||D.bubbleSize===i)return;
+    if(D.x!==i&&D.bubbleY!==i){D.x=D.bubbleY;D.bubbleY=D.bubbleSize;D.bubbleSize=i;}
+  }else if(D.type==='box'){
+    // numeric → toggle as a distribution column; text → group-by category
+    if(!D.numeric[i]){D.boxGroup=(D.boxGroup===i?-1:i);}
+    else if(D.y.includes(i))D.y=D.y.filter(y=>y!==i);
+    else D.y.push(i);
+    if(!D.y.length&&D.numeric[i])D.y=[i];
   }else{
     // scatter/line/bar: toggle numeric col as Y, or (for scatter) set X if it's the only sensible move
     if(!D.numeric[i]){D.x=i;}                 // text column → X category
@@ -383,43 +473,68 @@ function onHeaderClick(i){
 // ---------- mapping UI ----------
 function opt(sel,i,label){const o=document.createElement('option');o.value=i;o.textContent=label;sel.appendChild(o);}
 function refreshMapping(){
-  const pie=PIE_KEYS.includes(D.type), hist=D.type==='histogram';
-  $('mapXY').style.display=(!pie&&!hist)?'':'none';
+  const pie=PIE_KEYS.includes(D.type), hist=D.type==='histogram', bub=D.type==='bubble', box=D.type==='box';
+  const xy=!pie&&!hist&&!bub;                                     // scatter / line / bar / box use the X-Y section
+  $('mapXY').style.display=xy?'':'none';
+  $('mapBubble').style.display=bub?'':'none';
   $('mapHist').style.display=hist?'':'none';
   $('mapPie').style.display=pie?'':'none';
+  $('grpX').style.display=box?'none':'';                          // box has no X axis — it groups instead
+  $('grpBoxGroup').style.display=box?'':'none';
+  $('yLabel').textContent=box?'Distribution columns':'Y series';
   // appearance toggles relevance
-  $('grpXLabel').style.display=pie?'none':'';
+  $('grpXLabel').style.display=(pie||box)?'none':'';
   $('grpYLabel').style.display=pie?'none':'';
   $('grpGrid').style.display=pie?'none':'';
   $('grpPoint').style.display=(D.type==='scatter'||D.type==='line')?'':'none';
   $('grpSmooth').style.display=D.type==='line'?'':'none';
   $('grpFill').style.display=(D.type==='line'||D.type==='scatter')?'':'none';
+  $('grpStacked').style.display=(D.type==='bar'||D.type==='line')?'':'none';
+  $('grpHorizontal').style.display=(D.type==='bar')?'':'none';
 
   const numCols=D.numeric.map((n,i)=>n?i:-1).filter(i=>i>=0);
 
-  if(!pie&&!hist){
+  if(xy){
     const selX=$('selX');selX.innerHTML='';
     // scatter needs numeric X; line/bar accept any column as labels
     const xChoices=D.type==='scatter'?numCols:D.headers.map((_,i)=>i);
     xChoices.forEach(i=>opt(selX,i,D.headers[i]+(D.numeric[i]?'':' (text)')));
     if(!xChoices.includes(D.x))D.x=xChoices[0];
     selX.value=D.x;
+    // box group-by: any text column, or (none)
+    if(box){
+      const sg=$('selBoxGroup');sg.innerHTML='';
+      opt(sg,-1,'(none)');
+      D.headers.forEach((h,i)=>{if(!D.numeric[i])opt(sg,i,h);});
+      if(D.boxGroup>=0&&D.numeric[D.boxGroup])D.boxGroup=-1;
+      sg.value=D.boxGroup;
+    }
     // Y checkboxes (numeric only)
-    const box=$('yList');box.innerHTML='';
+    const bx=$('yList');bx.innerHTML='';
     D.y=D.y.filter(i=>numCols.includes(i));
-    if(!D.y.length&&numCols.length)D.y=[numCols.find(i=>i!==D.x)??numCols[0]];
+    if(!D.y.length&&numCols.length)D.y=[box?numCols[0]:(numCols.find(i=>i!==D.x)??numCols[0])];
+    const seq=isSeq();
     numCols.forEach(i=>{
       const lab=document.createElement('label');lab.className='ychk';
       const yi=D.y.indexOf(i);                                   // series color follows order within the selected set
-      const sw=yi>=0?rgb(seriesColor(yi)):'var(--border)';
+      const sw=yi>=0?rgb(pc(yi,seq?D.y.length:1)):'var(--border)';
       lab.innerHTML='<input type="checkbox" '+(yi>=0?'checked':'')+'><span class="sw" style="background:'+sw+'"></span>'+D.headers[i];
       lab.querySelector('input').addEventListener('change',e=>{
         if(e.target.checked){if(!D.y.includes(i))D.y.push(i);}else D.y=D.y.filter(y=>y!==i);
         refreshMapping();                                         // recolor swatches to match new series order
       });
-      box.appendChild(lab);
+      bx.appendChild(lab);
     });
-    if(!numCols.length)box.innerHTML='<span class="hint">No numeric columns detected.</span>';
+    if(!numCols.length)bx.innerHTML='<span class="hint">No numeric columns detected.</span>';
+  }
+  if(bub){
+    [['selBubX','x'],['selBubY','bubbleY'],['selBubSize','bubbleSize']].forEach(([id,key])=>{
+      const s=$(id);s.innerHTML='';
+      numCols.forEach(i=>opt(s,i,D.headers[i]));
+      if(!numCols.includes(D[key]))D[key]=numCols[0]??0;
+      s.value=D[key];
+      if(!numCols.length)s.innerHTML='<option>No numeric columns</option>';
+    });
   }
   if(hist){
     const s=$('selHistCol');s.innerHTML='';
@@ -484,8 +599,9 @@ function buildConfig(){
 
   if(t==='scatter'||t==='line'||t==='bar'){
     if(!D.y.length)return null;
+    const nS=D.y.length;
     const datasets=D.y.map((yi,k)=>{
-      const col=seriesColor(k);
+      const col=pc(k,nS);
       if(t==='scatter'){
         const xs=colNum(D.x),ys=colNum(yi);
         const data=[];for(let r=0;r<D.rows.length;r++)if(isFinite(xs[r])&&isFinite(ys[r]))data.push({x:xs[r],y:ys[r]});
@@ -498,22 +614,87 @@ function buildConfig(){
       return{label:D.headers[yi],data:colNum(yi),backgroundColor:rgba(col,0.75),borderColor:rgb(col),borderWidth:1};
     });
     const labels=(t==='scatter')?undefined:colStr(D.x);
+    const stacked=$('optStacked').checked&&(t==='bar'||t==='line');
+    const horizontal=$('optHorizontal').checked&&t==='bar';
     const xt=autoX(D.headers[D.x]);
     const yt=autoY(D.y.length===1?D.headers[D.y[0]]:'Value');
+    let scales;
+    if(t==='scatter'){
+      scales={
+        x:{type:'linear',title:{display:true,text:xt,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:$('optGrid').checked,color:'rgba(0,0,0,0.06)'},border:{color:'#dadce0'}},
+        y:{title:{display:true,text:yt,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:$('optGrid').checked,color:'rgba(0,0,0,0.06)'},border:{color:'#dadce0'}}
+      };
+    }else{
+      scales=horizontal?baseScales(yt,xt):baseScales(xt,yt);   // indexAxis:'y' swaps which axis carries the category
+      scales.x.stacked=stacked;scales.y.stacked=stacked;
+    }
     return{
       type:(t==='scatter')?'scatter':t,
       data:labels?{labels,datasets}:{datasets},
       options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},
+        indexAxis:horizontal?'y':'x',
         interaction:{mode:t==='bar'?'index':'nearest',intersect:t==='scatter'},
         parsing:t==='scatter'?false:undefined,
         plugins:basePlugins(autoTitle(),true),
-        scales:t==='scatter'?{
-          x:{type:'linear',title:{display:true,text:xt,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:$('optGrid').checked,color:'rgba(0,0,0,0.06)'},border:{color:'#dadce0'}},
-          y:{title:{display:true,text:yt,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:$('optGrid').checked,color:'rgba(0,0,0,0.06)'},border:{color:'#dadce0'}}
-        }:baseScales(xt,yt)
+        scales
       },
       _title:autoTitle()||(D.y.map(i=>D.headers[i]).join(', ')+' vs '+D.headers[D.x]),
-      _info:datasets.length+' series'
+      _info:datasets.length+' series'+(stacked?' · stacked':'')
+    };
+  }
+
+  if(t==='bubble'){
+    const xs=colNum(D.x),ys=colNum(D.bubbleY),ss=colNum(D.bubbleSize);
+    const sv=ss.filter(isFinite);if(!sv.length)return null;
+    let smn=Math.min(...sv),smx=Math.max(...sv);
+    const scaleR=v=>smx===smn?9:4+(v-smn)/(smx-smn)*20;          // display-only: map size column → 4–24 px radius
+    const data=[];for(let r=0;r<D.rows.length;r++)if(isFinite(xs[r])&&isFinite(ys[r])&&isFinite(ss[r]))data.push({x:xs[r],y:ys[r],r:scaleR(ss[r]),_raw:ss[r]});
+    if(!data.length)return null;
+    const col=pc(0,1);
+    const xt=autoX(D.headers[D.x]),yt=autoY(D.headers[D.bubbleY]);
+    return{
+      type:'bubble',
+      data:{datasets:[{label:D.headers[D.bubbleY]+' (size: '+D.headers[D.bubbleSize]+')',data,backgroundColor:rgba(col,0.45),borderColor:rgb(col),borderWidth:1}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},
+        plugins:{...basePlugins(autoTitle(),true),tooltip:{...basePlugins(autoTitle(),true).tooltip,callbacks:{label:c=>D.headers[D.bubbleSize]+'='+c.raw._raw+'  ('+c.raw.x+', '+c.raw.y+')'}}},
+        scales:{
+          x:{type:'linear',title:{display:true,text:xt,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:$('optGrid').checked,color:'rgba(0,0,0,0.06)'},border:{color:'#dadce0'}},
+          y:{title:{display:true,text:yt,color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:$('optGrid').checked,color:'rgba(0,0,0,0.06)'},border:{color:'#dadce0'}}
+        }
+      },
+      _title:autoTitle()||(D.headers[D.bubbleY]+' vs '+D.headers[D.x]),
+      _info:data.length+' bubbles'
+    };
+  }
+
+  if(t==='box'){
+    if(typeof Chart==='undefined'||!boxAvailable()){setStatus('Box-plot library failed to load — check connection and reload');return null;}
+    if(!D.y.length)return null;
+    const group=D.boxGroup>=0&&!D.numeric[D.boxGroup];
+    let labels,boxData;
+    if(group){
+      // one box per category level, using the first checked column as values
+      const gi=D.boxGroup,vi=D.y[0];const map=new Map();labels=[];
+      D.rows.forEach(r=>{const v=+r[vi];if(!isFinite(v))return;const k=r[gi]===''?'(blank)':r[gi];if(!map.has(k)){map.set(k,[]);labels.push(k);}map.get(k).push(v);});
+      boxData=labels.map(k=>map.get(k));
+    }else{
+      // one box per selected numeric column
+      labels=D.y.map(i=>D.headers[i]);
+      boxData=D.y.map(i=>colNum(i).filter(isFinite));
+    }
+    if(!labels.length||boxData.every(a=>!a.length))return null;
+    const bg=labels.map((_,i)=>rgba(pc(i,labels.length),0.45));
+    const bc=labels.map((_,i)=>rgb(pc(i,labels.length)));
+    const yt=autoY(group?D.headers[D.y[0]]:'Value');
+    const xt=autoX(group?D.headers[D.boxGroup]:'');
+    return{
+      type:'boxplot',
+      data:{labels,datasets:[{label:group?D.headers[D.y[0]]:'Distribution',data:boxData,backgroundColor:bg,borderColor:bc,borderWidth:1.5,itemRadius:2,itemStyle:'circle',outlierRadius:2.5,medianColor:'#202124'}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},
+        plugins:basePlugins(autoTitle(),false),
+        scales:baseScales(xt,yt)},
+      _title:autoTitle()||('Box plot — '+(group?D.headers[D.y[0]]+' by '+D.headers[D.boxGroup]:labels.join(', '))),
+      _info:labels.length+(labels.length===1?' box':' boxes')
     };
   }
 
@@ -526,11 +707,14 @@ function buildConfig(){
     const w=(mx-mn)/nb,counts=new Array(nb).fill(0);
     for(const v of vals){let b=Math.floor((v-mn)/w);if(b<0)b=0;if(b>=nb)b=nb-1;counts[b]++;}
     const labels=counts.map((_,i)=>(mn+i*w).toFixed(2));
-    const col=seriesColor(0);
+    // sequential palettes grade the bars low→high; categorical palettes use one solid colour
+    const seq=isSeq();
+    const bg=seq?counts.map((_,i)=>rgba(pc(i,nb),0.85)):rgba(pc(0,1),0.75);
+    const bc=seq?counts.map((_,i)=>rgb(pc(i,nb))):rgb(pc(0,1));
     const xt=autoX(D.headers[D.histCol]),yt=autoY('Count');
     return{
       type:'bar',
-      data:{labels,datasets:[{label:D.headers[D.histCol],data:counts,backgroundColor:rgba(col,0.75),borderColor:rgb(col),borderWidth:1,barPercentage:1,categoryPercentage:1}]},
+      data:{labels,datasets:[{label:D.headers[D.histCol],data:counts,backgroundColor:bg,borderColor:bc,borderWidth:1,barPercentage:1,categoryPercentage:1}]},
       options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},
         plugins:basePlugins(autoTitle(),false),
         scales:baseScales(xt,yt)},
@@ -549,7 +733,7 @@ function buildConfig(){
       labels=colStr(D.pieLabel);data=colNum(+D.pieVal);
     }
     if(!labels.length)return null;
-    const colors=labels.map((_,i)=>rgba(seriesColor(i),0.82));
+    const colors=labels.map((_,i)=>rgba(pc(i,labels.length),0.82));
     return{
       type:t,
       data:{labels,datasets:[{data,backgroundColor:colors,borderColor:'#ffffff',borderWidth:2}]},
@@ -567,6 +751,8 @@ function highlightCols(){
   const mark=(c,cls)=>document.querySelectorAll('#dataTable [data-c="'+c+'"]').forEach(el=>el.classList.add(cls));
   if(PIE_KEYS.includes(D.type)){mark(D.pieLabel,'cx');if(D.pieVal!==COUNT)mark(+D.pieVal,'cy');}
   else if(D.type==='histogram'){mark(D.histCol,'cx');}
+  else if(D.type==='bubble'){mark(D.x,'cx');mark(D.bubbleY,'cy');mark(D.bubbleSize,'cy');}
+  else if(D.type==='box'){if(D.boxGroup>=0)mark(D.boxGroup,'cx');D.y.forEach(i=>mark(i,'cy'));}
   else{mark(D.x,'cx');D.y.forEach(i=>mark(i,'cy'));}
 }
 
@@ -610,12 +796,17 @@ $('typeGrid').querySelectorAll('button').forEach(b=>{
   });
 });
 $('selX').addEventListener('change',e=>{D.x=+e.target.value;render();});
+$('selBoxGroup').addEventListener('change',e=>{D.boxGroup=+e.target.value;refreshMapping();});
+$('selBubX').addEventListener('change',e=>{D.x=+e.target.value;render();});
+$('selBubY').addEventListener('change',e=>{D.bubbleY=+e.target.value;render();});
+$('selBubSize').addEventListener('change',e=>{D.bubbleSize=+e.target.value;render();});
 $('selHistCol').addEventListener('change',e=>{D.histCol=+e.target.value;render();});
 $('bins').addEventListener('input',render);
 $('selPieLabel').addEventListener('change',e=>{D.pieLabel=+e.target.value;render();});
 $('selPieVal').addEventListener('change',e=>{D.pieVal=e.target.value;render();});
+$('optPalette').addEventListener('change',e=>{D.palette=e.target.value;refreshMapping();}); // recolour swatches + chart
 ['optTitle','optXLabel','optYLabel','optPoint'].forEach(id=>$(id).addEventListener('input',render));
-['optSmooth','optFill','optLegend','optGrid'].forEach(id=>$(id).addEventListener('change',render));
+['optSmooth','optFill','optLegend','optGrid','optStacked','optHorizontal'].forEach(id=>$(id).addEventListener('change',render));
 
 // ---------- export ----------
 $('btnPNG').addEventListener('click',()=>{
@@ -704,6 +895,25 @@ function plottedCSV(){
   if(t==='line'||t==='bar'){
     let head=esc(D.headers[D.x]);D.y.forEach(i=>head+=','+esc(D.headers[i]));let out=head+'\n';
     for(let r=0;r<D.rows.length;r++){let row=esc(D.rows[r][D.x]);D.y.forEach(i=>row+=','+esc(D.rows[r][i]));out+=row+'\n';}
+    return out;
+  }
+  if(t==='bubble'){
+    // raw x, y, size — the display radius scaling is not exported
+    let out=esc(D.headers[D.x])+','+esc(D.headers[D.bubbleY])+','+esc(D.headers[D.bubbleSize])+'\n';
+    const xs=colNum(D.x),ys=colNum(D.bubbleY),ss=colNum(D.bubbleSize);
+    for(let r=0;r<D.rows.length;r++)if(isFinite(xs[r])&&isFinite(ys[r])&&isFinite(ss[r]))out+=xs[r]+','+ys[r]+','+ss[r]+'\n';
+    return out;
+  }
+  if(t==='box'){
+    // long format: one row per raw value, tagged by its box label
+    const group=D.boxGroup>=0&&!D.numeric[D.boxGroup];
+    let out=(group?esc(D.headers[D.boxGroup]):'column')+',value\n';
+    if(group){
+      const vi=D.y[0];
+      for(let r=0;r<D.rows.length;r++){const v=+D.rows[r][vi];if(!isFinite(v))continue;const k=D.rows[r][D.boxGroup]===''?'(blank)':D.rows[r][D.boxGroup];out+=esc(k)+','+v+'\n';}
+    }else{
+      D.y.forEach(i=>colNum(i).forEach(v=>{if(isFinite(v))out+=esc(D.headers[i])+','+v+'\n';}));
+    }
     return out;
   }
   if(t==='histogram'||PIE_KEYS.includes(t)){
