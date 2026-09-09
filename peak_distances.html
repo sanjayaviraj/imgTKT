@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<!-- imgTKT — © 2026 Sanjaya VBD Aththawala Gedara. Free to use for any purpose at no cost. All other rights reserved; do not copy, modify, redistribute, or sell without written permission. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<title>Peak Distances</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.min.js"></script>
+<script>
+  // Fallback to the package-root browser bundle if the pinned path fails.
+  if (typeof GeoTIFF === 'undefined') {
+    document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/geotiff"></scr'+'ipt>');
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+  :root {
+    --bg-primary:#f8f9fa;--bg-secondary:#ffffff;--bg-panel:#ffffff;--bg-input:#ffffff;
+    --border:#dadce0;--text-primary:#202124;--text-secondary:#5f6368;--text-muted:#80868b;
+    --accent:#5FC44A;--accent-glow:rgba(95,196,74,0.16);--accent-hover:#4CAF3C;--green:#188038;--green-glow:rgba(24,128,56,0.10);
+    --red:#d93025;--yellow:#e37400;--pink:#F763AA;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Roboto',sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+  .header-title{font-family:'Roboto',sans-serif;font-size:22px;font-weight:500;letter-spacing:0;color:var(--text-primary);}
+  .header-subtitle{font-size:12px;color:var(--text-muted);font-family:'Roboto',sans-serif;}
+  .main{display:flex;flex:1;overflow:hidden;}
+  .left-panel{width:440px;min-width:440px;background:var(--bg-panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;order:2;}
+  .panel-section{padding:18px 22px;border-bottom:1px solid var(--border);}
+  .section-label{font-family:'Roboto',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.3px;text-transform:none;color:var(--text-primary);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;justify-content:space-between;}
+  .section-label .count{font-family:'Roboto Mono',monospace;font-size:11px;font-weight:400;color:var(--text-muted);}
+  .form-group{margin-bottom:10px;}
+  .form-group label{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:4px;}
+  .form-group input,.form-group select{width:100%;padding:8px 11px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-family:'Roboto Mono',monospace;font-size:13px;outline:none;transition:border-color 0.2s;box-shadow:none;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+  .hint{font-size:11px;color:var(--text-muted);line-height:1.5;}
+  .btn{width:100%;padding:9px 18px;border:1px solid var(--border);border-radius:999px;background:var(--bg-input);color:var(--text-primary);font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:none;}
+  .btn:hover:not(:disabled){background:var(--bg-primary);border-color:var(--accent);color:var(--accent);}
+  .btn.active{background:var(--accent-glow);border-color:var(--accent);color:var(--accent);}
+  .btn.danger{border-color:var(--pink);color:var(--pink);}
+  .btn.danger:hover:not(:disabled){background:rgba(247,99,170,0.08);border-color:var(--pink);color:var(--pink);}
+  .btn.success{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.success:hover:not(:disabled){background:var(--accent-hover);border-color:var(--accent-hover);color:#fff;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-row{display:flex;gap:8px;margin-top:8px;}
+  .btn-row .btn{flex:1;}
+  .color-options{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
+  .color-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid var(--border);transition:all 0.15s;}
+  .color-swatch:hover{transform:scale(1.1);}
+  .color-swatch.active{border-color:var(--text-primary);transform:scale(1.12);}
+  .ch-toggles{display:flex;flex-direction:column;gap:8px;}
+  .ch{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--bg-input);cursor:pointer;font-size:12px;transition:all 0.15s;}
+  .ch:hover{border-color:var(--accent);}
+  .ch .sw{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+  .ch .nm{flex:1;color:var(--text-secondary);white-space:nowrap;}
+  .ch input[type=range]{width:64px;accent-color:var(--accent);height:3px;}
+  .ch.off{opacity:0.4;}
+  .color-pop{position:fixed;z-index:100000;background:#fff;border:1px solid #dadce0;border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px;display:flex;flex-direction:column;gap:7px}
+  .pop-row{display:flex;gap:6px}
+  .cp-swatch{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
+  .cp-swatch:hover{transform:scale(1.12);border-color:rgba(0,0,0,.35)}
+  .cp-swatch.sel{outline:2px solid #202124;outline-offset:1px}
+  .lut-swatch{flex:1;height:20px;border-radius:6px;border:1px solid rgba(0,0,0,.15);cursor:pointer;padding:0;transition:transform .1s}
+  .lut-swatch:hover{transform:scale(1.05);border-color:rgba(0,0,0,.35)}
+  .lut-swatch.sel{outline:2px solid #202124;outline-offset:1px}
+  .pop-custom{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:#5f6368;cursor:pointer}
+  .pop-custom input{width:34px;height:22px;border:1px solid #dadce0;border-radius:5px;background:none;cursor:pointer;padding:0}
+  .ch-block{display:flex;flex-direction:column;gap:6px;}
+  .rng{display:flex;align-items:center;gap:6px;padding:0 6px;}
+  .rng label{font-size:10px;color:var(--text-muted);white-space:nowrap;}
+  .rng .num{width:60px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;
+    color:var(--text-primary);padding:5px 7px;font-family:'Roboto Mono',monospace;font-size:11px;}
+  .auto-btn{background:var(--bg-input);border:1px solid var(--border);color:var(--text-muted);border-radius:4px;
+    padding:4px 7px;font-family:'Roboto Mono',monospace;font-size:10px;cursor:pointer;}
+  .auto-btn:hover{color:var(--accent);border-color:var(--accent);}
+  .toggle-line{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:var(--text-secondary);cursor:pointer;}
+  .toggle-line input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;}
+  /* recorded-distances table */
+  .rec-summary{font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text-secondary);margin-bottom:8px;line-height:1.6;}
+  .rec-summary b{color:var(--text-primary);}
+  .rec-table-wrap{max-height:230px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;}
+  table.rec{width:100%;border-collapse:collapse;font-family:'Roboto Mono',monospace;font-size:11px;}
+  table.rec th{position:sticky;top:0;background:var(--bg-primary);color:var(--text-secondary);font-weight:500;padding:6px 7px;text-align:left;border-bottom:1px solid var(--border);font-size:10px;white-space:nowrap;}
+  table.rec td{padding:4px 7px;border-bottom:1px solid var(--border);color:var(--text-primary);white-space:nowrap;}
+  table.rec tr:last-child td{border-bottom:none;}
+  table.rec .cat-in{width:96px;border:1px solid transparent;background:transparent;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text-primary);outline:none;padding:2px 4px;border-radius:3px;}
+  table.rec .cat-in:hover{border-color:var(--border);}
+  table.rec .cat-in:focus{border-color:var(--accent);background:#fff;}
+  table.rec .del{border:none;background:none;color:var(--pink);cursor:pointer;font-size:12px;padding:0 2px;line-height:1;}
+  table.rec .del:hover{transform:scale(1.2);}
+  .rec-chip{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:2px;vertical-align:middle;}
+  .rec-empty{padding:16px;text-align:center;color:var(--text-muted);font-size:11px;font-family:'Roboto Mono',monospace;}
+  .image-viewer{flex:1;display:flex;flex-direction:column;position:relative;background:var(--bg-primary);overflow:hidden;}
+  .viewer-head{background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0;}
+  .filename{padding:9px 14px 0;font-family:'Roboto',sans-serif;font-size:13px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pill{background:var(--bg-primary);border:1px solid var(--border);border-radius:999px;padding:6px 13px;color:var(--text-secondary);font-size:12px;font-family:'Roboto Mono',monospace;white-space:nowrap;}
+  .pill b{color:var(--text-primary)}
+  .viewer-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;flex-shrink:0;flex-wrap:wrap;}
+  .toolbar-btn{padding:9px 18px;background:var(--bg-input);border:1px solid var(--border);border-radius:999px;color:var(--text-primary);font-size:13px;font-weight:500;letter-spacing:0.25px;cursor:pointer;font-family:'Roboto',sans-serif;transition:all 0.15s;}
+  .toolbar-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--bg-primary);}
+  .toolbar-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .toolbar-sep{width:1px;height:20px;background:var(--border);}
+  .toolbar-info{margin-left:auto;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text-muted);}
+  .canvas-wrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+  .canvas-wrap canvas{position:absolute;top:0;left:0;}
+  #imageCanvas{image-rendering:pixelated;}
+  #overlayCanvas{cursor:crosshair;z-index:2;}
+  .empty-state{position:absolute;top:24px;left:24px;right:24px;bottom:24px;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:var(--bg-secondary);border:1.5px dashed var(--border);border-radius:8px;padding:42px 24px;cursor:pointer;transition:border-color 0.2s,background 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+  .empty-state:hover{border-color:var(--accent);background:var(--accent-glow);}
+  .empty-state strong{font-family:'Roboto',sans-serif;font-size:17px;font-weight:600;display:block;margin-bottom:6px;color:var(--text-primary);}
+  .empty-state span{color:var(--text-muted);font-size:12.5px;}
+  .bottom-panel{height:270px;min-height:160px;background:var(--bg-secondary);border-top:1px solid var(--border);display:flex;flex-shrink:0;position:relative;box-shadow:0 -1px 3px rgba(0,0,0,0.05);}
+  .chart-container{flex:1;padding:12px 18px 10px 12px;position:relative;}
+  .chart-container canvas{width:100%!important;height:100%!important;}
+  #profileChart{cursor:crosshair;}
+  .chart-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 24px;color:var(--text-muted);font-size:12px;font-family:'Roboto Mono',monospace;}
+  .chart-empty .chart-desc{max-width:600px;font-family:'Roboto',sans-serif;font-size:13px;line-height:1.6;color:var(--text-secondary);}
+  .resize-handle{position:absolute;top:-3px;left:0;right:0;height:6px;cursor:ns-resize;z-index:10;}
+  .status-bar{padding:4px 20px;background:var(--bg-secondary);border-top:1px solid var(--border);font-family:'Roboto Mono',monospace;font-size:10px;color:var(--text-muted);display:flex;gap:20px;flex-shrink:0;}
+  ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="display:flex;align-items:center;gap:16px"><div class="header-title">Peak Distances<span style="color:var(--accent)">.</span></div>
+    <nav style="display:flex;gap:4px">
+      <a href="index.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Home</a>
+      <a href="size_analysis.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Size Analysis</a>
+      <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Line Profile</a>
+      <a href="peak_distances.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;background:var(--accent);color:#fff">Peak Distances</a>
+      <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">ROI Inspector</a>
+      <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Correlations</a>
+      <a href="measure_angles.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Measure Angles</a>
+      <a href="particle_analyzer.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Particle Analyzer</a>
+      <a href="plot_data.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Plot Data</a>
+    </nav>
+    <div class="header-subtitle">Peak-to-Peak Distance from Line Profiles</div>
+  </div>
+</div>
+<div class="main">
+  <div class="left-panel">
+    <input type="file" id="fileInput" accept=".tif,.tiff,.png,.jpg,.jpeg,.bmp" style="display:none">
+    <div class="panel-section" id="channelSection" style="display:none">
+      <div class="section-label">Channels</div>
+      <div class="ch-toggles" id="chToggles"></div>
+      <div class="hint" style="margin-top:8px">Click a channel to show / hide it. Slider adjusts display brightness; set display min / max to fix the contrast range (profiles use raw values).</div>
+      <button class="btn" id="btnNormalize" style="margin-top:10px">Normalize (0–1)</button>
+    </div>
+    <div class="panel-section">
+      <div class="section-label">Calibration</div>
+      <div class="form-group">
+        <label>Pixel Size (nm)</label>
+        <input type="number" id="pixelSize" value="1" min="0.0001" step="any">
+      </div>
+      <div class="hint">Distances are reported in these units. Set to 1 to measure in pixels.</div>
+    </div>
+    <div class="panel-section">
+      <div class="section-label">Line</div>
+      <div class="form-group">
+        <label>Line Type</label>
+        <div class="btn-row" style="margin-top:0">
+          <button class="btn active" id="btnLineStraight">╱ Straight</button>
+          <button class="btn" id="btnLineFree">✎ Freehand</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Line Width (px)</label>
+        <input type="number" id="lineWidth" value="1" min="1" max="50" step="1">
+      </div>
+      <div class="form-group">
+        <label>Line Color</label>
+        <div class="color-options">
+          <div class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></div>
+          <div class="color-swatch" style="background:#ffd400" data-color="#ffd400"></div>
+          <div class="color-swatch" style="background:#F763AA" data-color="#F763AA"></div>
+          <div class="color-swatch" style="background:#5FC44A" data-color="#5FC44A"></div>
+          <div class="color-swatch" style="background:#00e5ff" data-color="#00e5ff"></div>
+          <div class="color-swatch" style="background:#ff5252" data-color="#ff5252"></div>
+          <div class="color-swatch" style="background:#202124" data-color="#202124"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="btnDraw">✏️ Draw</button>
+        <button class="btn danger" id="btnClear">✕ Clear lines</button>
+      </div>
+      <div class="hint" style="margin-top:8px">Enable Draw, then drag a line across the peaks you want to measure.</div>
+    </div>
+    <div class="panel-section">
+      <div class="section-label">Peak-to-peak</div>
+      <div class="form-group">
+        <label>Category (label for the next distance)</label>
+        <input type="text" id="catInput" placeholder="e.g. lamella spacing" value="Category 1">
+      </div>
+      <div class="form-group">
+        <label>Measure on channel</label>
+        <select id="measCh"><option value="0">Channel 1</option></select>
+      </div>
+      <label class="toggle-line" style="margin-bottom:8px"><input type="checkbox" id="snapChk" checked>Snap click to nearest peak</label>
+      <div class="form-group" id="snapWinGroup">
+        <label>Snap window (± samples)</label>
+        <input type="number" id="snapWin" value="1" min="0" max="60" step="1">
+      </div>
+      <div class="hint">Draw a line, then <b>click two peaks on the plot below</b>. The first click sets peak 1; the second computes the distance, marks it on the image and the plot, and records it under the current category. Then move along and click the next pair.</div>
+      <button class="btn" id="btnUndoPending" style="margin-top:10px" disabled>↩ Cancel pending peak</button>
+    </div>
+    <div class="panel-section">
+      <div class="section-label">Recorded distances<span class="count" id="recCount"></span></div>
+      <div class="rec-summary" id="recSummary" style="display:none"></div>
+      <div class="rec-table-wrap">
+        <table class="rec">
+          <thead><tr><th>#</th><th>Category</th><th>Ch</th><th>Peak 1</th><th>Peak 2</th><th>Distance</th><th></th></tr></thead>
+          <tbody id="recBody"><tr><td colspan="7" class="rec-empty">No distances recorded yet.</td></tr></tbody>
+        </table>
+      </div>
+      <button class="btn success" id="btnDownloadCSV" style="margin-top:10px" disabled>⬇ Download distances CSV</button>
+      <div class="btn-row">
+        <button class="btn" id="btnPlotData" disabled>📊 Plot this data →</button>
+        <button class="btn danger" id="btnClearAll" disabled>Clear all</button>
+      </div>
+      <div class="btn-row"><button class="btn" id="btnProfileCSV" disabled>⬇ Profile CSV (raw curve)</button></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-label">Export figure</div>
+      <div class="hint" style="margin-bottom:8px">Save the image with the line and recorded peak markers overlaid — at full image resolution. SVG keeps the overlay as true vectors.</div>
+      <label class="toggle-line" style="margin-bottom:8px"><input type="checkbox" id="expView">Current view only (crop to what's on screen)</label>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn" id="expPng" disabled>PNG</button>
+        <button class="btn" id="expJpg" disabled>JPG</button>
+        <button class="btn" id="expSvg" disabled>SVG</button>
+      </div>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div class="image-viewer" id="imageViewer">
+      <div class="viewer-head">
+        <div class="filename" id="fileName" style="display:none"></div>
+        <div class="viewer-toolbar">
+          <span class="pill">Size <b id="pSize">–</b></span>
+          <span class="pill">Channels <b id="pCh">–</b></span>
+          <span class="pill">Bit depth <b id="pBits">–</b></span>
+          <span id="loadActions" style="display:none">
+            <button class="toolbar-btn" id="btnClearTop">Clear lines</button>
+            <button class="toolbar-btn" id="btnReset">Load another</button>
+          </span>
+          <span class="toolbar-info" id="cursorInfo">—</span>
+        </div>
+        <div class="viewer-toolbar" style="padding-top:0">
+          <span class="pill" style="display:flex;align-items:center;gap:8px">Zoom
+            <input type="range" id="zoomSlider" min="0.25" max="8" step="0.05" value="1" style="width:130px;accent-color:var(--accent)">
+            <b id="zoomInfo" style="min-width:42px;text-align:right;color:var(--text-primary)">100%</b>
+          </span>
+          <button class="toolbar-btn" id="btnZoomOut">−</button>
+          <button class="toolbar-btn" id="btn1to1">100%</button>
+          <button class="toolbar-btn" id="btnFit">Fit</button>
+          <button class="toolbar-btn" id="btnZoomIn">+</button>
+        </div>
+        <div class="viewer-toolbar" id="ztBar" style="display:none;padding-top:0"></div>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="empty-state" id="emptyState">
+          <strong>Drop an image here</strong>
+          <span>or click to browse · multi-channel TIFF / OME-TIFF · RGB PNG/JPG</span>
+        </div>
+        <canvas id="imageCanvas"></canvas>
+        <canvas id="overlayCanvas"></canvas>
+      </div>
+    </div>
+    <div class="bottom-panel" id="bottomPanel">
+      <div class="resize-handle" id="resizeHandle"></div>
+      <div class="chart-container">
+        <div class="chart-empty" id="chartEmpty">
+          <p class="chart-desc">Draw a line across a row of peaks, then click two peaks on this plot to measure and record their separation. Hover the plot to see the matching position on the image in real time; each recorded distance is drawn on the image and the graph and saved under a category you name — build up a whole table, then export it as CSV.</p>
+          Draw a line, then click two peaks to record their distance
+        </div>
+        <canvas id="profileChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="status-bar">
+  <span id="statusText">Ready</span>
+  <span id="statusDim">—</span>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const S={channels:[],nCh:0,colors:[],lut:[],visible:[],bright:[],dispMin:[],dispMax:[],width:0,height:0,zoom:1,panX:0,panY:0,
+  drawMode:true,drawing:false,lineType:'straight',linePts:null,lineStart:null,lineEnd:null,lineColor:'#ffffff',normalize:false,
+  xData:null,profiles:null,samplePts:null,lineId:0,
+  measCh:0,snap:true,snapWin:1,hoverIdx:null,pending:null,records:[]};
+const iC=$('imageCanvas'),oC=$('overlayCanvas');
+const iCtx=iC.getContext('2d'),oCtx=oC.getContext('2d');
+const wrap=$('canvasWrap');
+
+/* ---------- channel colors (any number of channels) ---------- */
+// Shared channel palette — kept identical across tools: magenta, green, cyan, yellow, red, blue, orange, purple, mint, pink
+const BASE_COLORS=[
+  [236,64,209],[95,196,74],[64,208,224],[255,206,84],
+  [237,85,101],[93,156,236],[246,146,30],[172,127,244],
+  [120,255,160],[236,120,170]
+];
+function hslToRgb(h,s,l){h/=360;const f=n=>{const k=(n+h*12)%12;const a=s*Math.min(l,1-l);return l-a*Math.max(-1,Math.min(k-3,9-k,1));};return[Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];}
+function channelColor(i){return i<BASE_COLORS.length?BASE_COLORS[i].slice():hslToRgb((i*137.508)%360,0.65,0.6);}
+const rgb=c=>'rgb('+c[0]+','+c[1]+','+c[2]+')';
+// Distinct per-record colour so each measured distance is its own hue on the image & plot.
+function recColor(k){return hslToRgb((k*67+15)%360,0.78,0.5);}
+function recColorCss(k){return rgb(recColor(k));}
+
+/* ---------- file loading ---------- */
+const fi=$('fileInput');
+fi.addEventListener('change',e=>{if(e.target.files.length)handleFile(e.target.files[0]);});
+wrap.addEventListener('dragover',e=>{e.preventDefault();wrap.style.outline='2px dashed var(--accent)';wrap.style.outlineOffset='-6px';});
+wrap.addEventListener('dragleave',()=>{wrap.style.outline='none';});
+wrap.addEventListener('drop',e=>{e.preventDefault();wrap.style.outline='none';if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0]);});
+$('emptyState').addEventListener('click',()=>fi.click());
+
+function handleFile(file){
+  const ext=file.name.split('.').pop().toLowerCase();
+  const fn=$('fileName'); fn.textContent=file.name; fn.title=file.name; fn.style.display='block';
+  $('statusText').textContent='Loading…';
+  if(ext==='tif'||ext==='tiff')loadTiff(file);else loadStd(file);
+}
+
+function toChannel(arr){let mn=Infinity,mx=-Infinity;for(let i=0;i<arr.length;i++){const v=arr[i];if(v<mn)mn=v;if(v>mx)mx=v;}if(mx===mn)mx=mn+1;return{data:arr,min:mn,max:mx};}
+
+/* ---------- dimension metadata (separate channels from Z-slices / time points) ---------- */
+// TIFF pages can be channels, Z-slices, or time points; read the real layout from OME-XML or ImageJ
+// metadata so a z-stack / time series isn't mistaken for N "channels".
+function parseDims(desc){
+  if(!desc) return null;
+  const pm=desc.match(/<Pixels\b[^>]*>/i);
+  if(pm){
+    const gi=k=>{const r=pm[0].match(new RegExp(k+'\\s*=\\s*"(\\d+)"'));return r?+r[1]:null;};
+    const nC=gi('SizeC');
+    if(nC){const od=pm[0].match(/DimensionOrder\s*=\s*"([A-Za-z]+)"/);
+      return {nC:nC,nZ:gi('SizeZ')||1,nT:gi('SizeT')||1,order:od?od[1].toUpperCase():'XYCZT',source:'OME'};}
+  }
+  if(/ImageJ\s*=/.test(desc)){
+    const gi=k=>{const r=desc.match(new RegExp('(?:^|[\\n\\r])'+k+'\\s*=\\s*(\\d+)'));return r?+r[1]:null;};
+    const nC=gi('channels'),nZ=gi('slices'),nT=gi('frames');
+    if(nC||nZ||nT) return {nC:nC||1,nZ:nZ||1,nT:nT||1,order:'XYCZT',source:'ImageJ'};
+  }
+  return null;
+}
+function planeIndex(c,z,t,D){
+  const val={C:c,Z:z,T:t},num={C:D.nC,Z:D.nZ,T:D.nT};
+  const seq=(D.order||'XYCZT').replace(/[^CZT]/g,'').split('');
+  let idx=0,stride=1;
+  for(const ch of seq){ idx+=val[ch]*stride; stride*=num[ch]; }
+  return idx;
+}
+async function readPlaneChannels(z,t){
+  const D=S.dims,out=[];
+  if(S.planeMode==='samples'){
+    const r=await S.first.readRasters();
+    for(let c=0;c<D.nC;c++) out.push(toChannel(r[c]));
+  }else{
+    for(let c=0;c<D.nC;c++){
+      const img=await S.tiff.getImage(planeIndex(c,z,t,D));
+      const r=await img.readRasters();
+      out.push(toChannel(r[0]));
+    }
+  }
+  return out;
+}
+async function gotoPlane(z,t){
+  const D=S.dims; z=Math.max(0,Math.min(D.nZ-1,z)); t=Math.max(0,Math.min(D.nT-1,t));
+  S.z=z; S.t=t;
+  S.channels=await readPlaneChannels(z,t);
+  render(); renderOverlay();
+  if(S.profiles) extractProfiles();     // refresh the plotted profile for the new plane
+}
+async function reinterpret(mode){
+  const N=S.pageCount;
+  S.dims = mode==='z' ? {nC:1,nZ:N,nT:1,order:'XYCZT'}
+        : mode==='t' ? {nC:1,nZ:1,nT:N,order:'XYCZT'}
+        : {nC:N,nZ:1,nT:1,order:'XYCZT'};
+  S.z=0; S.t=0;
+  const ch=await readPlaneChannels(0,0);
+  setChannels(ch,S.width,S.height,S.bits);
+}
+function makeSlider(label,n,getV,onSet){
+  const pill=document.createElement('span'); pill.className='pill'; pill.style.cssText='display:inline-flex;align-items:center;gap:8px';
+  const sl=document.createElement('input'); sl.type='range'; sl.min=0; sl.max=n-1; sl.step=1; sl.value=getV();
+  sl.style.cssText='width:118px;accent-color:var(--accent)';
+  const lab=document.createElement('b'); lab.style.cssText='min-width:52px;text-align:right;color:var(--text-primary)'; lab.textContent=(getV()+1)+' / '+n;
+  sl.oninput=()=>{ lab.textContent=(+sl.value+1)+' / '+n; onSet(+sl.value); };
+  pill.append(label+' ', sl, lab);
+  return pill;
+}
+function buildZT(){
+  const bar=$('ztBar'); if(!bar) return; bar.innerHTML=''; const D=S.dims;
+  if(S.ambiguous){
+    const wrap=document.createElement('span'); wrap.className='pill'; wrap.style.cssText='display:inline-flex;align-items:center;gap:8px';
+    const sel=document.createElement('select'); sel.style.cssText='background:var(--bg-input);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-family:Roboto Mono,monospace;font-size:12px;padding:3px 6px';
+    sel.innerHTML='<option value="channels">'+S.pageCount+' channels</option><option value="z">'+S.pageCount+' Z-slices</option><option value="t">'+S.pageCount+' time points</option>';
+    sel.value = D.nZ>1?'z':(D.nT>1?'t':'channels');
+    sel.onchange=()=>reinterpret(sel.value);
+    wrap.append(S.pageCount+' pages =', sel);
+    bar.appendChild(wrap);
+  }
+  if(D.nZ>1) bar.appendChild(makeSlider('Z slice',D.nZ,()=>S.z,v=>gotoPlane(v,S.t)));
+  if(D.nT>1) bar.appendChild(makeSlider('Time',D.nT,()=>S.t,v=>gotoPlane(S.z,v)));
+  bar.style.display=(S.ambiguous||D.nZ>1||D.nT>1)?'flex':'none';
+}
+
+async function loadTiff(file){
+  if(typeof GeoTIFF==='undefined'){loadTiffUTIF(file);return;}
+  try{
+    const buf=await file.arrayBuffer();
+    const tiff=await GeoTIFF.fromArrayBuffer(buf);
+    const count=await tiff.getImageCount();
+    const first=await tiff.getImage(0);
+    const w=first.getWidth(),h=first.getHeight();
+    const spp=first.getSamplesPerPixel();
+    const bits=(first.getBitsPerSample&&first.getBitsPerSample()[0])||16;
+    const desc=first.fileDirectory?first.fileDirectory.ImageDescription:'';
+    let dims,planeMode='pages',ambiguous=false;
+    const meta=parseDims(desc);
+    if(meta && spp===1 && meta.nC*meta.nZ*meta.nT===count){ dims=meta; }
+    else if(spp>=2){ dims={nC:spp,nZ:1,nT:1,order:'XYCZT'}; planeMode='samples'; }
+    else if(count>=2){ dims={nC:count,nZ:1,nT:1,order:'XYCZT'}; ambiguous=true; }
+    else { dims={nC:1,nZ:1,nT:1,order:'XYCZT'}; planeMode='samples'; }
+    S.tiff=tiff; S.first=first; S.pageCount=count; S.dims=dims; S.planeMode=planeMode; S.ambiguous=ambiguous; S.z=0; S.t=0;
+    const channels=await readPlaneChannels(0,0);
+    setChannels(channels,w,h,bits);
+  }catch(err){console.error(err);loadTiffUTIF(file);}
+}
+
+function loadTiffUTIF(file){
+  if(typeof UTIF==='undefined'){$('statusText').textContent='TIFF decoder failed to load — check connection and reload';return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      S.dims=null;                       // fallback decoder: plain channels, no Z/T
+      const buf=new Uint8Array(e.target.result);
+      const ifds=UTIF.decode(buf);UTIF.decodeImage(buf,ifds[0]);
+      const ifd=ifds[0],w=ifd.width,h=ifd.height;
+      const rgba=UTIF.toRGBA8(ifd);
+      const gray=new Float32Array(w*h);
+      for(let i=0;i<w*h;i++)gray[i]=.299*rgba[i*4]+.587*rgba[i*4+1]+.114*rgba[i*4+2];
+      if(ifd.t258&&ifd.t258[0]>8){const data=ifd.data,samples=ifd.t277?ifd.t277[0]:1;if(samples===1&&data.length>=w*h*2)for(let i=0;i<w*h;i++)gray[i]=data[i*2]|(data[i*2+1]<<8);}
+      setChannels([toChannel(gray)],w,h,(ifd.t258&&ifd.t258[0])||8);
+    }catch(err){console.error(err);loadStd(file);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function loadStd(file){
+  const img=new Image();
+  img.onload=function(){
+    S.dims=null;                         // PNG/JPG: plain RGB channels, no Z/T
+    const w=img.width,h=img.height,N=w*h;
+    const tc=document.createElement('canvas');tc.width=w;tc.height=h;
+    const tctx=tc.getContext('2d');tctx.drawImage(img,0,0);
+    const id=tctx.getImageData(0,0,w,h).data;
+    const R=new Float32Array(N),G=new Float32Array(N),B=new Float32Array(N);
+    let color=false;
+    for(let i=0;i<N;i++){const r=id[i*4],g=id[i*4+1],b=id[i*4+2];R[i]=r;G[i]=g;B[i]=b;if(r!==g||g!==b)color=true;}
+    setChannels(color?[toChannel(R),toChannel(G),toChannel(B)]:[toChannel(R)],w,h,8);
+  };
+  img.src=URL.createObjectURL(file);
+}
+
+function setChannels(channels,w,h,bits){
+  // Non-TIFF / fallback loaders don't set dimension metadata — treat those as plain channels.
+  if(!S.dims){ S.dims={nC:channels.length,nZ:1,nT:1,order:'XYCZT'}; S.ambiguous=false; S.planeMode='samples'; S.pageCount=channels.length; S.z=0; S.t=0; }
+  S.bits=bits;
+  S.channels=channels;S.nCh=channels.length;S.width=w;S.height=h;
+  $('pSize').textContent=w+' × '+h;
+  $('pCh').textContent=channels.length;
+  $('pBits').textContent=(bits||8)+'-bit';
+  $('loadActions').style.display='contents';
+  S.colors=channels.map((_,i)=>channelColor(i));
+  S.lut=channels.map(()=>null);
+  S.visible=channels.map(()=>true);
+  S.bright=channels.map(()=>1);
+  S.lineStart=null;S.lineEnd=null;S.linePts=null;S.xData=null;S.profiles=null;S.samplePts=null;S.pending=null;S.hoverIdx=null;
+  if(S.measCh>=S.nCh)S.measCh=0;
+  buildChannelToggles();
+  buildMeasSelect();
+  buildZT();
+  $('emptyState').style.display='none';
+  $('statusDim').textContent=`${w} × ${h} px | ${S.nCh} channel${S.nCh>1?'s':''}`;
+  $('statusText').textContent='Image loaded';
+  clearChart();
+  updateProfileButtons();
+  $('expPng').disabled=$('expJpg').disabled=$('expSvg').disabled=false;
+  fitToView();render();renderOverlay();
+}
+
+function buildMeasSelect(){
+  const sel=$('measCh');sel.innerHTML='';
+  for(let i=0;i<S.nCh;i++){const o=document.createElement('option');o.value=i;o.textContent='Channel '+(i+1);sel.appendChild(o);}
+  sel.value=S.measCh;
+}
+$('measCh').addEventListener('change',e=>{S.measCh=parseInt(e.target.value)||0;S.pending=null;syncPendingBtn();if(chart)chart.update('none');renderOverlay();});
+
+function buildChannelToggles(){
+  const box=$('chToggles');box.innerHTML='';
+  $('channelSection').style.display='block';
+  // Display range defaults to each channel's data min/max.
+  S.dispMin=S.channels.map(c=>c.min);
+  S.dispMax=S.channels.map(c=>c.max);
+  for(let i=0;i<S.nCh;i++){
+    const block=document.createElement('div');block.className='ch-block';
+    const el=document.createElement('div');
+    el.className='ch';el.dataset.c=i;
+    el.innerHTML='<span class="sw" style="background:'+rgb(S.colors[i])+'"></span>'
+      +'<span class="nm">Channel '+(i+1)+'</span>'
+      +'<input type="range" min="0.2" max="8" step="0.1" value="1">';
+    el.addEventListener('click',ev=>{if(ev.target.tagName==='INPUT')return;S.visible[i]=!S.visible[i];el.classList.toggle('off',!S.visible[i]);render();if(S.profiles)plotProfiles();});
+    const sw=el.querySelector('.sw'); sw.style.cursor='pointer'; sw.title='Change channel color';
+    sw.addEventListener('click',ev=>{ ev.stopPropagation(); openColorPicker(i, sw); });
+    const sl=el.querySelector('input');
+    sl.addEventListener('input',e=>{S.bright[i]=parseFloat(e.target.value);render();});
+    sl.addEventListener('click',e=>e.stopPropagation());
+    const rng=document.createElement('div');rng.className='rng';
+    rng.innerHTML='<label>min/max</label>'
+      +'<input type="number" class="num rmin" step="1" value="'+Math.round(S.dispMin[i])+'">'
+      +'<input type="number" class="num rmax" step="1" value="'+Math.round(S.dispMax[i])+'">'
+      +'<button type="button" class="auto-btn" title="Reset to data range">auto</button>';
+    const rmin=rng.querySelector('.rmin'),rmax=rng.querySelector('.rmax');
+    rmin.addEventListener('input',()=>{S.dispMin[i]=parseFloat(rmin.value);render();});
+    rmax.addEventListener('input',()=>{S.dispMax[i]=parseFloat(rmax.value);render();});
+    rng.querySelector('.auto-btn').addEventListener('click',()=>{const ch=S.channels[i];S.dispMin[i]=ch.min;S.dispMax[i]=ch.max;rmin.value=Math.round(ch.min);rmax.value=Math.round(ch.max);render();});
+    block.appendChild(el);block.appendChild(rng);
+    box.appendChild(block);
+  }
+}
+
+/* ---------- channel colour picker (solid colours + LUTs + custom) ---------- */
+// Gray + 6 colour-blind-safe additive colours (blend correctly in the composite; avoid the red/green pair).
+const PICK_COLORS=[
+  ['Gray',[176,176,176]],['Magenta',[255,0,255]],['Green',[0,255,0]],['Cyan',[0,255,255]],
+  ['Yellow',[255,255,0]],['Orange',[255,140,0]],['Blue',[64,140,255]]
+];
+// Popular microscopy LUTs (gradient control points, low→high). Sampled per pixel in the composite; the
+// profile plot uses a representative solid colour for a LUT channel (a line can't be a gradient).
+const LUTS={
+  fire:   [[0,0,0],[20,0,70],[120,0,130],[200,20,20],[240,120,0],[255,200,0],[255,255,120],[255,255,255]],
+  viridis:[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]],
+  gfb:    [[0,0,0],[0,0,150],[0,120,180],[0,200,80],[180,240,40],[255,255,180],[255,255,255]]
+};
+const LUT_LABEL={fire:'Fire',viridis:'Viridis',gfb:'Green Fire Blue'};
+function lutRGB(name,x){ const s=LUTS[name]; if(!s) return [0,0,0];
+  const n=s.length-1, p=Math.max(0,Math.min(1,x))*n, i=Math.min(n-1,Math.floor(p)), f=p-i, a=s[i], b=s[i+1];
+  return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f]; }
+function lutCss(name){ const s=LUTS[name]; return 'linear-gradient(90deg,'+s.map((c,k)=>rgb(c)+' '+Math.round(k/(s.length-1)*100)+'%').join(',')+')'; }
+function lutLabelColor(name){ return rgb(lutRGB(name,0.8).map(Math.round)); }
+const hex2rgb=h=>{ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; };
+const rgb2hex=c=>'#'+c.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+let _pickPop=null, _pickOutside=null;
+function closeColorPicker(){
+  if(_pickOutside){ document.removeEventListener('pointerdown',_pickOutside); _pickOutside=null; }
+  if(_pickPop){ _pickPop.remove(); _pickPop=null; }
+}
+function paintChannelSwatch(i){
+  const lut=S.lut&&S.lut[i];
+  const sw=document.querySelector('#chToggles .ch[data-c="'+i+'"] .sw');
+  if(sw) sw.style.background = lut ? lutCss(lut) : rgb(S.colors[i]);
+}
+function refreshChannelColor(){ if(S.nCh) render(); if(S.profiles) plotProfiles(); }
+function setChannelColor(i,col){ S.colors[i]=col.slice(); if(S.lut) S.lut[i]=null; paintChannelSwatch(i); refreshChannelColor(); }
+function setChannelLUT(i,name){ if(!S.lut) S.lut=[]; S.lut[i]=name; paintChannelSwatch(i); refreshChannelColor(); }
+function openColorPicker(i,anchor){
+  closeColorPicker();
+  const pop=document.createElement('div'); pop.className='color-pop';
+  const cur=S.colors[i]||[], curLut=(S.lut&&S.lut[i])||null;
+  const solids=document.createElement('div'); solids.className='pop-row';
+  PICK_COLORS.forEach(([name,c])=>{
+    const b=document.createElement('button'); b.type='button'; b.className='cp-swatch'; b.title=name; b.style.background=rgb(c);
+    if(!curLut && cur[0]===c[0]&&cur[1]===c[1]&&cur[2]===c[2]) b.classList.add('sel');
+    b.onclick=ev=>{ ev.stopPropagation(); setChannelColor(i,c); closeColorPicker(); };
+    solids.appendChild(b);
+  });
+  pop.appendChild(solids);
+  const luts=document.createElement('div'); luts.className='pop-row';
+  Object.keys(LUTS).forEach(name=>{
+    const b=document.createElement('button'); b.type='button'; b.className='lut-swatch'; b.title=LUT_LABEL[name]; b.style.background=lutCss(name);
+    if(curLut===name) b.classList.add('sel');
+    b.onclick=ev=>{ ev.stopPropagation(); setChannelLUT(i,name); closeColorPicker(); };
+    luts.appendChild(b);
+  });
+  pop.appendChild(luts);
+  const custom=document.createElement('label'); custom.className='pop-custom';
+  const inp=document.createElement('input'); inp.type='color'; inp.value=rgb2hex(curLut?[255,255,255]:cur);
+  inp.oninput=ev=>{ setChannelColor(i, hex2rgb(ev.target.value)); };
+  custom.append('Custom', inp);
+  pop.appendChild(custom);
+  document.body.appendChild(pop);
+  const r=anchor.getBoundingClientRect();
+  pop.style.left=Math.max(8, Math.min(window.innerWidth-pop.offsetWidth-8, r.left))+'px';
+  pop.style.top=(r.bottom+6)+'px';
+  _pickPop=pop;
+  _pickOutside=ev=>{ if(_pickPop && !_pickPop.contains(ev.target) && ev.target!==anchor) closeColorPicker(); };
+  document.addEventListener('pointerdown',_pickOutside);
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  if(!S.nCh)return;
+  const w=S.width,h=S.height,N=w*h;iC.width=w;iC.height=h;
+  const img=iCtx.createImageData(w,h),d=img.data;
+  for(let p=0;p<N;p++){
+    let r=0,g=0,b=0;
+    for(let c=0;c<S.nCh;c++){
+      if(!S.visible[c])continue;
+      const ch=S.channels[c];
+      const lo=S.dispMin[c],hi=S.dispMax[c];
+      let t=((ch.data[p]-lo)/((hi-lo)||1))*S.bright[c];
+      if(t<0)t=0;else if(t>1)t=1;
+      const lut=S.lut&&S.lut[c];
+      if(lut){ const rc=lutRGB(lut,t); r+=rc[0]; g+=rc[1]; b+=rc[2]; }
+      else { const col=S.colors[c]; r+=t*col[0]; g+=t*col[1]; b+=t*col[2]; }
+    }
+    d[p*4]=r>255?255:r;d[p*4+1]=g>255?255:g;d[p*4+2]=b>255?255:b;d[p*4+3]=255;
+  }
+  iCtx.putImageData(img,0,0);applyTransform();
+}
+
+function applyTransform(){
+  // Image canvas: native-res bitmap, CSS-scaled by zoom (crisp via image-rendering:pixelated).
+  iC.style.width=S.width*S.zoom+'px';iC.style.height=S.height*S.zoom+'px';iC.style.left=S.panX+'px';iC.style.top=S.panY+'px';
+  // Overlay canvas: screen-resolution so drawn lines/markers stay crisp at any zoom.
+  const cw=wrap.clientWidth,ch=wrap.clientHeight,dpr=window.devicePixelRatio||1;
+  oC.width=Math.round(cw*dpr);oC.height=Math.round(ch*dpr);
+  oC.style.width=cw+'px';oC.style.height=ch+'px';oC.style.left='0px';oC.style.top='0px';
+  oCtx.setTransform(dpr,0,0,dpr,0,0);
+  renderOverlay();
+  $('zoomInfo').textContent=Math.round(S.zoom*100)+'%';
+  const zs=$('zoomSlider'); if(zs) zs.value=Math.max(0.25,Math.min(8,S.zoom));
+}
+// image px -> screen (CSS) px within the wrap
+function toScreen(p){return{x:S.panX+p.x*S.zoom,y:S.panY+p.y*S.zoom};}
+
+function fitToView(){
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  const sx=(ww-20)/S.width,sy=(wh-20)/S.height;
+  S.zoom=Math.min(sx,sy,8);S.panX=(ww-S.width*S.zoom)/2;S.panY=(wh-S.height*S.zoom)/2;applyTransform();
+}
+
+function setZoomCentered(z){
+  if(!S.nCh)return;
+  z=Math.max(0.1,Math.min(50,z));
+  const ww=wrap.clientWidth,wh=wrap.clientHeight;
+  const cx=(ww/2-S.panX)/S.zoom, cy=(wh/2-S.panY)/S.zoom;   // image point under the viewport center
+  S.zoom=z;S.panX=ww/2-cx*z;S.panY=wh/2-cy*z;applyTransform();
+}
+$('btnZoomIn').addEventListener('click',()=>setZoomCentered(S.zoom*1.3));
+$('btnZoomOut').addEventListener('click',()=>setZoomCentered(S.zoom/1.3));
+$('btnFit').addEventListener('click',fitToView);
+$('btn1to1').addEventListener('click',()=>setZoomCentered(1));
+$('zoomSlider').addEventListener('input',e=>setZoomCentered(parseFloat(e.target.value)));
+
+wrap.addEventListener('wheel',e=>{
+  if(!S.nCh)return;e.preventDefault();
+  const f=e.deltaY<0?1.1:0.9,r=wrap.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top,old=S.zoom;
+  S.zoom=Math.max(.1,Math.min(50,S.zoom*f));
+  S.panX=mx-(mx-S.panX)*(S.zoom/old);S.panY=my-(my-S.panY)*(S.zoom/old);applyTransform();
+});
+
+let isPan=false,psX,psY;
+wrap.addEventListener('mousedown',e=>{if(e.button===1||(e.button===0&&!S.drawMode)){isPan=true;psX=e.clientX-S.panX;psY=e.clientY-S.panY;oC.style.cursor='grabbing';e.preventDefault();}});
+window.addEventListener('mousemove',e=>{if(isPan){S.panX=e.clientX-psX;S.panY=e.clientY-psY;applyTransform();}});
+window.addEventListener('mouseup',()=>{isPan=false;oC.style.cursor=S.drawMode?'crosshair':'grab';});
+
+function canvasCoords(e){const r=wrap.getBoundingClientRect();return{x:(e.clientX-r.left-S.panX)/S.zoom,y:(e.clientY-r.top-S.panY)/S.zoom};}
+
+const btnDraw=$('btnDraw');
+btnDraw.classList.toggle('active',S.drawMode);          // Draw is selected by default
+oC.style.cursor=S.drawMode?'crosshair':'grab';
+btnDraw.addEventListener('click',()=>{S.drawMode=!S.drawMode;btnDraw.classList.toggle('active',S.drawMode);oC.style.cursor=S.drawMode?'crosshair':'grab';});
+// light clear: drops the drawn profile line only (used when switching line type); keeps recorded distances
+function clearCurrentLine(){S.lineStart=null;S.lineEnd=null;S.linePts=null;S.xData=null;S.profiles=null;S.samplePts=null;S.pending=null;S.hoverIdx=null;renderOverlay();clearChart();syncPendingBtn();updateProfileButtons();}
+// full clear: wipes the drawn line AND every recorded distance / marker on the image and plot
+function clearLines(){
+  if(S.records.length && !confirm('Clear the drawn line and all '+S.records.length+' recorded distance'+(S.records.length>1?'s':'')+'?'))return;
+  S.records=[];
+  clearCurrentLine();
+  renderRecords();
+  $('statusText').textContent='Cleared';
+}
+$('btnClear').addEventListener('click',clearLines);
+function setLineType(t){S.lineType=t;$('btnLineStraight').classList.toggle('active',t==='straight');$('btnLineFree').classList.toggle('active',t==='freehand');clearCurrentLine();}
+$('btnLineStraight').addEventListener('click',()=>setLineType('straight'));
+$('btnLineFree').addEventListener('click',()=>setLineType('freehand'));
+$('btnClearTop').addEventListener('click',clearLines);
+$('btnReset').addEventListener('click',resetImage);
+function resetImage(){
+  S.channels=[];S.nCh=0;S.width=0;S.height=0;
+  clearCurrentLine();
+  $('emptyState').style.display='';
+  $('channelSection').style.display='none';
+  $('chToggles').innerHTML='';
+  $('fileName').style.display='none';
+  $('loadActions').style.display='none';
+  $('expPng').disabled=$('expJpg').disabled=$('expSvg').disabled=true;
+  $('pSize').textContent='–';$('pCh').textContent='–';$('pBits').textContent='–';
+  $('statusDim').textContent='—';$('statusText').textContent='Ready';$('cursorInfo').textContent='—';
+  iCtx.clearRect(0,0,iC.width,iC.height);
+  oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
+  fi.value='';
+}
+
+oC.addEventListener('mousedown',e=>{
+  if(!S.drawMode||e.button!==0||!S.nCh)return;
+  S.drawing=true;S.lineId++;S.pending=null;syncPendingBtn();const p=canvasCoords(e);   // new line = new identity; drop any half-picked peak
+  if(S.lineType==='freehand'){S.linePts=[p];S.lineStart=p;S.lineEnd=null;}
+  else{S.lineStart=p;S.lineEnd=null;}
+});
+oC.addEventListener('mousemove',e=>{
+  if(!S.nCh)return;
+  const c=canvasCoords(e),px=Math.floor(c.x),py=Math.floor(c.y);
+  if(px>=0&&px<S.width&&py>=0&&py<S.height){
+    const vals=S.channels.map(ch=>ch.data[py*S.width+px].toFixed(0)).join(', ');
+    $('cursorInfo').textContent=`x:${px} y:${py} [${vals}]`;
+  }
+  if(S.drawing){
+    if(S.lineType==='freehand'){const last=S.linePts[S.linePts.length-1];const dx=c.x-last.x,dy=c.y-last.y;if(dx*dx+dy*dy>=1)S.linePts.push(c);S.lineEnd=c;}
+    else S.lineEnd=c;
+    renderOverlay();
+  }
+});
+oC.addEventListener('mouseup',e=>{
+  if(!S.drawing)return;S.drawing=false;const c=canvasCoords(e);
+  if(S.lineType==='freehand'){const lp=S.linePts;if(lp&&(c.x!==lp[lp.length-1].x||c.y!==lp[lp.length-1].y))lp.push(c);S.lineEnd=c;if(lp&&lp.length>=2)extractProfiles();}
+  else{S.lineEnd=c;if(S.lineStart&&S.lineEnd)extractProfiles();}
+});
+
+function renderOverlay(){
+  oCtx.clearRect(0,0,wrap.clientWidth,wrap.clientHeight);
+  // the drawn profile line
+  if(S.lineType==='freehand'){ if(S.linePts&&S.linePts.length>=2)drawPolyline(oCtx,S.linePts); }
+  else if(S.lineStart&&S.lineEnd)drawLine(oCtx,toScreen(S.lineStart),toScreen(S.lineEnd));
+  if(!S.nCh)return;
+  // recorded peak-pairs (absolute image coords → always valid even across redraws)
+  S.records.forEach((r,k)=>{
+    const col=recColorCss(k),a=toScreen(r.p1),b=toScreen(r.p2);
+    oCtx.save();oCtx.lineCap='round';
+    oCtx.lineWidth=1.5;oCtx.strokeStyle=col;
+    oCtx.beginPath();oCtx.moveTo(a.x,a.y);oCtx.lineTo(b.x,b.y);oCtx.stroke();
+    [a,b].forEach(q=>{oCtx.fillStyle=col;oCtx.beginPath();oCtx.arc(q.x,q.y,4,0,Math.PI*2);oCtx.fill();oCtx.lineWidth=1.2;oCtx.strokeStyle='rgba(0,0,0,0.55)';oCtx.stroke();});
+    const mx=(a.x+b.x)/2,my=(a.y+b.y)/2,txt='#'+(k+1)+'  '+r.dist.toFixed(1);
+    oCtx.font='600 11px "Roboto Mono",monospace';oCtx.textAlign='center';oCtx.textBaseline='middle';
+    const tw=oCtx.measureText(txt).width;
+    oCtx.fillStyle='rgba(0,0,0,0.62)';oCtx.fillRect(mx-tw/2-4,my-17,tw+8,15);
+    oCtx.fillStyle='#fff';oCtx.fillText(txt,mx,my-9.5);
+    oCtx.restore();
+  });
+  // pending peak 1
+  if(S.pending&&S.samplePts&&S.samplePts[S.pending.i]){
+    const q=toScreen(S.samplePts[S.pending.i]);
+    oCtx.save();oCtx.fillStyle='var(--accent)';oCtx.fillStyle='#5FC44A';
+    oCtx.beginPath();oCtx.arc(q.x,q.y,6,0,Math.PI*2);oCtx.fill();
+    oCtx.lineWidth=2;oCtx.strokeStyle='#fff';oCtx.stroke();oCtx.restore();
+  }
+  // hover locator (mirrors the plot cursor onto the image)
+  if(S.hoverIdx!=null&&S.samplePts&&S.samplePts[S.hoverIdx]){
+    const q=toScreen(S.samplePts[S.hoverIdx]);
+    oCtx.save();
+    oCtx.strokeStyle='rgba(0,0,0,0.6)';oCtx.lineWidth=3;oCtx.beginPath();oCtx.arc(q.x,q.y,7,0,Math.PI*2);oCtx.stroke();
+    oCtx.strokeStyle='#fff';oCtx.lineWidth=1.5;oCtx.beginPath();oCtx.arc(q.x,q.y,7,0,Math.PI*2);oCtx.stroke();oCtx.restore();
+  }
+}
+// pts in image px -> crisp screen-space polyline.
+function drawPolyline(ctx,pts){
+  ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
+  const trace=()=>{ctx.beginPath();pts.forEach((p,i)=>{const q=toScreen(p);if(i===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y);});ctx.stroke();};
+  ctx.lineWidth=4;ctx.strokeStyle='rgba(0,0,0,0.45)';trace();
+  ctx.lineWidth=2;ctx.strokeStyle=S.lineColor;trace();
+  [pts[0],pts[pts.length-1]].forEach(p=>{const q=toScreen(p);ctx.fillStyle=S.lineColor;ctx.beginPath();ctx.arc(q.x,q.y,4,0,Math.PI*2);ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.stroke();});
+  ctx.restore();
+}
+// s, en are in screen (CSS) px; widths are constant so the line is crisp at any zoom.
+function drawLine(ctx,s,en){
+  ctx.save();ctx.lineCap='round';
+  ctx.lineWidth=4;ctx.strokeStyle='rgba(0,0,0,0.45)';
+  ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(en.x,en.y);ctx.stroke();
+  ctx.lineWidth=2;ctx.strokeStyle=S.lineColor;
+  ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(en.x,en.y);ctx.stroke();
+  [s,en].forEach(p=>{ctx.fillStyle=S.lineColor;ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.stroke();});
+  ctx.restore();
+}
+
+// Average each channel's raw pixels across the line width, perpendicular to the local direction.
+function sampleAllAt(cx,cy,perpX,perpY,lw,out){
+  for(let c=0;c<S.nCh;c++){
+    let sum=0,cnt=0;
+    for(let w=-(lw-1)/2;w<=(lw-1)/2;w++){
+      const px=Math.round(cx+perpX*w),py=Math.round(cy+perpY*w);
+      if(px>=0&&px<S.width&&py>=0&&py<S.height){sum+=S.channels[c].data[py*S.width+px];cnt++;}
+    }
+    out[c].push(cnt>0?sum/cnt:0);
+  }
+}
+function extractProfiles(){
+  if(!S.nCh)return;
+  const lw=parseInt($('lineWidth').value)||1, pxSz=parseFloat($('pixelSize').value)||1;
+  const xData=[],profiles=S.channels.map(()=>[]),samplePts=[];
+  if(S.lineType==='freehand'&&S.linePts&&S.linePts.length>=2){
+    const pts=S.linePts,seg=[];let total=0;
+    for(let i=1;i<pts.length;i++){const dx=pts[i].x-pts[i-1].x,dy=pts[i].y-pts[i-1].y,L=Math.hypot(dx,dy);seg.push({L,dx,dy,x:pts[i-1].x,y:pts[i-1].y});total+=L;}
+    if(total<1){S.linePts=null;renderOverlay();return;}
+    const steps=Math.max(Math.round(total),2);
+    for(let i=0;i<=steps;i++){
+      const target=total*i/steps;let acc=0,si=0;while(si<seg.length-1&&acc+seg[si].L<target){acc+=seg[si].L;si++;}
+      const sg=seg[si],f=sg.L>0?(target-acc)/sg.L:0,nx=sg.L>0?sg.dx/sg.L:1,ny=sg.L>0?sg.dy/sg.L:0;
+      const sx=sg.x+sg.dx*f, sy=sg.y+sg.dy*f;
+      xData.push(target*pxSz);samplePts.push({x:sx,y:sy});
+      sampleAllAt(sx,sy,-ny,nx,lw,profiles);
+    }
+  } else if(S.lineStart&&S.lineEnd){
+    const s=S.lineStart,en=S.lineEnd,dx=en.x-s.x,dy=en.y-s.y,len=Math.sqrt(dx*dx+dy*dy);
+    if(len<1){S.lineEnd=null;renderOverlay();return;}
+    const steps=Math.max(Math.round(len),2),nx=dx/len,ny=dy/len;
+    for(let i=0;i<=steps;i++){const t=i/steps;const sx=s.x+dx*t,sy=s.y+dy*t;xData.push(t*len*pxSz);samplePts.push({x:sx,y:sy});sampleAllAt(sx,sy,-ny,nx,lw,profiles);}
+  } else return;
+  S.xData=xData;S.profiles=profiles;S.samplePts=samplePts;
+  plotProfiles();renderOverlay();
+  updateProfileButtons();
+}
+
+/* ---------- peak-to-peak measuring on the plot ---------- */
+$('snapChk').addEventListener('change',e=>{S.snap=e.target.checked;$('snapWinGroup').style.opacity=S.snap?'1':'0.4';});
+$('snapWin').addEventListener('change',e=>{S.snapWin=Math.max(0,parseInt(e.target.value)||0);});
+function snapIndex(idx){
+  if(!S.snap||!S.profiles)return idx;
+  const c=Math.min(S.measCh,S.nCh-1),prof=S.profiles[c];if(!prof)return idx;
+  const w=S.snapWin|0,n=prof.length;let best=idx,bv=prof[idx];
+  for(let j=Math.max(0,idx-w);j<=Math.min(n-1,idx+w);j++){if(prof[j]>bv){bv=prof[j];best=j;}}
+  return best;
+}
+function syncPendingBtn(){$('btnUndoPending').disabled=!S.pending;}
+$('btnUndoPending').addEventListener('click',()=>{S.pending=null;syncPendingBtn();if(chart)chart.update('none');renderOverlay();});
+
+function recordPair(i1,i2){
+  if(i1===i2||!S.samplePts)return;
+  const a=Math.min(i1,i2),b=Math.max(i1,i2),c=Math.min(S.measCh,S.nCh-1);
+  const prof=S.profiles[c],x1=S.xData[a],x2=S.xData[b],dist=Math.abs(x2-x1);
+  const p1=S.samplePts[a],p2=S.samplePts[b],pxSz=parseFloat($('pixelSize').value)||1;
+  const eucl=Math.hypot(p2.x-p1.x,p2.y-p1.y)*pxSz;
+  const cat=($('catInput').value||'').trim()||'uncategorized';
+  S.records.push({category:cat,ch:c,i1:a,i2:b,x1:x1,x2:x2,dist:dist,eucl:eucl,
+    p1:{x:p1.x,y:p1.y},p2:{x:p2.x,y:p2.y},val1:prof[a],val2:prof[b],lineId:S.lineId});
+  persistRecords();renderRecords();
+  $('statusText').textContent='Recorded distance #'+S.records.length+': '+dist.toFixed(2);
+}
+
+const pc=$('profileChart');
+function chartIndexFromEvent(e){
+  if(!chart||!S.xData||!chart.scales||!chart.scales.x)return null;
+  const r=pc.getBoundingClientRect(),px=e.clientX-r.left;
+  let idx=Math.round(chart.scales.x.getValueForPixel(px));
+  if(!isFinite(idx))return null;
+  return Math.max(0,Math.min(S.xData.length-1,idx));
+}
+pc.addEventListener('mousemove',e=>{
+  const idx=chartIndexFromEvent(e);if(idx==null)return;
+  if(idx===S.hoverIdx)return;
+  S.hoverIdx=idx;
+  const c=Math.min(S.measCh,S.nCh-1);
+  $('cursorInfo').textContent='profile @ '+S.xData[idx].toFixed(1)+'  ·  ch'+(c+1)+'='+S.profiles[c][idx].toFixed(1);
+  if(chart)chart.update('none');renderOverlay();
+});
+pc.addEventListener('mouseleave',()=>{if(S.hoverIdx==null)return;S.hoverIdx=null;if(chart)chart.update('none');renderOverlay();});
+pc.addEventListener('click',e=>{
+  const idx=chartIndexFromEvent(e);if(idx==null)return;
+  const s=snapIndex(idx);
+  if(!S.pending){S.pending={i:s};syncPendingBtn();}
+  else{recordPair(S.pending.i,s);S.pending=null;syncPendingBtn();}
+  if(chart)chart.update('none');renderOverlay();
+});
+
+/* ---------- plot ---------- */
+// Draws the peak cursors, the pending peak and every recorded pair on top of the profile lines.
+const peakPlugin={
+  id:'peakOverlay',
+  afterDatasetsDraw(c){
+    if(!S.xData)return;
+    const ctx=c.ctx,area=c.chartArea,xs=c.scales.x;if(!area||!xs)return;
+    const top=area.top,bot=area.bottom;
+    const pxOf=i=>xs.getPixelForValue(i);
+    // recorded pairs on the current line
+    S.records.forEach((r,k)=>{
+      if(r.lineId!==S.lineId||r.i1>=S.xData.length||r.i2>=S.xData.length)return;
+      const col=recColorCss(k),x1=pxOf(r.i1),x2=pxOf(r.i2);
+      ctx.save();
+      ctx.globalAlpha=0.55;ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([3,3]);
+      [x1,x2].forEach(x=>{ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bot);ctx.stroke();});
+      ctx.setLineDash([]);ctx.globalAlpha=1;
+      const y=top+11+(k%4)*13;
+      ctx.strokeStyle=col;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke();
+      [x1,x2].forEach(x=>{ctx.beginPath();ctx.moveTo(x,y-3);ctx.lineTo(x,y+3);ctx.stroke();});
+      ctx.fillStyle=col;ctx.font='600 10px "Roboto Mono",monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.fillText('#'+(k+1)+'  '+r.dist.toFixed(1),(x1+x2)/2,y-3);
+      ctx.restore();
+    });
+    // pending peak 1
+    if(S.pending){const x=pxOf(S.pending.i);ctx.save();ctx.strokeStyle='#5FC44A';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bot);ctx.stroke();
+      ctx.fillStyle='#188038';ctx.font='600 10px "Roboto Mono",monospace';ctx.textAlign='center';ctx.textBaseline='top';
+      ctx.fillText('peak 1 · click the 2nd peak',x,top+2);ctx.restore();}
+    // hover cursor
+    if(S.hoverIdx!=null){const x=pxOf(S.hoverIdx);ctx.save();ctx.strokeStyle='#80868b';ctx.lineWidth=1;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bot);ctx.stroke();ctx.restore();}
+  }
+};
+
+let chart=null;
+function plotProfiles(){
+  $('chartEmpty').style.display='none';
+  const norm=S.normalize;
+  const datasets=[];
+  S.profiles.forEach((p,c)=>{
+    if(!S.visible[c])return;
+    let data=p;
+    if(norm){
+      let mn=Infinity,mx=-Infinity;
+      for(const v of p){if(v<mn)mn=v;if(v>mx)mx=v;}
+      const rng=(mx-mn)||1;
+      data=p.map(v=>(v-mn)/rng);
+    }
+    const lineCol=(S.lut&&S.lut[c])?lutLabelColor(S.lut[c]):rgb(S.colors[c]);
+    datasets.push({label:'Channel '+(c+1),data,borderColor:lineCol,backgroundColor:'transparent',
+      borderWidth:2,pointRadius:0,tension:0,fill:false});
+  });
+  if(chart)chart.destroy();
+  chart=new Chart($('profileChart').getContext('2d'),{
+    type:'line',
+    data:{labels:S.xData.map(x=>x.toFixed(1)),datasets},
+    plugins:[peakPlugin],
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:false,
+      interaction:{mode:'index',intersect:false},
+      onHover:null,
+      plugins:{
+        legend:{display:S.nCh>1,position:'top',align:'end',labels:{boxWidth:8,boxHeight:8,usePointStyle:true,pointStyle:'circle',color:'#5f6368',font:{family:'Roboto',size:11},padding:14}},
+        tooltip:{enabled:true,backgroundColor:'#ffffff',titleColor:'#202124',bodyColor:'#5f6368',borderColor:'#dadce0',borderWidth:1,padding:10,titleFont:{family:'Roboto Mono',size:11},bodyFont:{family:'Roboto Mono',size:11},callbacks:{title:i=>'Distance: '+i[0].label,label:i=>`${i.dataset.label}: ${i.parsed.y.toFixed(norm?3:1)}`}}
+      },
+      scales:{
+        x:{title:{display:true,text:'Distance along line',color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10},maxTicksLimit:12},grid:{display:false},border:{color:'#dadce0'}},
+        y:{title:{display:true,text:norm?'Normalized intensity (0–1)':'Intensity (a.u.)',color:'#80868b',font:{family:'Roboto Mono',size:11}},min:norm?0:undefined,max:norm?1.05:undefined,ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:false},border:{color:'#dadce0'}}
+      }
+    }
+  });
+}
+function clearChart(){if(chart){chart.destroy();chart=null;}$('chartEmpty').style.display='flex';}
+
+/* ---------- records table + persistence ---------- */
+function updateProfileButtons(){$('btnProfileCSV').disabled=!S.profiles;}
+function renderRecords(){
+  const tb=$('recBody');
+  if(!S.records.length){
+    tb.innerHTML='<tr><td colspan="7" class="rec-empty">No distances recorded yet.</td></tr>';
+    $('recCount').textContent='';$('recSummary').style.display='none';
+    $('btnDownloadCSV').disabled=true;$('btnPlotData').disabled=true;$('btnClearAll').disabled=true;
+    persistRecords();return;
+  }
+  $('recCount').textContent='('+S.records.length+')';
+  $('btnDownloadCSV').disabled=false;$('btnPlotData').disabled=false;$('btnClearAll').disabled=false;
+  // summary (overall mean ± SD of the recorded distances)
+  const d=S.records.map(r=>r.dist),m=d.reduce((a,b)=>a+b,0)/d.length;
+  const sd=d.length>1?Math.sqrt(d.reduce((a,b)=>a+(b-m)*(b-m),0)/(d.length-1)):0;
+  $('recSummary').style.display='block';
+  $('recSummary').innerHTML='n = <b>'+d.length+'</b>  ·  mean = <b>'+m.toFixed(2)+'</b>  ·  SD = <b>'+sd.toFixed(2)+'</b>  ·  range <b>'+Math.min(...d).toFixed(2)+'</b>–<b>'+Math.max(...d).toFixed(2)+'</b>';
+  tb.innerHTML=S.records.map((r,i)=>{
+    return '<tr>'
+      +'<td><span class="rec-chip" style="background:'+recColorCss(i)+'"></span>'+(i+1)+'</td>'
+      +'<td><input class="cat-in" data-i="'+i+'" value="'+escapeHtml(r.category)+'"></td>'
+      +'<td>'+(r.ch+1)+'</td>'
+      +'<td>'+r.x1.toFixed(1)+'</td>'
+      +'<td>'+r.x2.toFixed(1)+'</td>'
+      +'<td><b>'+r.dist.toFixed(2)+'</b></td>'
+      +'<td><button class="del" data-i="'+i+'" title="Delete">✕</button></td>'
+      +'</tr>';
+  }).join('');
+  tb.querySelectorAll('.cat-in').forEach(inp=>{inp.oninput=e=>{S.records[+e.target.dataset.i].category=e.target.value;persistRecords();};});
+  tb.querySelectorAll('.del').forEach(btn=>{btn.onclick=e=>{S.records.splice(+e.target.dataset.i,1);renderRecords();if(chart)chart.update('none');renderOverlay();};});
+  persistRecords();
+}
+function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+$('btnClearAll').addEventListener('click',()=>{if(!S.records.length)return;if(!confirm('Delete all '+S.records.length+' recorded distances?'))return;S.records=[];renderRecords();if(chart)chart.update('none');renderOverlay();});
+
+function csvCell(s){s=s==null?'':String(s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+function buildRecordsCSV(){
+  const head=['record','category','channel','peak1_pos','peak2_pos','distance','distance_straight','peak1_intensity','peak2_intensity'];
+  const rows=S.records.map((r,i)=>[i+1,csvCell(r.category),r.ch+1,r.x1.toFixed(4),r.x2.toFixed(4),r.dist.toFixed(4),r.eucl.toFixed(4),r.val1.toFixed(4),r.val2.toFixed(4)].join(','));
+  return [head.join(','),...rows].join('\n');
+}
+function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);}
+$('btnDownloadCSV').addEventListener('click',()=>{if(!S.records.length)return;downloadBlob(new Blob([buildRecordsCSV()],{type:'text/csv'}),'peak_distances_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.csv');});
+// Hand the recorded distances off to the Plot Data page.
+$('btnPlotData').addEventListener('click',()=>{if(!S.records.length)return;try{localStorage.setItem('imgtkt_plot_data',JSON.stringify({name:'peak_distances.csv',csv:buildRecordsCSV()}));}catch(e){alert('Could not hand off data: '+e.message);return;}window.open('plot_data.html','_blank');});
+
+// raw profile curve (the sampled intensities of the current line)
+function buildProfileCSV(){
+  if(!S.profiles)return null;
+  const cols=[];for(let c=0;c<S.nCh;c++)if(S.visible[c])cols.push(c);
+  if(!cols.length)return null;
+  let head='Distance';cols.forEach(c=>head+=',Channel_'+(c+1));
+  let csv=head+'\n';
+  for(let i=0;i<S.xData.length;i++){let row=S.xData[i].toFixed(3);cols.forEach(c=>row+=','+S.profiles[c][i].toFixed(3));csv+=row+'\n';}
+  return csv;
+}
+$('btnProfileCSV').addEventListener('click',()=>{const csv=buildProfileCSV();if(!csv)return;downloadBlob(new Blob([csv],{type:'text/csv'}),'peak_distances_profile.csv');});
+
+document.querySelectorAll('.color-swatch').forEach(sw=>{sw.addEventListener('click',()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');S.lineColor=sw.dataset.color;renderOverlay();});});
+$('btnNormalize').addEventListener('click',()=>{S.normalize=!S.normalize;$('btnNormalize').classList.toggle('active',S.normalize);if(S.profiles)plotProfiles();});
+$('lineWidth').addEventListener('change',()=>{if(S.samplePts)extractProfiles();});
+$('pixelSize').addEventListener('change',()=>{if(S.samplePts)extractProfiles();});
+
+/* ---------- figure export (image + line + recorded peak markers) ---------- */
+// Stroke / marker / font sizes scaled to the image's own resolution.
+function figSizes(){const m=Math.min(S.width,S.height);return{lw:Math.max(1.5,m/250),font:Math.max(11,m/45)};}
+function currentLinePts(){
+  if(S.lineType==='freehand'){ return (S.linePts&&S.linePts.length>=2)?S.linePts:null; }
+  return (S.lineStart&&S.lineEnd)?[S.lineStart,S.lineEnd]:null;
+}
+// Draw the current line in image coordinates (P maps image px -> target px), with a dark halo like the live overlay.
+function drawLineFlat(ctx,P,s){
+  const pts=currentLinePts(); if(!pts)return;
+  ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
+  const trace=()=>{ctx.beginPath();pts.forEach((p,i)=>{const q=P(p.x,p.y);if(i===0)ctx.moveTo(q[0],q[1]);else ctx.lineTo(q[0],q[1]);});ctx.stroke();};
+  ctx.lineWidth=s.lw*2;ctx.strokeStyle='rgba(0,0,0,0.45)';trace();
+  ctx.lineWidth=s.lw;ctx.strokeStyle=S.lineColor;trace();
+  [pts[0],pts[pts.length-1]].forEach(p=>{const q=P(p.x,p.y);ctx.fillStyle=S.lineColor;ctx.beginPath();ctx.arc(q[0],q[1],s.lw*1.8,0,Math.PI*2);ctx.fill();ctx.lineWidth=s.lw*0.6;ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.stroke();});
+  ctx.restore();
+}
+// Draw every recorded peak-pair in image coordinates.
+function drawRecordsFlat(ctx,P,s){
+  S.records.forEach((r,k)=>{
+    const col=recColorCss(k),a=P(r.p1.x,r.p1.y),b=P(r.p2.x,r.p2.y);
+    ctx.save();ctx.lineCap='round';
+    ctx.lineWidth=s.lw;ctx.strokeStyle=col;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+    [a,b].forEach(q=>{ctx.fillStyle=col;ctx.beginPath();ctx.arc(q[0],q[1],s.lw*1.8,0,Math.PI*2);ctx.fill();ctx.lineWidth=s.lw*0.6;ctx.strokeStyle='rgba(0,0,0,0.55)';ctx.stroke();});
+    const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,txt='#'+(k+1)+' '+r.dist.toFixed(1);
+    ctx.font='600 '+s.font+'px "Roboto Mono",monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.lineWidth=s.font*0.28;ctx.strokeStyle='rgba(0,0,0,0.75)';ctx.strokeText(txt,mx,my-s.lw*2.2);
+    ctx.fillStyle='#fff';ctx.fillText(txt,mx,my-s.lw*2.2);
+    ctx.restore();
+  });
+}
+// Region of the image to export (image px): whole image, or just what's visible in the viewport when "current view only" is on.
+function figRect(){
+  const ev=$('expView');
+  if(!ev||!ev.checked) return {x:0,y:0,w:S.width,h:S.height};
+  const ww=wrap.clientWidth,wh=wrap.clientHeight,C=(v,m)=>Math.max(0,Math.min(m,v));
+  const x0=C((0-S.panX)/S.zoom,S.width), y0=C((0-S.panY)/S.zoom,S.height);
+  const x1=C((ww-S.panX)/S.zoom,S.width), y1=C((wh-S.panY)/S.zoom,S.height);
+  return {x:x0,y:y0,w:Math.max(1,x1-x0),h:Math.max(1,y1-y0)};
+}
+// Raster figure: native-resolution image (or visible crop) with the overlays baked on top.
+function renderFigureCanvas(bg){
+  const r=figRect();
+  const ec=document.createElement('canvas');ec.width=Math.round(r.w);ec.height=Math.round(r.h);
+  const ctx=ec.getContext('2d');
+  if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,ec.width,ec.height);}
+  ctx.drawImage(iC,r.x,r.y,r.w,r.h,0,0,ec.width,ec.height);
+  const P=(x,y)=>[x-r.x,y-r.y],s=figSizes();
+  drawLineFlat(ctx,P,s);drawRecordsFlat(ctx,P,s);
+  return ec;
+}
+// Vector figure: the raster image (or visible crop) embedded, line + markers as true SVG vectors.
+function buildFigureSVG(){
+  const r=figRect(),s=figSizes(),pts=currentLinePts();let el='';
+  if(pts){
+    const d=pts.map(p=>(p.x-r.x)+','+(p.y-r.y)).join(' ');
+    el+='<polyline points="'+d+'" fill="none" stroke="rgba(0,0,0,0.45)" stroke-width="'+(s.lw*2)+'" stroke-linejoin="round" stroke-linecap="round"/>'
+      +'<polyline points="'+d+'" fill="none" stroke="'+S.lineColor+'" stroke-width="'+s.lw+'" stroke-linejoin="round" stroke-linecap="round"/>';
+    [pts[0],pts[pts.length-1]].forEach(p=>{el+='<circle cx="'+(p.x-r.x)+'" cy="'+(p.y-r.y)+'" r="'+(s.lw*1.8)+'" fill="'+S.lineColor+'" stroke="rgba(0,0,0,0.5)" stroke-width="'+(s.lw*0.6)+'"/>';});
+  }
+  S.records.forEach((rec,k)=>{
+    const col=recColorCss(k),a=[rec.p1.x-r.x,rec.p1.y-r.y],b=[rec.p2.x-r.x,rec.p2.y-r.y];
+    el+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="'+col+'" stroke-width="'+s.lw+'" stroke-linecap="round"/>';
+    [a,b].forEach(q=>{el+='<circle cx="'+q[0]+'" cy="'+q[1]+'" r="'+(s.lw*1.8)+'" fill="'+col+'" stroke="rgba(0,0,0,0.55)" stroke-width="'+(s.lw*0.6)+'"/>';});
+    const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;
+    el+='<text x="'+mx+'" y="'+(my-s.lw*2.2)+'" font-family="Roboto Mono, monospace" font-size="'+s.font+'" font-weight="600" text-anchor="middle" fill="#fff" stroke="rgba(0,0,0,0.75)" stroke-width="'+(s.font*0.28)+'" paint-order="stroke">#'+(k+1)+' '+rec.dist.toFixed(1)+'</text>';
+  });
+  const w=Math.round(r.w),h=Math.round(r.h);
+  let src=iC;
+  if(r.x||r.y||w!==S.width||h!==S.height){const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(iC,r.x,r.y,r.w,r.h,0,0,w,h);src=c;}
+  const img=src.toDataURL('image/png');
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">'
+    +'<image x="0" y="0" width="'+w+'" height="'+h+'" href="'+img+'"/>'+el+'</svg>';
+}
+function saveFigure(kind){
+  if(!S.nCh)return;
+  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  if(kind==='svg'){downloadBlob(new Blob([buildFigureSVG()],{type:'image/svg+xml'}),'peak_distances_figure_'+stamp+'.svg');return;}
+  const ec=renderFigureCanvas(kind==='jpg'?'#000':null);
+  ec.toBlob(b=>downloadBlob(b,'peak_distances_figure_'+stamp+'.'+kind),kind==='jpg'?'image/jpeg':'image/png',0.95);
+}
+$('expPng').addEventListener('click',()=>saveFigure('png'));
+$('expJpg').addEventListener('click',()=>saveFigure('jpg'));
+$('expSvg').addEventListener('click',()=>saveFigure('svg'));
+
+const rh=$('resizeHandle');let isR=false,rsY,rsH;
+rh.addEventListener('mousedown',e=>{isR=true;rsY=e.clientY;rsH=$('bottomPanel').offsetHeight;e.preventDefault();});
+window.addEventListener('mousemove',e=>{if(!isR)return;const h2=rsH-(e.clientY-rsY);$('bottomPanel').style.height=Math.max(120,Math.min(520,h2))+'px';if(S.nCh)applyTransform();if(chart)chart.resize();});
+window.addEventListener('mouseup',()=>{isR=false;});
+window.addEventListener('resize',()=>{if(S.nCh)applyTransform();});
+
+/* ---------- lightweight session persistence (records only, not the image) ---------- */
+const PERSIST_KEY='imgtkt_peak_distances_records';
+function persistRecords(){ try{ S.records.length? localStorage.setItem(PERSIST_KEY,JSON.stringify({records:S.records})) : localStorage.removeItem(PERSIST_KEY); }catch(e){} }
+function restoreRecords(){
+  let n=0;
+  try{ const raw=localStorage.getItem(PERSIST_KEY);
+    if(raw){ const o=JSON.parse(raw); if(o&&o.records&&o.records.length){ S.records=o.records; n=o.records.length; } }
+  }catch(e){}
+  renderRecords();
+  if(n) showRestoreBanner(n, ()=>{ S.records=[]; renderRecords(); if(S.nCh){if(chart)chart.update('none');renderOverlay();} });
+}
+// On-load prompt when a previous session's records were restored: keep them or clear them.
+function showRestoreBanner(n, onClear){
+  const back=document.createElement('div');
+  back.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(32,33,36,.28);display:flex;align-items:center;justify-content:center;font-family:Roboto,sans-serif';
+  const bar=document.createElement('div');
+  bar.style.cssText='background:#fff;border:1px solid #dadce0;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:9px 12px 9px 18px;display:flex;align-items:center;gap:12px;font-size:13px;color:#202124';
+  bar.innerHTML='<span>↩ Restored <b>'+n+'</b> record'+(n>1?'s':'')+' from your previous session.</span>';
+  const mk=(txt,fill)=>{const b=document.createElement('button');b.textContent=txt;
+    b.style.cssText='font-family:Roboto,sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;border-radius:999px;padding:6px 14px;'+(fill?'border:1px solid #5FC44A;background:#5FC44A;color:#fff':'border:1px solid #F763AA;background:#fff;color:#F763AA');return b;};
+  const keep=mk('Keep',true), clr=mk('Clear',false);
+  keep.onclick=()=>back.remove();
+  clr.onclick=()=>{ onClear(); back.remove(); };
+  bar.appendChild(keep); bar.appendChild(clr);
+  back.appendChild(bar); document.body.appendChild(back);
+}
+
+$('statusText').textContent=(typeof GeoTIFF!=='undefined'||typeof UTIF!=='undefined')?'Ready — multi-channel TIFF support loaded':'Ready (TIFF unavailable — use PNG/JPG)';
+restoreRecords();
+</script>
+</body>
+</html>
