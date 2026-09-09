@@ -53,6 +53,12 @@ All formulas run on **raw pixel data**; display settings never affect the result
 I(x) = offset + amplitude · exp( −(x − center)² / (2σ²) )
 FWHM = 2·√(2·ln 2) · σ  ≈  2.3548 · σ
 ```
+**Peak Distances — peak-to-peak.** The line profile is sampled at 1-pixel steps along the drawn line (raw pixels, averaged across the line width). Clicking a point snaps to the nearest local maximum within the snap window on the selected channel; the recorded distance is the separation of the two peaks *along the profile* (with the straight-line distance also exported):
+
+```
+distance          = | position(peak₂) − position(peak₁) |     (along the line, × pixel size)
+distance_straight  = ‖ (x,y)peak₂ − (x,y)peak₁ ‖ · pixel size   (Euclidean, in the image)
+```
 
 **ROI Inspector — mean & sum.** For a region of N pixels, per channel c:
 
