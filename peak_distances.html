@@ -118,6 +118,10 @@
   .chart-container{flex:1;padding:12px 18px 10px 12px;position:relative;}
   .chart-container canvas{width:100%!important;height:100%!important;}
   #profileChart{cursor:crosshair;}
+  .chart-readout{position:absolute;top:6px;left:12px;z-index:5;pointer-events:none;font-family:'Roboto Mono',monospace;font-size:11px;color:var(--text-primary);background:rgba(255,255,255,0.94);border:1px solid var(--border);border-radius:6px;padding:4px 10px;display:flex;gap:12px;align-items:center;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+  .chart-readout .d{font-weight:600;}
+  .chart-readout .cv{display:inline-flex;align-items:center;gap:4px;color:var(--text-secondary);}
+  .chart-readout .cv i{width:8px;height:8px;border-radius:2px;display:inline-block;}
   .chart-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:0 24px;color:var(--text-muted);font-size:12px;font-family:'Roboto Mono',monospace;}
   .chart-empty .chart-desc{max-width:600px;font-family:'Roboto',sans-serif;font-size:13px;line-height:1.6;color:var(--text-secondary);}
   .resize-handle{position:absolute;top:-3px;left:0;right:0;height:6px;cursor:ns-resize;z-index:10;}
@@ -273,6 +277,7 @@
     <div class="bottom-panel" id="bottomPanel">
       <div class="resize-handle" id="resizeHandle"></div>
       <div class="chart-container">
+        <div class="chart-readout" id="chartReadout" hidden></div>
         <div class="chart-empty" id="chartEmpty">
           <p class="chart-desc">Draw a line across a row of peaks, then click two peaks on this plot to measure and record their separation. Hover the plot to see the matching position on the image in real time; each recorded distance is drawn on the image and the graph and saved under a category you name — build up a whole table, then export it as CSV.</p>
           Draw a line, then click two peaks to record their distance
@@ -866,9 +871,21 @@ pc.addEventListener('mousemove',e=>{
   S.hoverIdx=idx;
   const c=Math.min(S.measCh,S.nCh-1);
   $('cursorInfo').textContent='profile @ '+S.xData[idx].toFixed(1)+'  ·  ch'+(c+1)+'='+S.profiles[c][idx].toFixed(1);
+  showChartReadout(idx);
   if(chart)chart.update('none');renderOverlay();
 });
-pc.addEventListener('mouseleave',()=>{if(S.hoverIdx==null)return;S.hoverIdx=null;if(chart)chart.update('none');renderOverlay();});
+pc.addEventListener('mouseleave',()=>{if(S.hoverIdx==null)return;S.hoverIdx=null;$('chartReadout').hidden=true;if(chart)chart.update('none');renderOverlay();});
+// Compact single-line readout, pinned above the plot so it never covers the peaks.
+function showChartReadout(idx){
+  const box=$('chartReadout');
+  let html='<span class="d">Distance: '+S.xData[idx].toFixed(1)+'</span>';
+  for(let c=0;c<S.nCh;c++){
+    if(!S.visible[c])continue;
+    const col=(S.lut&&S.lut[c])?lutLabelColor(S.lut[c]):rgb(S.colors[c]);
+    html+='<span class="cv"><i style="background:'+col+'"></i>C'+(c+1)+': '+S.profiles[c][idx].toFixed(1)+'</span>';
+  }
+  box.innerHTML=html;box.hidden=false;
+}
 pc.addEventListener('click',e=>{
   const idx=chartIndexFromEvent(e);if(idx==null)return;
   const s=snapIndex(idx);
@@ -912,6 +929,13 @@ const peakPlugin={
   }
 };
 
+// Pin the hover tooltip to the top of the plot (x follows the cursor) so it never covers the peaks.
+if(window.Chart&&Chart.Tooltip&&Chart.Tooltip.positioners){
+  Chart.Tooltip.positioners.pinnedTop=function(items,eventPosition){
+    const a=this.chart.chartArea;
+    return {x: eventPosition? eventPosition.x : (a.left+a.right)/2, y: a.top};
+  };
+}
 let chart=null;
 function plotProfiles(){
   $('chartEmpty').style.display='none';
@@ -941,16 +965,16 @@ function plotProfiles(){
       onHover:null,
       plugins:{
         legend:{display:S.nCh>1,position:'top',align:'end',labels:{boxWidth:8,boxHeight:8,usePointStyle:true,pointStyle:'circle',color:'#5f6368',font:{family:'Roboto',size:11},padding:14}},
-        tooltip:{enabled:true,backgroundColor:'#ffffff',titleColor:'#202124',bodyColor:'#5f6368',borderColor:'#dadce0',borderWidth:1,padding:10,titleFont:{family:'Roboto Mono',size:11},bodyFont:{family:'Roboto Mono',size:11},callbacks:{title:i=>'Distance: '+i[0].label,label:i=>`${i.dataset.label}: ${i.parsed.y.toFixed(norm?3:1)}`}}
+        tooltip:{enabled:false}
       },
       scales:{
         x:{title:{display:true,text:'Distance along line',color:'#80868b',font:{family:'Roboto Mono',size:11}},ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10},maxTicksLimit:12},grid:{display:false},border:{color:'#dadce0'}},
-        y:{title:{display:true,text:norm?'Normalized intensity (0–1)':'Intensity (a.u.)',color:'#80868b',font:{family:'Roboto Mono',size:11}},min:norm?0:undefined,max:norm?1.05:undefined,ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:false},border:{color:'#dadce0'}}
+        y:{title:{display:true,text:norm?'Normalized intensity (0–1)':'Intensity (a.u.)',color:'#80868b',font:{family:'Roboto Mono',size:11}},min:norm?0:undefined,max:norm?1.1:undefined,grace:norm?undefined:'8%',ticks:{color:'#80868b',font:{family:'Roboto Mono',size:10}},grid:{display:false},border:{color:'#dadce0'}}
       }
     }
   });
 }
-function clearChart(){if(chart){chart.destroy();chart=null;}$('chartEmpty').style.display='flex';}
+function clearChart(){if(chart){chart.destroy();chart=null;}$('chartEmpty').style.display='flex';$('chartReadout').hidden=true;}
 
 /* ---------- records table + persistence ---------- */
 function updateProfileButtons(){$('btnProfileCSV').disabled=!S.profiles;}
