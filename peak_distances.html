@@ -173,10 +173,6 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Line Width (px)</label>
-        <input type="number" id="lineWidth" value="1" min="1" max="50" step="1">
-      </div>
-      <div class="form-group">
         <label>Line Color</label>
         <div class="color-options">
           <div class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></div>
@@ -793,38 +789,32 @@ function drawLine(ctx,s,en){
   ctx.restore();
 }
 
-// Average each channel's raw pixels across the line width, perpendicular to the local direction.
-function sampleAllAt(cx,cy,perpX,perpY,lw,out){
-  for(let c=0;c<S.nCh;c++){
-    let sum=0,cnt=0;
-    for(let w=-(lw-1)/2;w<=(lw-1)/2;w++){
-      const px=Math.round(cx+perpX*w),py=Math.round(cy+perpY*w);
-      if(px>=0&&px<S.width&&py>=0&&py<S.height){sum+=S.channels[c].data[py*S.width+px];cnt++;}
-    }
-    out[c].push(cnt>0?sum/cnt:0);
-  }
-}
 function extractProfiles(){
   if(!S.nCh)return;
-  const lw=parseInt($('lineWidth').value)||1, pxSz=parseFloat($('pixelSize').value)||1;
+  const pxSz=parseFloat($('pixelSize').value)||1;
   const xData=[],profiles=S.channels.map(()=>[]),samplePts=[];
+  // Raw single-pixel sample at the nearest pixel — no line-width averaging, no interpolation.
+  const sampleAt=(cx,cy)=>{
+    const px=Math.round(cx),py=Math.round(cy),inb=px>=0&&px<S.width&&py>=0&&py<S.height;
+    for(let c=0;c<S.nCh;c++)profiles[c].push(inb?S.channels[c].data[py*S.width+px]:0);
+    samplePts.push({x:cx,y:cy});
+  };
   if(S.lineType==='freehand'&&S.linePts&&S.linePts.length>=2){
     const pts=S.linePts,seg=[];let total=0;
     for(let i=1;i<pts.length;i++){const dx=pts[i].x-pts[i-1].x,dy=pts[i].y-pts[i-1].y,L=Math.hypot(dx,dy);seg.push({L,dx,dy,x:pts[i-1].x,y:pts[i-1].y});total+=L;}
     if(total<1){S.linePts=null;renderOverlay();return;}
-    const steps=Math.max(Math.round(total),2);
-    for(let i=0;i<=steps;i++){
-      const target=total*i/steps;let acc=0,si=0;while(si<seg.length-1&&acc+seg[si].L<target){acc+=seg[si].L;si++;}
-      const sg=seg[si],f=sg.L>0?(target-acc)/sg.L:0,nx=sg.L>0?sg.dx/sg.L:1,ny=sg.L>0?sg.dy/sg.L:0;
-      const sx=sg.x+sg.dx*f, sy=sg.y+sg.dy*f;
-      xData.push(target*pxSz);samplePts.push({x:sx,y:sy});
-      sampleAllAt(sx,sy,-ny,nx,lw,profiles);
+    // Walk the path in exact 1-pixel increments → each step is exactly one pixel (= pixel size in nm).
+    for(let d=0;d<=total+1e-6;d+=1){
+      let acc=0,si=0;while(si<seg.length-1&&acc+seg[si].L<d){acc+=seg[si].L;si++;}
+      const sg=seg[si],f=sg.L>0?(d-acc)/sg.L:0;
+      xData.push(d*pxSz);sampleAt(sg.x+sg.dx*f,sg.y+sg.dy*f);
     }
   } else if(S.lineStart&&S.lineEnd){
     const s=S.lineStart,en=S.lineEnd,dx=en.x-s.x,dy=en.y-s.y,len=Math.sqrt(dx*dx+dy*dy);
     if(len<1){S.lineEnd=null;renderOverlay();return;}
-    const steps=Math.max(Math.round(len),2),nx=dx/len,ny=dy/len;
-    for(let i=0;i<=steps;i++){const t=i/steps;const sx=s.x+dx*t,sy=s.y+dy*t;xData.push(t*len*pxSz);samplePts.push({x:sx,y:sy});sampleAllAt(sx,sy,-ny,nx,lw,profiles);}
+    // Step exactly one pixel along the line → adjacent points are exactly one pixel (= pixel size) apart.
+    const ux=dx/len,uy=dy/len,n=Math.floor(len);
+    for(let i=0;i<=n;i++){xData.push(i*pxSz);sampleAt(s.x+ux*i,s.y+uy*i);}
   } else return;
   S.xData=xData;S.profiles=profiles;S.samplePts=samplePts;
   plotProfiles();renderOverlay();
@@ -1036,7 +1026,6 @@ $('btnProfileCSV').addEventListener('click',()=>{const csv=buildProfileCSV();if(
 
 document.querySelectorAll('.color-swatch').forEach(sw=>{sw.addEventListener('click',()=>{document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('active'));sw.classList.add('active');S.lineColor=sw.dataset.color;renderOverlay();});});
 $('btnNormalize').addEventListener('click',()=>{S.normalize=!S.normalize;$('btnNormalize').classList.toggle('active',S.normalize);if(S.profiles)plotProfiles();});
-$('lineWidth').addEventListener('change',()=>{if(S.samplePts)extractProfiles();});
 $('pixelSize').addEventListener('change',()=>{if(S.samplePts)extractProfiles();});
 
 /* ---------- figure export (image + line + recorded peak markers) ---------- */
