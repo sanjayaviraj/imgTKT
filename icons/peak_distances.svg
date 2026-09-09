@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Intensity profile with two peaks (green) -->
+  <path d="M 8,78 L 20,78 Q 30,20 40,78 Q 50,60 60,78 Q 70,20 80,78 L 92,78"
+        fill="none" stroke="#5FC44A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  <!-- Base axis -->
+  <line x1="8" y1="78" x2="92" y2="78" stroke="#80868b" stroke-width="2" stroke-linecap="round"/>
+  <!-- Peak markers (pink) -->
+  <circle cx="35" cy="24" r="4.5" fill="#F763AA"/>
+  <circle cx="75" cy="24" r="4.5" fill="#F763AA"/>
+  <!-- Drop lines from peaks -->
+  <line x1="35" y1="28" x2="35" y2="40" stroke="#F763AA" stroke-width="1.6" stroke-dasharray="3 3"/>
+  <line x1="75" y1="28" x2="75" y2="40" stroke="#F763AA" stroke-width="1.6" stroke-dasharray="3 3"/>
+  <!-- Peak-to-peak distance arrow -->
+  <line x1="35" y1="40" x2="75" y2="40" stroke="#F763AA" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M 41,35 L 35,40 L 41,45" fill="none" stroke="#F763AA" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 69,35 L 75,40 L 69,45" fill="none" stroke="#F763AA" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
