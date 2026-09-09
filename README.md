@@ -22,11 +22,12 @@ Inputs: multi-channel **TIFF / OME-TIFF** (channels auto-detected) and RGB **PNG
 |------|---------|
 | [Size Analysis](size_analysis.html) | Measure feature size (FWHM) from a line profile via Gaussian fitting |
 | [Line Profile](line_profile.html) | Read the intensity profile of every channel along a drawn line |
+| [Peak Distances](peak_distances.html) | Click two peaks on a line profile to record their peak-to-peak distance, tagged by category |
 | [ROI Inspector](roi_inspector.html) | Mean & sum intensity per channel inside a region |
 | [Correlations](correlations.html) | Pearson & Manders colocalization between two channels |
 | [Measure Angles](measure_angles.html) | Angle in degrees from three clicked points |
 | [Particle Analyzer](particle_analyzer.html) | Otsu-threshold a channel and measure every object (area, shape, intensity) |
-| [Plot Data](plot_data.html) | Plot exported CSV/TSV — scatter, line, bar, histogram, pie |
+| [Plot Data](plot_data.html) | Plot exported CSV/TSV — scatter, line, bar (grouped/stacked/horizontal), bubble, histogram, box plot, pie; colour-blind-safe & LUT palettes |
 
 ## Good to know
 
@@ -53,6 +54,7 @@ All formulas run on **raw pixel data**; display settings never affect the result
 I(x) = offset + amplitude · exp( −(x − center)² / (2σ²) )
 FWHM = 2·√(2·ln 2) · σ  ≈  2.3548 · σ
 ```
+
 **Peak Distances — peak-to-peak.** The line profile is sampled at 1-pixel steps along the drawn line (raw pixels, averaged across the line width). Clicking a point snaps to the nearest local maximum within the snap window on the selected channel; the recorded distance is the separation of the two peaks *along the profile* (with the straight-line distance also exported):
 
 ```

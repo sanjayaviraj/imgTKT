@@ -125,6 +125,7 @@
       <a href="index.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Home</a>
       <a href="size_analysis.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;background:var(--accent);color:#fff">Size Analysis</a>
       <a href="line_profile.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Line Profile</a>
+      <a href="peak_distances.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Peak Distances</a>
       <a href="roi_inspector.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">ROI Inspector</a>
       <a href="correlations.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Correlations</a>
       <a href="measure_angles.html" style="padding:4px 12px;border-radius:999px;font-family:'Roboto',sans-serif;font-size:12px;font-weight:500;text-decoration:none;color:var(--text-secondary);border:1px solid var(--border)">Measure Angles</a>
@@ -952,8 +953,8 @@ function plotProfile(xD,yD,fC){
   chart=new Chart(document.getElementById('profileChart').getContext('2d'),{
     type:'line',
     data:{labels:xD.map(x=>x.toFixed(1)),datasets:[
-      {label:'Raw Profile',data:yD,borderColor:'#F763AA',backgroundColor:'rgba(247,99,170,0.08)',borderWidth:1.5,pointRadius:0,fill:true,tension:.1,order:2},
-      {label:'Gaussian Fit',data:fC,borderColor:'#5FC44A',borderWidth:2,pointRadius:0,borderDash:[6,3],fill:false,tension:.3,order:1},
+      {label:'Raw Profile',data:yD,borderColor:'#F763AA',backgroundColor:'rgba(247,99,170,0.08)',borderWidth:1.5,pointRadius:0,fill:true,tension:0,order:2},
+      {label:'Gaussian Fit',data:fC,borderColor:'#5FC44A',borderWidth:2,pointRadius:0,borderDash:[6,3],fill:false,tension:0,order:1},
       {label:'FWHM',data:xD.map(x=>(x>=fl&&x<=fr)?hm:null),borderColor:'rgba(217,48,37,0.7)',backgroundColor:'rgba(217,48,37,0.07)',borderWidth:2,pointRadius:0,fill:true,spanGaps:false,order:0}
     ]},
     options:{
